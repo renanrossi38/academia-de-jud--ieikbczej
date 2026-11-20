@@ -12,6 +12,7 @@ import CartCheckout from './pages/CartCheckout'
 import OrderConfirmation from './pages/OrderConfirmation'
 import MyOrders from './pages/MyOrders'
 import AdminOrders from './pages/AdminOrders'
+import AdminProducts from './pages/AdminProducts'
 import AdminStudents from './pages/AdminStudents'
 import AdminAttendance from './pages/AdminAttendance'
 import AdminClasses from './pages/AdminClasses'
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/pedido/:id/confirmacao" element={<OrderConfirmation />} />
               <Route path="/meus-pedidos" element={<MyOrders />} />
               <Route path="/painel/pedidos" element={<AdminOrders />} />
+              <Route path="/painel/produtos" element={<AdminProducts />} />
               <Route path="/painel/alunos" element={<AdminStudents />} />
               <Route path="/painel/presenca" element={<AdminAttendance />} />
               <Route path="/painel/turmas" element={<AdminClasses />} />

@@ -45,6 +45,8 @@ export interface Student {
 export type ProductCategory = 'uniformes' | 'faixas' | 'camisetas' | 'equipamentos' | 'planos'
 
 export interface Product {
+  collectionId: string
+  collectionName: string
   id: string
   name: string
   slug: string

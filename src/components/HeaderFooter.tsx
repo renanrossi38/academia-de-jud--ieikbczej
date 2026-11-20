@@ -4,13 +4,13 @@ import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import { HankoStamp } from '@/components/HankoStamp'
 import {
-  ShoppingBag,
   User,
   LogOut,
   ClipboardList,
   Menu,
   X,
   ShieldCheck,
+  ShoppingBag,
   Users,
   CalendarCheck,
   Layers,
@@ -49,15 +49,6 @@ export const Header: React.FC = () => {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-6">
-          <Link
-            to="/"
-            className={`text-sm font-medium transition-colors hover:text-[#C1272D] ${
-              isActive('/') ? 'text-[#C1272D] font-semibold' : 'text-[#1C1B1A]'
-            }`}
-          >
-            Catálogo
-          </Link>
-
           {user && (
             <Link
               to="/meus-pedidos"
@@ -117,6 +108,18 @@ export const Header: React.FC = () => {
             >
               <Users className="w-4 h-4" />
               Alunos
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/produtos"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
+                isActive('/painel/produtos') ? 'ring-2 ring-[#C1272D]' : ''
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Loja
             </Link>
           )}
 
@@ -218,7 +221,7 @@ export const Header: React.FC = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 text-base font-medium text-[#1C1B1A] hover:text-[#C1272D]"
           >
-            Catálogo de Produtos
+            Início
           </Link>
 
           {user && (
@@ -238,6 +241,16 @@ export const Header: React.FC = () => {
               className="block py-2 text-base font-semibold text-[#C1272D]"
             >
               Turmas (Admin)
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/produtos"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-semibold text-[#C1272D]"
+            >
+              Loja (Admin)
             </Link>
           )}
 

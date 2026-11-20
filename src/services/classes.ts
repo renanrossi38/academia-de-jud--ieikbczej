@@ -5,12 +5,16 @@ import { Attendance, AttendanceStatus, Class, ClassLevel, ClassStudent, Student 
 export interface CreateClassInput {
   name: string
   level?: ClassLevel | ''
+  schedule?: string
+  monthly_fee?: number | null
   active?: boolean
 }
 
 export interface UpdateClassInput {
   name?: string
   level?: ClassLevel | ''
+  schedule?: string
+  monthly_fee?: number | null
   active?: boolean
 }
 
@@ -54,6 +58,8 @@ export const classesService = {
     return pb.collection('classes').create<Class>({
       name: input.name.trim(),
       level: input.level || '',
+      schedule: input.schedule?.trim() || '',
+      monthly_fee: input.monthly_fee ?? null,
       active: input.active ?? true,
     })
   },
@@ -61,6 +67,7 @@ export const classesService = {
   async updateClass(id: string, input: UpdateClassInput): Promise<Class> {
     const payload: UpdateClassInput = { ...input }
     if (typeof payload.name === 'string') payload.name = payload.name.trim()
+    if (typeof payload.schedule === 'string') payload.schedule = payload.schedule.trim()
     return pb.collection('classes').update<Class>(id, payload)
   },
 

@@ -43,10 +43,18 @@ const LEVEL_OPTIONS: { label: string; value: string }[] = [
 interface ClassFormState {
   name: string
   level: string
+  schedule: string
+  monthly_fee: string
   active: boolean
 }
 
-const emptyForm: ClassFormState = { name: '', level: '', active: true }
+const emptyForm: ClassFormState = {
+  name: '',
+  level: '',
+  schedule: '',
+  monthly_fee: '',
+  active: true,
+}
 
 interface ClassFormDialogProps {
   open: boolean
@@ -69,7 +77,13 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
     if (open) {
       setForm(
         editing
-          ? { name: editing.name, level: editing.level || '', active: editing.active !== false }
+          ? {
+              name: editing.name,
+              level: editing.level || '',
+              schedule: editing.schedule || '',
+              monthly_fee: editing.monthly_fee != null ? String(editing.monthly_fee) : '',
+              active: editing.active !== false,
+            }
           : emptyForm,
       )
     }
@@ -91,11 +105,17 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
         ? await classesService.updateClass(editing.id, {
             name: form.name,
             level: form.level as Class['level'],
+            schedule: form.schedule,
+            monthly_fee:
+              form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
             active: form.active,
           })
         : await classesService.createClass({
             name: form.name,
             level: form.level as Class['level'],
+            schedule: form.schedule,
+            monthly_fee:
+              form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
             active: form.active,
           })
       onSaved(saved)
@@ -143,6 +163,32 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               placeholder="Ex.: Infantil — Ter/Qui"
               className="h-9 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
               maxLength={200}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="class-schedule" className="text-xs font-bold text-[#1C1B1A]">
+              Horário
+            </Label>
+            <Input
+              id="class-schedule"
+              value={form.schedule}
+              onChange={(e) => setForm((f) => ({ ...f, schedule: e.target.value }))}
+              placeholder="Ex.: Ter/Qui 19h–20h"
+              className="h-9 text-sm bg-white border-[#E8E0D5]"
+              maxLength={120}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="class-fee" className="text-xs font-bold text-[#1C1B1A]">
+              Mensalidade (R$)
+            </Label>
+            <Input
+              id="class-fee"
+              value={form.monthly_fee}
+              onChange={(e) => setForm((f) => ({ ...f, monthly_fee: e.target.value }))}
+              inputMode="decimal"
+              placeholder="Ex.: 150.00"
+              className="h-9 text-sm bg-white border-[#E8E0D5]"
             />
           </div>
           <div className="space-y-1.5">
@@ -408,9 +454,23 @@ export default function AdminClasses() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] text-[#6B6560]">
-                <Users className="w-3.5 h-3.5" />
-                {memberCounts[c.id] ?? '…'} aluno(s) matriculado(s)
+              <div className="flex items-center gap-1.5 text-[11px] text-[#6B6560] flex-wrap">
+                {c.schedule && (
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    {c.schedule}
+                  </span>
+                )}
+                {c.monthly_fee != null && (
+                  <span className="font-bold text-[#1C1B1A]">
+                    {c.monthly_fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    /mês
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  {memberCounts[c.id] ?? '…'} aluno(s) matriculado(s)
+                </span>
               </div>
 
               <div className="flex items-center gap-3 pt-2 border-t border-[#E8E0D5] mt-auto">
