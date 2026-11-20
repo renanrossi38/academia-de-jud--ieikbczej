@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T17:12:15.621Z",
+  "generatedAt": "2026-11-20T17:29:33.930Z",
   "collections": [
     {
       "name": "users",
@@ -126,7 +126,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["uniformes", "faixas", "equipamentos", "planos"]
+          "selectValues": ["uniformes", "faixas", "equipamentos", "planos", "camisetas"]
         },
         {
           "name": "active",
@@ -519,8 +519,8 @@
       "name": "classes",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || class_students_via_class.student.user = @request.auth.id)",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || class_students_via_class.student.user = @request.auth.id)",
+        "list": "active = true && (@request.auth.id = '' || @request.auth.id != '') || (@request.auth.id != '' && (@request.auth.role = 'admin' || class_students_via_class.student.user = @request.auth.id))",
+        "view": "active = true && (@request.auth.id = '' || @request.auth.id != '') || (@request.auth.id != '' && (@request.auth.role = 'admin' || class_students_via_class.student.user = @request.auth.id))",
         "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
         "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
         "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
@@ -558,6 +558,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "schedule",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monthly_fee",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_classes_active ON classes (active)"]

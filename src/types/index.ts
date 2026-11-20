@@ -42,7 +42,7 @@ export interface Student {
   updated: string
 }
 
-export type ProductCategory = 'uniformes' | 'faixas' | 'equipamentos' | 'planos'
+export type ProductCategory = 'uniformes' | 'faixas' | 'camisetas' | 'equipamentos' | 'planos'
 
 export interface Product {
   id: string
@@ -129,6 +129,10 @@ export interface Class {
   name: string
   level?: ClassLevel | ''
   active: boolean
+  /** Horário das aulas, ex.: "Ter/Qui — 19h às 20h30". */
+  schedule?: string
+  /** Mensalidade da turma em R$. */
+  monthly_fee?: number
   created: string
   updated: string
 }
