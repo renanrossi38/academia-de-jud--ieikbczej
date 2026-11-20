@@ -1,11 +1,25 @@
 export type UserRole = 'admin' | 'aluno'
 
+export type Belt =
+  | 'branca'
+  | 'cinza'
+  | 'amarela'
+  | 'laranja'
+  | 'verde'
+  | 'azul'
+  | 'roxa'
+  | 'marrom'
+  | 'preta'
+
 export interface User {
   id: string
   email: string
   name: string
   avatar?: string
   role: UserRole
+  phone?: string
+  belt?: Belt
+  active?: boolean
   created: string
   updated: string
 }

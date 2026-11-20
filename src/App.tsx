@@ -12,6 +12,7 @@ import CartCheckout from './pages/CartCheckout'
 import OrderConfirmation from './pages/OrderConfirmation'
 import MyOrders from './pages/MyOrders'
 import AdminOrders from './pages/AdminOrders'
+import AdminStudents from './pages/AdminStudents'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import VerifyEmail from './pages/VerifyEmail'
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/pedido/:id/confirmacao" element={<OrderConfirmation />} />
               <Route path="/meus-pedidos" element={<MyOrders />} />
               <Route path="/painel/pedidos" element={<AdminOrders />} />
+              <Route path="/painel/alunos" element={<AdminStudents />} />
               <Route path="/entrar" element={<Login />} />
               <Route path="/criar-conta" element={<Register />} />
               <Route path="/verificar-email" element={<VerifyEmail />} />
