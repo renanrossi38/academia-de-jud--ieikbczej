@@ -14,6 +14,7 @@ import {
   Users,
   CalendarCheck,
   Layers,
+  Trophy,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -89,13 +90,13 @@ export const Header: React.FC = () => {
 
           {isAdmin && (
             <Link
-              to="/painel/presenca"
+              to="/painel/ranking"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
-                isActive('/painel/presenca') ? 'ring-2 ring-[#C1272D]' : ''
+                isActive('/painel/ranking') ? 'ring-2 ring-[#C1272D]' : ''
               }`}
             >
-              <CalendarCheck className="w-4 h-4" />
-              Presença
+              <Trophy className="w-4 h-4" />
+              Ranking
             </Link>
           )}
 
@@ -266,11 +267,11 @@ export const Header: React.FC = () => {
 
           {isAdmin && (
             <Link
-              to="/painel/presenca"
+              to="/painel/ranking"
               onClick={() => setMobileMenuOpen(false)}
               className="block py-2 text-base font-semibold text-[#C1272D]"
             >
-              Presença (Admin)
+              Ranking (Admin)
             </Link>
           )}
 

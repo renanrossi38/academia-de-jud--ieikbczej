@@ -14,7 +14,7 @@ import MyOrders from './pages/MyOrders'
 import AdminOrders from './pages/AdminOrders'
 import AdminProducts from './pages/AdminProducts'
 import AdminStudents from './pages/AdminStudents'
-import AdminAttendance from './pages/AdminAttendance'
+import AdminRanking from './pages/AdminRanking'
 import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
 import MyAttendance from './pages/MyAttendance'
@@ -45,7 +45,7 @@ const App = () => (
               <Route path="/painel/pedidos" element={<AdminOrders />} />
               <Route path="/painel/produtos" element={<AdminProducts />} />
               <Route path="/painel/alunos" element={<AdminStudents />} />
-              <Route path="/painel/presenca" element={<AdminAttendance />} />
+              <Route path="/painel/ranking" element={<AdminRanking />} />
               <Route path="/painel/turmas" element={<AdminClasses />} />
               <Route path="/painel/turmas/:classId" element={<AdminClassDetail />} />
               <Route path="/minha-presenca" element={<MyAttendance />} />
