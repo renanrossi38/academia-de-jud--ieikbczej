@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
-import { Belt, User } from '@/types'
+import { Belt, Student } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -14,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { studentsService } from '@/services/students'
-import { Loader2, Copy, Check, KeyRound } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 const BELT_OPTIONS: { label: string; value: Belt }[] = [
   { label: 'Branca', value: 'branca' },
@@ -68,7 +67,7 @@ const emptyForm: StudentFormState = { name: '', email: '', phone: '', belt: '' }
 interface CreateStudentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCreated: (student: User) => void
+  onCreated: (student: Student) => void
 }
 
 export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
@@ -79,24 +78,18 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   const { toast } = useToast()
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [creating, setCreating] = useState(false)
-  const [createdStudent, setCreatedStudent] = useState<User | null>(null)
-  const [createdPassword, setCreatedPassword] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
 
   const resetAndClose = () => {
     setForm(emptyForm)
-    setCreatedPassword(null)
-    setCreatedStudent(null)
-    setCopied(false)
     onOpenChange(false)
   }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim() || !form.email.trim()) {
+    if (!form.name.trim()) {
       toast({
-        title: 'Preencha os campos obrigatórios',
-        description: 'Nome e e-mail são obrigatórios para o cadastro.',
+        title: 'O nome é obrigatório',
+        description: 'Telefone, faixa e e-mail são opcionais.',
         variant: 'destructive',
       })
       return
@@ -104,27 +97,23 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
 
     setCreating(true)
     try {
-      const { student, initialPassword } = await studentsService.createStudent({
+      const student = await studentsService.createStudent({
         name: form.name,
         email: form.email,
         phone: form.phone,
         belt: (form.belt || undefined) as Belt | undefined,
       })
-
       onCreated(student)
-      setCreatedStudent(student)
-      setCreatedPassword(initialPassword)
-      setForm(emptyForm)
       toast({
-        title: 'Aluno cadastrado com sucesso!',
-        description: `${student.name || student.email} já pode acessar a academia com o e-mail informado.`,
+        title: 'Aluno cadastrado!',
+        description: `${student.name} foi adicionado à academia.`,
       })
+      resetAndClose()
     } catch (err: any) {
       console.error('Erro ao cadastrar aluno:', err)
       toast({
         title: 'Falha ao cadastrar aluno',
-        description:
-          err?.message || 'Verifique se o e-mail já não está cadastrado e tente novamente.',
+        description: err?.message || 'Tente novamente em instantes.',
         variant: 'destructive',
       })
     } finally {
@@ -132,189 +121,114 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
     }
   }
 
-  const copyPassword = async () => {
-    if (!createdPassword) return
-    try {
-      await navigator.clipboard.writeText(createdPassword)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-      toast({ title: 'Senha copiada para a área de transferência' })
-    } catch (_) {
-      toast({
-        title: 'Não foi possível copiar',
-        description: 'Copie a senha manualmente antes de fechar.',
-        variant: 'destructive',
-      })
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : resetAndClose())}>
       <DialogContent className="sm:max-w-md bg-white border-[#E8E0D5]">
-        {createdPassword && createdStudent ? (
-          <>
-            <DialogHeader>
-              <DialogTitle className="font-serif text-[#1C1B1A] flex items-center gap-2">
-                <KeyRound className="w-5 h-5 text-[#C1272D]" />
-                Aluno cadastrado!
-              </DialogTitle>
-              <DialogDescription className="text-xs text-[#6B6560]">
-                A conta foi criada no backend com a função de <strong>aluno</strong>. Guarde a senha
-                inicial gerada — ela será exibida <strong>apenas uma vez</strong>.
-              </DialogDescription>
-            </DialogHeader>
+        <form onSubmit={handleCreate}>
+          <DialogHeader>
+            <DialogTitle className="font-serif text-[#1C1B1A]">Cadastrar Novo Aluno</DialogTitle>
+            <DialogDescription className="text-xs text-[#6B6560]">
+              Só o nome é obrigatório. O e-mail é opcional e só serve para gerar o acesso ao site
+              depois.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="p-4 bg-[#FAF6F0] rounded-xl border border-[#E8E0D5] space-y-3">
-              <div>
-                <Label className="text-[10px] uppercase tracking-wider text-[#6B6560] font-serif">
-                  E-mail de acesso
-                </Label>
-                <p className="text-sm font-semibold text-[#1C1B1A] mt-0.5">
-                  {createdStudent.email}
-                </p>
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase tracking-wider text-[#6B6560] font-serif">
-                  Senha inicial
-                </Label>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <code className="flex-1 text-sm font-mono font-bold text-[#C1272D] bg-white border border-[#E8E0D5] rounded-md px-3 py-2 select-all">
-                    {createdPassword}
-                  </code>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={copyPassword}
-                    className="border-[#E8E0D5] shrink-0"
-                  >
-                    {copied ? (
-                      <Check className="w-4 h-4 text-[#2E7D4F]" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="student-name" className="text-xs text-[#1C1B1A] font-medium">
+                Nome completo *
+              </Label>
+              <Input
+                id="student-name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Ex.: Hana Suzuki"
+                className="bg-white border-[#E8E0D5]"
+                required
+              />
             </div>
 
-            <DialogFooter>
-              <Button
-                onClick={resetAndClose}
-                className="w-full bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
-              >
-                Entendi, copiei a senha
-              </Button>
-            </DialogFooter>
-          </>
-        ) : (
-          <form onSubmit={handleCreate}>
-            <DialogHeader>
-              <DialogTitle className="font-serif text-[#1C1B1A]">Cadastrar Novo Aluno</DialogTitle>
-              <DialogDescription className="text-xs text-[#6B6560]">
-                Uma conta de acesso será criada automaticamente com uma senha inicial gerada pelo
-                sistema.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="student-name" className="text-xs text-[#1C1B1A] font-medium">
-                  Nome completo *
-                </Label>
-                <Input
-                  id="student-name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Ex.: Hana Suzuki"
-                  className="bg-white border-[#E8E0D5]"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="student-email" className="text-xs text-[#1C1B1A] font-medium">
-                  E-mail *
-                </Label>
-                <Input
-                  id="student-email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="aluno@email.com"
-                  className="bg-white border-[#E8E0D5]"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="student-phone" className="text-xs text-[#1C1B1A] font-medium">
-                  Telefone
-                </Label>
-                <Input
-                  id="student-phone"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="(11) 90000-0000"
-                  className="bg-white border-[#E8E0D5]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="student-belt" className="text-xs text-[#1C1B1A] font-medium">
-                  Faixa
-                </Label>
-                <select
-                  id="student-belt"
-                  value={form.belt}
-                  onChange={(e) => setForm({ ...form, belt: e.target.value as Belt | '' })}
-                  className={selectClass}
-                >
-                  <option value="">Selecione a faixa...</option>
-                  {BELT_OPTIONS.map((b) => (
-                    <option key={b.value} value={b.value}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="student-phone" className="text-xs text-[#1C1B1A] font-medium">
+                Telefone
+              </Label>
+              <Input
+                id="student-phone"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="(11) 90000-0000"
+                className="bg-white border-[#E8E0D5]"
+              />
             </div>
 
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={resetAndClose}
-                className="border-[#E8E0D5] text-xs"
+            <div className="space-y-1.5">
+              <Label htmlFor="student-belt" className="text-xs text-[#1C1B1A] font-medium">
+                Faixa
+              </Label>
+              <select
+                id="student-belt"
+                value={form.belt}
+                onChange={(e) => setForm({ ...form, belt: e.target.value as Belt | '' })}
+                className={selectClass}
               >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={creating}
-                className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
-              >
-                {creating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  'Cadastrar Aluno'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
+                <option value="">Selecione a faixa...</option>
+                {BELT_OPTIONS.map((b) => (
+                  <option key={b.value} value={b.value}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="student-email" className="text-xs text-[#1C1B1A] font-medium">
+                E-mail
+              </Label>
+              <Input
+                id="student-email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="Opcional — aluno@email.com"
+                className="bg-white border-[#E8E0D5]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetAndClose}
+              className="border-[#E8E0D5] text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={creating}
+              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+            >
+              {creating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                'Cadastrar Aluno'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
 }
 
 interface EditStudentDialogProps {
-  student: User | null
+  student: Student | null
   onOpenChange: (open: boolean) => void
-  onSaved: (updated: User) => void
+  onSaved: (updated: Student) => void
 }
 
 export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
@@ -340,6 +254,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
     setLoadedFor(student.id)
   }
 
+  const hasAccount = !!student?.user
+
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!student) return
@@ -352,8 +268,9 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
     try {
       const updated = await studentsService.updateStudent(student.id, {
         name: form.name.trim(),
+        email: hasAccount ? student.email || '' : form.email.trim(),
         phone: form.phone.trim(),
-        belt: (form.belt || undefined) as Belt | undefined,
+        belt: form.belt,
         active,
       })
 
@@ -382,8 +299,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
           <DialogHeader>
             <DialogTitle className="font-serif text-[#1C1B1A]">Editar Aluno</DialogTitle>
             <DialogDescription className="text-xs text-[#6B6560]">
-              Atualize os dados de {student?.name || student?.email}. O e-mail de acesso não pode
-              ser alterado por aqui.
+              Atualize os dados de {student?.name}.
             </DialogDescription>
           </DialogHeader>
 
@@ -402,12 +318,23 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-[#6B6560] font-medium">E-mail (fixo)</Label>
+              <Label htmlFor="edit-email" className="text-xs text-[#1C1B1A] font-medium">
+                E-mail
+              </Label>
               <Input
-                value={student?.email || ''}
-                disabled
-                className="bg-[#FAF6F0] text-[#6B6560]"
+                id="edit-email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                disabled={hasAccount}
+                placeholder="Opcional"
+                className="bg-white border-[#E8E0D5] disabled:bg-[#FAF6F0] disabled:text-[#6B6560]"
               />
+              <p className="text-[11px] text-[#6B6560]">
+                {hasAccount
+                  ? 'Este aluno já tem conta de acesso: o e-mail de login não muda por aqui.'
+                  : 'Opcional. Preencha para poder gerar o acesso ao site.'}
+              </p>
             </div>
 
             <div className="space-y-1.5">

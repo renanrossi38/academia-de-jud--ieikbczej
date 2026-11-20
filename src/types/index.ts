@@ -24,6 +24,20 @@ export interface User {
   updated: string
 }
 
+/** Aluno da academia (controle interno). E-mail e conta de acesso são opcionais. */
+export interface Student {
+  id: string
+  name: string
+  phone?: string
+  belt?: Belt | ''
+  email?: string
+  active: boolean
+  /** Conta de acesso ao site (users), quando já criada. */
+  user?: string
+  created: string
+  updated: string
+}
+
 export type ProductCategory = 'uniformes' | 'faixas' | 'equipamentos' | 'planos'
 
 export interface Product {
@@ -104,13 +118,13 @@ export interface Attendance {
   collectionId: string
   collectionName: string
   id: string
-  user: string
+  student: string
   date: string
   status: AttendanceStatus
   notes?: string
   created: string
   updated: string
   expand?: {
-    user?: User
+    student?: Student
   }
 }

@@ -1,5 +1,5 @@
 import pb from '@/lib/pocketbase/client'
-import { Attendance, AttendanceStatus, User } from '@/types'
+import { Attendance, AttendanceStatus, Student } from '@/types'
 
 /** Data (YYYY-MM-DD) no fuso local a partir de um Date. */
 export function toLocalDateKey(d: Date): string {
@@ -18,7 +18,7 @@ function dayRange(dateKey: string): { start: string; end: string } {
 }
 
 export interface AttendanceDayInput {
-  userId: string
+  studentId: string
   status: AttendanceStatus
 }
 
@@ -33,9 +33,9 @@ export const attendanceService = {
   },
 
   /** Histórico completo de um aluno (ordem decrescente de data). */
-  async listByUser(userId: string): Promise<Attendance[]> {
+  async listByStudent(studentId: string): Promise<Attendance[]> {
     return pb.collection('attendance').getFullList<Attendance>({
-      filter: `user = "${userId}"`,
+      filter: `student = "${studentId}"`,
       sort: '-date',
     })
   },
@@ -53,21 +53,21 @@ export const attendanceService = {
 
   /**
    * Marcações de vários alunos em uma data (lote do painel), filtrando por
-   * usuário: o PocketBase não aceita OR grande em um único filtro, então
+   * aluno: o PocketBase não aceita OR grande em um único filtro, então
    * buscamos o dia inteiro e filtramos no cliente.
    */
-  async listForDayAndUsers(dateKey: string, userIds: string[]): Promise<Attendance[]> {
+  async listForDayAndStudents(dateKey: string, studentIds: string[]): Promise<Attendance[]> {
     const all = await this.listByDate(dateKey)
-    if (userIds.length === 0) return []
-    const wanted = new Set(userIds)
-    return all.filter((a) => wanted.has(a.user))
+    if (studentIds.length === 0) return []
+    const wanted = new Set(studentIds)
+    return all.filter((a) => wanted.has(a.student))
   },
 
   /** Cria ou atualiza a marcação de um aluno em uma data (uma por aluno/dia). */
   async saveOne(dateKey: string, input: AttendanceDayInput): Promise<Attendance> {
     const { start, end } = dayRange(dateKey)
     const existing = await pb.collection('attendance').getFullList<Attendance>({
-      filter: `user = "${input.userId}" && date >= "${start}" && date <= "${end}"`,
+      filter: `student = "${input.studentId}" && date >= "${start}" && date <= "${end}"`,
       limit: 1,
     })
 
@@ -77,7 +77,7 @@ export const attendanceService = {
       })
     }
     return pb.collection('attendance').create<Attendance>({
-      user: input.userId,
+      student: input.studentId,
       date: `${dateKey} 12:00:00.000Z`,
       status: input.status,
     })
@@ -103,10 +103,10 @@ export const attendanceService = {
     return { saved, skipped }
   },
 
-  /** Lista alunos ativos (para o painel de presença). */
-  async listActiveStudents(): Promise<User[]> {
-    return pb.collection('users').getFullList<User>({
-      filter: `role = "aluno"`,
+  /** Lista alunos ativos (para o painel de presença). Alunos sem e-mail entram normalmente. */
+  async listActiveStudents(): Promise<Student[]> {
+    return pb.collection('students').getFullList<Student>({
+      filter: 'active = true',
       sort: 'name',
     })
   },

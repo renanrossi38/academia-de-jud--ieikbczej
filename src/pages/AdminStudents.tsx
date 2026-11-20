@@ -8,13 +8,14 @@ import {
   beltLabel,
   beltBadgeClass,
 } from '@/components/admin/StudentDialogs'
+import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { studentsService } from '@/services/students'
-import { User } from '@/types'
+import { Student } from '@/types'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
-import pb from '@/lib/pocketbase/client'
 import {
   Loader2,
   Search,
@@ -26,22 +27,31 @@ import {
   Phone,
   UserCheck,
   UserX,
+  KeyRound,
 } from 'lucide-react'
+
+/** Insere ou substitui um aluno pelo id (evita duplicar com o realtime). */
+const upsert = (list: Student[], record: Student): Student[] =>
+  list.some((s) => s.id === record.id)
+    ? list.map((s) => (s.id === record.id ? record : s))
+    : [record, ...list]
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 export default function AdminStudents() {
   const { user, isAdmin, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [students, setStudents] = useState<User[]>([])
+  const [students, setStudents] = useState<Student[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [editingStudent, setEditingStudent] = useState<User | null>(null)
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null)
+  const [accessStudent, setAccessStudent] = useState<Student | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
-
-  const isAluno = (u: Partial<User>) => u.role === 'aluno'
 
   const loadStudents = useCallback(async () => {
     setIsLoading(true)
@@ -77,51 +87,45 @@ export default function AdminStudents() {
     }
 
     loadStudents()
-
-    // Tempo real: mantém a lista de alunos sempre atualizada
-    pb.collection('users').subscribe('*', (e) => {
-      const record = e.record as unknown as User
-      if (!isAluno(record)) return
-      if (e.action === 'create') {
-        setStudents((prev) => [record, ...prev])
-      } else if (e.action === 'update') {
-        setStudents((prev) => prev.map((s) => (s.id === record.id ? record : s)))
-      } else if (e.action === 'delete') {
-        setStudents((prev) => prev.filter((s) => s.id !== record.id))
-      }
-    })
-
-    return () => {
-      pb.collection('users').unsubscribe('*')
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, authLoading])
+
+  // Tempo real: alterações de qualquer administrador aparecem na lista na hora
+  useRealtime<Student>('students', (e) => {
+    if (e.action === 'delete') {
+      setStudents((prev) => prev.filter((s) => s.id !== e.record.id))
+      return
+    }
+    setStudents((prev) => upsert(prev, e.record))
+  })
 
   const filteredStudents = useMemo(() => {
     const term = search.trim().toLowerCase()
     if (!term) return students
     return students.filter(
       (s) =>
-        (s.name || '').toLowerCase().includes(term) || (s.email || '').toLowerCase().includes(term),
+        (s.name || '').toLowerCase().includes(term) ||
+        (s.email || '').toLowerCase().includes(term) ||
+        (s.phone || '').toLowerCase().includes(term),
     )
   }, [students, search])
 
-  const activeCount = students.filter((s) => s.active !== false).length
+  const activeCount = students.filter((s) => s.active).length
   const inactiveCount = students.length - activeCount
 
-  const handleToggleActive = async (student: User) => {
+  const handleToggleActive = async (student: Student) => {
     setTogglingId(student.id)
     try {
       const updated = await studentsService.updateStudent(student.id, {
-        active: student.active === false,
+        active: !student.active,
       })
-      setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
+      setStudents((prev) => upsert(prev, updated))
       toast({
-        title: updated.active === false ? 'Aluno desativado' : 'Aluno reativado',
-        description: `${updated.name || updated.email} ${
-          updated.active === false
-            ? 'foi marcado como inativo, mas continua na lista.'
-            : 'voltou a ficar ativo na academia.'
+        title: updated.active ? 'Aluno reativado' : 'Aluno desativado',
+        description: `${updated.name} ${
+          updated.active
+            ? 'voltou a ficar ativo na academia.'
+            : 'foi marcado como inativo, mas continua na lista.'
         }`,
       })
     } catch (err: any) {
@@ -184,7 +188,7 @@ export default function AdminStudents() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou e-mail..."
+            placeholder="Buscar por nome, e-mail ou telefone..."
             className="pl-9 pr-9 h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
           />
           {search && (
@@ -215,7 +219,7 @@ export default function AdminStudents() {
           </h3>
           <p className="text-xs text-[#6B6560] mt-1">
             {search
-              ? 'Tente buscar por outro nome ou e-mail.'
+              ? 'Tente buscar por outro nome, e-mail ou telefone.'
               : 'Cadastre o primeiro aluno da academia para começar.'}
           </p>
         </div>
@@ -227,9 +231,9 @@ export default function AdminStudents() {
               <thead>
                 <tr className="border-b border-[#E8E0D5] bg-[#FAF6F0]/60 text-[#6B6560] font-serif uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Nome</th>
-                  <th className="py-3 px-4">E-mail</th>
                   <th className="py-3 px-4">Telefone</th>
                   <th className="py-3 px-4">Faixa</th>
+                  <th className="py-3 px-4">E-mail</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Cadastro</th>
                   <th className="py-3 px-4 text-right">Ações</th>
@@ -237,19 +241,13 @@ export default function AdminStudents() {
               </thead>
               <tbody className="divide-y divide-[#E8E0D5]">
                 {filteredStudents.map((student) => {
-                  const dateFormatted = new Date(student.created).toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                  })
-                  const isActiveStudent = student.active !== false
+                  const canCreateAccess = !!student.email && !student.user
 
                   return (
                     <tr key={student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
                       <td className="py-3.5 px-4">
                         <strong className="text-[#1C1B1A] block">{student.name || '—'}</strong>
                       </td>
-                      <td className="py-3.5 px-4 text-[#6B6560]">{student.email}</td>
                       <td className="py-3.5 px-4 text-[#6B6560]">{student.phone || '—'}</td>
                       <td className="py-3.5 px-4">
                         <Badge
@@ -258,21 +256,29 @@ export default function AdminStudents() {
                           {beltLabel(student.belt)}
                         </Badge>
                       </td>
+                      <td className="py-3.5 px-4 text-[#6B6560]">
+                        <span>{student.email || '—'}</span>
+                        {student.user && (
+                          <span className="block text-[10px] font-semibold text-[#2E7D4F]">
+                            Com acesso ao site
+                          </span>
+                        )}
+                      </td>
                       <td className="py-3.5 px-4">
                         <Badge
                           className={`text-[10px] font-bold border ${
-                            isActiveStudent
+                            student.active
                               ? 'bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20'
                               : 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20'
                           }`}
                         >
-                          {isActiveStudent ? 'Ativo' : 'Inativo'}
+                          {student.active ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560]">
                         <span className="inline-flex items-center gap-1.5">
                           <Calendar className="w-3 h-3" />
-                          {dateFormatted}
+                          {formatDate(student.created)}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
@@ -284,23 +290,32 @@ export default function AdminStudents() {
                             <Pencil className="w-3.5 h-3.5 inline mr-1" />
                             Editar
                           </button>
+                          {canCreateAccess && (
+                            <button
+                              onClick={() => setAccessStudent(student)}
+                              className="text-[#C1272D] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                              Gerar acesso
+                            </button>
+                          )}
                           <button
                             onClick={() => handleToggleActive(student)}
                             disabled={togglingId === student.id}
                             className={`font-semibold text-xs inline-flex items-center gap-1 disabled:opacity-50 ${
-                              isActiveStudent
+                              student.active
                                 ? 'text-[#6B6560] hover:text-[#C1272D]'
                                 : 'text-[#2E7D4F] hover:underline'
                             }`}
                           >
                             {togglingId === student.id ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : isActiveStudent ? (
+                            ) : student.active ? (
                               <UserX className="w-3.5 h-3.5" />
                             ) : (
                               <UserCheck className="w-3.5 h-3.5" />
                             )}
-                            {isActiveStudent ? 'Desativar' : 'Reativar'}
+                            {student.active ? 'Desativar' : 'Reativar'}
                           </button>
                         </div>
                       </td>
@@ -314,12 +329,7 @@ export default function AdminStudents() {
           {/* Cartões (mobile) */}
           <div className="md:hidden divide-y divide-[#E8E0D5]">
             {filteredStudents.map((student) => {
-              const dateFormatted = new Date(student.created).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-              })
-              const isActiveStudent = student.active !== false
+              const canCreateAccess = !!student.email && !student.user
 
               return (
                 <div
@@ -330,17 +340,22 @@ export default function AdminStudents() {
                     <h4 className="font-semibold text-sm text-[#1C1B1A]">{student.name || '—'}</h4>
                     <Badge
                       className={`text-[10px] font-bold border ${
-                        isActiveStudent
+                        student.active
                           ? 'bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20'
                           : 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20'
                       }`}
                     >
-                      {isActiveStudent ? 'Ativo' : 'Inativo'}
+                      {student.active ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </div>
 
                   <div className="text-xs text-[#6B6560] space-y-1">
-                    <p className="truncate">{student.email}</p>
+                    <p className="truncate">
+                      {student.email || '—'}
+                      {student.user && (
+                        <span className="ml-2 font-semibold text-[#2E7D4F]">· com acesso</span>
+                      )}
+                    </p>
                     {student.phone && (
                       <p className="flex items-center gap-1.5">
                         <Phone className="w-3 h-3" />
@@ -349,7 +364,7 @@ export default function AdminStudents() {
                     )}
                     <p className="flex items-center gap-1.5">
                       <Calendar className="w-3 h-3" />
-                      Cadastro em {dateFormatted}
+                      Cadastro em {formatDate(student.created)}
                     </p>
                   </div>
 
@@ -366,16 +381,24 @@ export default function AdminStudents() {
                       >
                         Editar
                       </button>
+                      {canCreateAccess && (
+                        <button
+                          onClick={() => setAccessStudent(student)}
+                          className="text-[#C1272D] hover:underline font-semibold text-xs"
+                        >
+                          Gerar acesso
+                        </button>
+                      )}
                       <button
                         onClick={() => handleToggleActive(student)}
                         disabled={togglingId === student.id}
                         className={`font-semibold text-xs disabled:opacity-50 ${
-                          isActiveStudent ? 'text-[#6B6560]' : 'text-[#2E7D4F]'
+                          student.active ? 'text-[#6B6560]' : 'text-[#2E7D4F]'
                         }`}
                       >
                         {togglingId === student.id
                           ? '...'
-                          : isActiveStudent
+                          : student.active
                             ? 'Desativar'
                             : 'Reativar'}
                       </button>
@@ -392,22 +415,25 @@ export default function AdminStudents() {
       <CreateStudentDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreated={(student) => setStudents((prev) => [student, ...prev])}
+        onCreated={(student) => setStudents((prev) => upsert(prev, student))}
       />
       <EditStudentDialog
         student={editingStudent}
         onOpenChange={(open) => !open && setEditingStudent(null)}
-        onSaved={(updated) =>
-          setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
-        }
+        onSaved={(updated) => setStudents((prev) => upsert(prev, updated))}
+      />
+      <StudentAccessDialog
+        student={accessStudent}
+        onOpenChange={(open) => !open && setAccessStudent(null)}
+        onAccessCreated={(updated) => setStudents((prev) => upsert(prev, updated))}
       />
 
-      {/* Aviso de proteção (contas de administrador nunca aparecem nem podem ser alteradas aqui) */}
+      {/* Aviso: e-mail e conta de acesso são opcionais */}
       <div className="mt-6 flex items-start gap-2 text-[11px] text-[#6B6560]">
         <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <p>
-          Esta lista mostra apenas alunos. Contas de administradores não aparecem e não podem ser
-          editadas, desativadas ou excluídas por esta tela.
+          O cadastro é um controle interno da academia: o e-mail é opcional. Alunos com e-mail podem
+          receber um acesso ao site pelo botão "Gerar acesso".
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T16:25:09.689Z",
+  "generatedAt": "2026-11-20T16:39:26.103Z",
   "collections": [
     {
       "name": "users",
@@ -374,20 +374,13 @@
       "name": "attendance",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || user = @request.auth.id)",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || user = @request.auth.id)",
+        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || student.user = @request.auth.id)",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || student.user = @request.auth.id)",
         "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
         "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
         "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
       },
       "fields": [
-        {
-          "name": "user",
-          "type": "relation",
-          "required": true,
-          "system": false,
-          "collectionRef": "users"
-        },
         {
           "name": "date",
           "type": "date",
@@ -420,12 +413,95 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "student",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "students"
         }
       ],
       "indexes": [
-        "CREATE UNIQUE INDEX idx_attendance_user_date ON attendance (user, date)",
-        "CREATE INDEX idx_attendance_date ON attendance (date)"
+        "CREATE INDEX idx_attendance_date ON attendance (date)",
+        "CREATE UNIQUE INDEX idx_attendance_student_date ON attendance (student, date) WHERE student != ''"
       ]
+    },
+    {
+      "name": "students",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || user = @request.auth.id)",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || user = @request.auth.id)",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "belt",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "branca",
+            "cinza",
+            "amarela",
+            "laranja",
+            "verde",
+            "azul",
+            "roxa",
+            "marrom",
+            "preta"
+          ]
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_students_user ON students (user) WHERE user != \"\""]
     }
   ]
 }
