@@ -41,6 +41,7 @@ import {
   Search,
   CalendarDays,
   Users,
+  Ban,
 } from 'lucide-react'
 
 const statusMeta: Record<AttendanceStatus, { label: string; icon: React.ReactNode }> = {
@@ -78,6 +79,8 @@ export default function AdminClassDetail() {
   const [addingStudentId, setAddingStudentId] = useState<string | null>(null)
   const [removingLink, setRemovingLink] = useState<ClassStudent | null>(null)
   const [isRemoving, setIsRemoving] = useState(false)
+
+  const isFull = !!turma?.vagas && links.length >= turma.vagas
 
   const loadTurma = useCallback(async () => {
     if (!classId) return
@@ -337,16 +340,29 @@ export default function AdminClassDetail() {
           </div>
           <p className="text-xs text-[#6B6560] mt-1 flex items-center gap-1.5">
             <Users className="w-3.5 h-3.5" />
-            {links.length} aluno(s) matriculado(s) — faça a chamada do dia abaixo.
+            {links.length}/{turma.vagas ?? '—'} vagas ocupadas — faça a chamada do dia abaixo.
           </p>
         </div>
-        <Button
-          onClick={openAddDialog}
-          className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold shrink-0"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Adicionar aluno
-        </Button>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <Button
+            onClick={openAddDialog}
+            disabled={!!turma.vagas && links.length >= turma.vagas}
+            title={
+              !!turma.vagas && links.length >= turma.vagas
+                ? 'Turma lotada — sem vagas disponíveis'
+                : undefined
+            }
+            className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+          >
+            {isFull ? <Ban className="w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+            {isFull ? 'Turma lotada' : 'Adicionar aluno'}
+          </Button>
+          {isFull && (
+            <span className="text-[11px] font-bold text-[#C1272D]">
+              Turma lotada — sem vagas disponíveis
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Seleção de data + resumo */}
@@ -487,6 +503,7 @@ export default function AdminClassDetail() {
             <DialogTitle className="font-serif text-[#1C1B1A]">Adicionar aluno</DialogTitle>
             <DialogDescription className="text-[#6B6560] text-xs">
               Selecione entre os alunos ativos ainda não matriculados em "{turma.name}".
+              {!!turma.vagas && ` Vagas ocupadas: ${links.length}/${turma.vagas}.`}
             </DialogDescription>
           </DialogHeader>
           <div className="relative mb-2">
@@ -507,6 +524,16 @@ export default function AdminClassDetail() {
               <div className="p-6 text-center text-xs text-[#6B6560]">
                 Nenhum aluno ativo disponível para matricular.
               </div>
+            ) : isFull ? (
+              <div className="p-6 text-center">
+                <Ban className="w-6 h-6 text-[#C1272D] mx-auto mb-2" />
+                <p className="text-xs font-bold text-[#C1272D]">
+                  Turma lotada — sem vagas disponíveis
+                </p>
+                <p className="text-[11px] text-[#6B6560] mt-1">
+                  Aumente o número de vagas na edição da turma para matricular mais alunos.
+                </p>
+              </div>
             ) : (
               candidates
                 .filter((s) =>
@@ -524,7 +551,7 @@ export default function AdminClassDetail() {
                     </div>
                     <Button
                       size="sm"
-                      disabled={addingStudentId === s.id}
+                      disabled={addingStudentId === s.id || isFull}
                       onClick={() => handleAdd(s.id)}
                       className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold shrink-0"
                     >

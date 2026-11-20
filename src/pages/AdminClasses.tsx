@@ -45,6 +45,7 @@ interface ClassFormState {
   level: string
   schedule: string
   monthly_fee: string
+  vagas: string
   active: boolean
 }
 
@@ -53,6 +54,7 @@ const emptyForm: ClassFormState = {
   level: '',
   schedule: '',
   monthly_fee: '',
+  vagas: '20',
   active: true,
 }
 
@@ -82,6 +84,7 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               level: editing.level || '',
               schedule: editing.schedule || '',
               monthly_fee: editing.monthly_fee != null ? String(editing.monthly_fee) : '',
+              vagas: String(editing.vagas ?? ''),
               active: editing.active !== false,
             }
           : emptyForm,
@@ -99,6 +102,15 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
       })
       return
     }
+    const vagasNum = Number(form.vagas)
+    if (!Number.isFinite(vagasNum) || vagasNum < 1) {
+      toast({
+        title: 'Vagas inválidas',
+        description: 'Informe o número de vagas da turma (mínimo 1).',
+        variant: 'destructive',
+      })
+      return
+    }
     setSaving(true)
     try {
       const saved = editing
@@ -108,6 +120,7 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
             schedule: form.schedule,
             monthly_fee:
               form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
+            vagas: Math.round(vagasNum),
             active: form.active,
           })
         : await classesService.createClass({
@@ -116,6 +129,7 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
             schedule: form.schedule,
             monthly_fee:
               form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
+            vagas: Math.round(vagasNum),
             active: form.active,
           })
       onSaved(saved)
@@ -190,6 +204,22 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               placeholder="Ex.: 150.00"
               className="h-9 text-sm bg-white border-[#E8E0D5]"
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="class-vagas" className="text-xs font-bold text-[#1C1B1A]">
+              Vagas *
+            </Label>
+            <Input
+              id="class-vagas"
+              value={form.vagas}
+              onChange={(e) => setForm((f) => ({ ...f, vagas: e.target.value }))}
+              inputMode="numeric"
+              placeholder="Ex.: 20"
+              className="h-9 text-sm bg-white border-[#E8E0D5]"
+            />
+            <p className="text-[11px] text-[#6B6560]">
+              Limite de alunos matriculados nesta turma. Matrículas além disso são bloqueadas.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="class-level" className="text-xs font-bold text-[#1C1B1A]">
@@ -469,7 +499,7 @@ export default function AdminClasses() {
                 )}
                 <span className="inline-flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
-                  {memberCounts[c.id] ?? '…'} aluno(s) matriculado(s)
+                  {memberCounts[c.id] ?? '…'}/{c.vagas ?? '—'} vagas ocupadas
                 </span>
               </div>
 

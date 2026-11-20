@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T17:35:05.098Z",
+  "generatedAt": "2026-11-20T17:55:38.544Z",
   "collections": [
     {
       "name": "users",
@@ -570,6 +570,12 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "vagas",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_classes_active ON classes (active)"]
@@ -618,6 +624,59 @@
         "CREATE UNIQUE INDEX idx_class_students_pair ON class_students (class, student)",
         "CREATE INDEX idx_class_students_student ON class_students (student)"
       ]
+    },
+    {
+      "name": "points_entries",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "student",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "students"
+        },
+        {
+          "name": "points",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_points_entries_student ON points_entries (student)"]
     }
   ]
 }

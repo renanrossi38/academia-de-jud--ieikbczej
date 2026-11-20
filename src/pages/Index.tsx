@@ -234,6 +234,12 @@ export default function Index() {
                           </strong>
                         </span>
                       </span>
+                      {!!c.vagas && (
+                        <span className="flex items-center gap-2 text-[#1C1B1A]">
+                          <Users className="w-4 h-4 text-[#C1272D] shrink-0" />
+                          Vagas: <strong className="font-semibold">{c.vagas}</strong>
+                        </span>
+                      )}
                     </div>
 
                     <Link

@@ -7,6 +7,8 @@ export interface CreateClassInput {
   level?: ClassLevel | ''
   schedule?: string
   monthly_fee?: number | null
+  /** Número de vagas da turma (limite de matrículas). */
+  vagas: number
   active?: boolean
 }
 
@@ -15,6 +17,7 @@ export interface UpdateClassInput {
   level?: ClassLevel | ''
   schedule?: string
   monthly_fee?: number | null
+  vagas?: number
   active?: boolean
 }
 
@@ -60,6 +63,7 @@ export const classesService = {
       level: input.level || '',
       schedule: input.schedule?.trim() || '',
       monthly_fee: input.monthly_fee ?? null,
+      vagas: input.vagas,
       active: input.active ?? true,
     })
   },
@@ -93,6 +97,18 @@ export const classesService = {
     return res.totalItems
   },
 
+  /**
+   * Total de matrículas de uma turma, sem contar os alunos cujo cadastro não
+   * existe mais (relação expandida vazia) — usado para o limite de vagas.
+   */
+  async countActiveClassStudents(classId: string): Promise<number> {
+    const links = await pb.collection('class_students').getFullList<ClassStudent>({
+      filter: `class = "${classId}"`,
+      expand: 'student',
+    })
+    return links.filter((l) => !!l.expand?.student).length
+  },
+
   /** Contagem de matrículas por turma (um pedido só, para a listagem de turmas). */
   async countStudentsByClass(): Promise<Record<string, number>> {
     const links = await pb.collection('class_students').getFullList<ClassStudent>({})
@@ -115,12 +131,21 @@ export const classesService = {
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
   },
 
-  /** Matricula um aluno na turma (ignora matrícula duplicada). */
+  /** Matricula um aluno na turma (ignora duplicada; bloqueia quando a turma lotou). */
   async addStudent(classId: string, studentId: string): Promise<void> {
     const existing = await pb.collection('class_students').getList(1, 1, {
       filter: `class = "${classId}" && student = "${studentId}"`,
     })
     if (existing.items.length > 0) return
+
+    const klass = await this.getClass(classId)
+    const vagas = typeof klass.vagas === 'number' ? klass.vagas : 0
+    if (vagas > 0) {
+      const ocupadas = await this.countActiveClassStudents(classId)
+      if (ocupadas >= vagas) {
+        throw new Error(`Turma lotada — sem vagas disponíveis (${ocupadas}/${vagas} ocupadas).`)
+      }
+    }
     await pb.collection('class_students').create({ class: classId, student: studentId })
   },
 

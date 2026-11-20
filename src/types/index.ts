@@ -135,6 +135,8 @@ export interface Class {
   schedule?: string
   /** Mensalidade da turma em R$. */
   monthly_fee?: number
+  /** Número de vagas da turma (limite de matrículas). */
+  vagas: number
   created: string
   updated: string
 }
@@ -162,6 +164,22 @@ export interface Attendance {
   date: string
   status: AttendanceStatus
   notes?: string
+  created: string
+  updated: string
+  expand?: {
+    student?: Student
+  }
+}
+
+/** Lançamento manual de pontos do ranking (competição/evento). */
+export interface PointEntry {
+  collectionId: string
+  collectionName: string
+  id: string
+  student: string
+  points: number
+  description: string
+  date?: string
   created: string
   updated: string
   expand?: {
