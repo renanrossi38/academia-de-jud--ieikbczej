@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
 import { attendanceService, toLocalDateKey } from '@/services/attendance'
-import { Attendance, AttendanceStatus } from '@/types'
+import { studentsService } from '@/services/students'
+import { Attendance, AttendanceStatus, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,13 +41,22 @@ export default function MyAttendance() {
   const navigate = useNavigate()
 
   const [records, setRecords] = useState<Attendance[]>([])
+  const [student, setStudent] = useState<Student | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Presença é vinculada ao registro de aluno (students), não ao usuário.
   const loadHistory = useCallback(async () => {
     if (!user) return
     setIsLoading(true)
     try {
-      const data = await attendanceService.listByUser(user.id)
+      let me: Student | null = null
+      try {
+        me = await studentsService.getByUser(user.id)
+      } catch {
+        me = null
+      }
+      setStudent(me)
+      const data = me ? await attendanceService.listByStudent(me.id) : ([] as Attendance[])
       setRecords(data)
     } catch (err) {
       console.error('Erro ao carregar minha presença:', err)
@@ -63,15 +73,11 @@ export default function MyAttendance() {
     if (user) loadHistory()
   }, [user, authLoading, loadHistory])
 
-  // Tempo real: nova marcação do admin aparece na hora
+  // Tempo real: nova marcação do admin aparece na hora (filtrada pelo student resolvido)
   useRealtime<Attendance>('attendance', (e) => {
-    if (!user) return
+    if (!student || e.action === 'delete') return
     const rec = e.record
-    if (rec.user !== user.id) return
-    if (e.action === 'delete') {
-      setRecords((prev) => prev.filter((r) => r.id !== rec.id))
-      return
-    }
+    if (rec.student !== student.id) return
     setRecords((prev) => {
       const exists = prev.some((r) => r.id === rec.id)
       if (exists) return prev.map((r) => (r.id === rec.id ? rec : r))

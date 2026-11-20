@@ -26,11 +26,15 @@ export interface User {
 
 /** Aluno da academia (controle interno). E-mail e conta de acesso são opcionais. */
 export interface Student {
+  collectionId: string
+  collectionName: string
   id: string
   name: string
   phone?: string
   belt?: Belt | ''
   email?: string
+  address?: string
+  birth_date?: string
   active: boolean
   /** Conta de acesso ao site (users), quando já criada. */
   user?: string

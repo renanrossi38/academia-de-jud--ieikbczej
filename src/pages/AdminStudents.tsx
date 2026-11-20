@@ -7,6 +7,7 @@ import {
   EditStudentDialog,
   beltLabel,
   beltBadgeClass,
+  birthDateLabel,
 } from '@/components/admin/StudentDialogs'
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { studentsService } from '@/services/students'
@@ -15,6 +16,16 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import {
   Loader2,
@@ -24,10 +35,13 @@ import {
   Pencil,
   ShieldAlert,
   Calendar,
+  CalendarDays,
+  MapPin,
   Phone,
   UserCheck,
   UserX,
   KeyRound,
+  Trash2,
 } from 'lucide-react'
 
 /** Insere ou substitui um aluno pelo id (evita duplicar com o realtime). */
@@ -52,6 +66,8 @@ export default function AdminStudents() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [accessStudent, setAccessStudent] = useState<Student | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [deletingStudent, setDeletingStudent] = useState<Student | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadStudents = useCallback(async () => {
     setIsLoading(true)
@@ -137,6 +153,29 @@ export default function AdminStudents() {
       })
     } finally {
       setTogglingId(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingStudent) return
+    setDeleting(true)
+    try {
+      await studentsService.deleteStudent(deletingStudent.id)
+      setStudents((prev) => prev.filter((s) => s.id !== deletingStudent.id))
+      toast({
+        title: 'Aluno excluído',
+        description: `${deletingStudent.name} foi removido definitivamente, junto com o histórico de presença dele.`,
+      })
+      setDeletingStudent(null)
+    } catch (err: any) {
+      console.error('Erro ao excluir aluno:', err)
+      toast({
+        title: 'Erro ao excluir aluno',
+        description: err?.message || 'Falha ao excluir no servidor. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -234,6 +273,8 @@ export default function AdminStudents() {
                   <th className="py-3 px-4">Telefone</th>
                   <th className="py-3 px-4">Faixa</th>
                   <th className="py-3 px-4">E-mail</th>
+                  <th className="py-3 px-4">Nascimento</th>
+                  <th className="py-3 px-4">Endereço</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Cadastro</th>
                   <th className="py-3 px-4 text-right">Ações</th>
@@ -263,6 +304,12 @@ export default function AdminStudents() {
                             Com acesso ao site
                           </span>
                         )}
+                      </td>
+                      <td className="py-3.5 px-4 text-[#6B6560]">
+                        {student.birth_date ? birthDateLabel(student.birth_date) : '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-[#6B6560] max-w-[220px] truncate">
+                        {student.address || '—'}
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge
@@ -317,6 +364,13 @@ export default function AdminStudents() {
                             )}
                             {student.active ? 'Desativar' : 'Reativar'}
                           </button>
+                          <button
+                            onClick={() => setDeletingStudent(student)}
+                            className="text-[#6B6560] hover:text-[#C1272D] font-semibold text-xs inline-flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Excluir
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -366,6 +420,18 @@ export default function AdminStudents() {
                       <Calendar className="w-3 h-3" />
                       Cadastro em {formatDate(student.created)}
                     </p>
+                    {student.birth_date && (
+                      <p className="flex items-center gap-1.5">
+                        <CalendarDays className="w-3 h-3" />
+                        Nascimento: {birthDateLabel(student.birth_date)}
+                      </p>
+                    )}
+                    {student.address && (
+                      <p className="flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3" />
+                        {student.address}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-[#E8E0D5]">
@@ -402,6 +468,12 @@ export default function AdminStudents() {
                             ? 'Desativar'
                             : 'Reativar'}
                       </button>
+                      <button
+                        onClick={() => setDeletingStudent(student)}
+                        className="text-[#6B6560] hover:text-[#C1272D] font-semibold text-xs inline-flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -436,6 +508,47 @@ export default function AdminStudents() {
           receber um acesso ao site pelo botão "Gerar acesso".
         </p>
       </div>
+
+      {/* Confirmação de exclusão definitiva */}
+      <AlertDialog
+        open={!!deletingStudent}
+        onOpenChange={(open) => !open && setDeletingStudent(null)}
+      >
+        <AlertDialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-[#1C1B1A]">
+              Excluir aluno definitivamente?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#6B6560] text-xs leading-relaxed">
+              <strong className="text-[#1C1B1A]">{deletingStudent?.name}</strong> será apagado do
+              sistema, junto com todo o histórico de presença dele. Esta ação não pode ser desfeita
+              — se o aluno só saiu por um período, prefira "Desativar".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#E8E0D5] text-[#1C1B1A] text-xs font-semibold">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+              disabled={deleting}
+              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                'Sim, excluir'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

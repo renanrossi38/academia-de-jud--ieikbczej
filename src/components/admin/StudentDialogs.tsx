@@ -60,9 +60,29 @@ interface StudentFormState {
   email: string
   phone: string
   belt: Belt | ''
+  address: string
+  birth_date: string
 }
 
-const emptyForm: StudentFormState = { name: '', email: '', phone: '', belt: '' }
+const emptyForm: StudentFormState = {
+  name: '',
+  email: '',
+  phone: '',
+  belt: '',
+  address: '',
+  birth_date: '',
+}
+
+/** Data (YYYY-MM-DD) a partir do campo date do PocketBase, sem deslocar o dia. */
+const toBirthDateInput = (value?: string): string => (value ? value.slice(0, 10) : '')
+
+/** Formata a data de nascimento (YYYY-MM-DD) para exibição em pt-BR. */
+export const birthDateLabel = (value?: string): string => {
+  const key = toBirthDateInput(value)
+  if (!key || key.length !== 10) return '—'
+  const [y, m, d] = key.split('-')
+  return `${d}/${m}/${y}`
+}
 
 interface CreateStudentDialogProps {
   open: boolean
@@ -102,6 +122,8 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
         email: form.email,
         phone: form.phone,
         belt: (form.belt || undefined) as Belt | undefined,
+        address: form.address,
+        birth_date: form.birth_date,
       })
       onCreated(student)
       toast({
@@ -181,6 +203,32 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
             </div>
 
             <div className="space-y-1.5">
+              <Label htmlFor="student-address" className="text-xs text-[#1C1B1A] font-medium">
+                Endereço
+              </Label>
+              <Input
+                id="student-address"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                placeholder="Opcional — rua, número, bairro, cidade"
+                className="bg-white border-[#E8E0D5]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="student-birth" className="text-xs text-[#1C1B1A] font-medium">
+                Data de nascimento
+              </Label>
+              <Input
+                id="student-birth"
+                type="date"
+                value={form.birth_date}
+                onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
+                className="bg-white border-[#E8E0D5]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
               <Label htmlFor="student-email" className="text-xs text-[#1C1B1A] font-medium">
                 E-mail
               </Label>
@@ -249,6 +297,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       email: student.email || '',
       phone: student.phone || '',
       belt: (student.belt as Belt) || '',
+      address: student.address || '',
+      birth_date: toBirthDateInput(student.birth_date),
     })
     setActive(student.active !== false)
     setLoadedFor(student.id)
@@ -271,6 +321,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
         email: hasAccount ? student.email || '' : form.email.trim(),
         phone: form.phone.trim(),
         belt: form.belt,
+        address: form.address.trim(),
+        birth_date: form.birth_date,
         active,
       })
 
@@ -346,6 +398,32 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="(11) 90000-0000"
+                className="bg-white border-[#E8E0D5]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-address" className="text-xs text-[#1C1B1A] font-medium">
+                Endereço
+              </Label>
+              <Input
+                id="edit-address"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                placeholder="Opcional — rua, número, bairro, cidade"
+                className="bg-white border-[#E8E0D5]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-birth" className="text-xs text-[#1C1B1A] font-medium">
+                Data de nascimento
+              </Label>
+              <Input
+                id="edit-birth"
+                type="date"
+                value={form.birth_date}
+                onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
                 className="bg-white border-[#E8E0D5]"
               />
             </div>

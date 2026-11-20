@@ -6,6 +6,8 @@ export interface CreateStudentInput {
   email?: string
   phone?: string
   belt?: Belt
+  address?: string
+  birth_date?: string
 }
 
 export interface UpdateStudentInput {
@@ -14,6 +16,8 @@ export interface UpdateStudentInput {
   phone?: string
   belt?: Belt | ''
   active?: boolean
+  address?: string
+  birth_date?: string
 }
 
 // Senha inicial gerada para o aluno (exibida uma única vez)
@@ -65,8 +69,15 @@ export const studentsService = {
       email: input.email?.trim() || '',
       phone: input.phone?.trim() || '',
       belt: input.belt || '',
+      address: input.address?.trim() || '',
+      birth_date: input.birth_date?.trim() || '',
       active: true,
     })
+  },
+
+  /** Exclui o aluno de vez (as presenças dele saem junto, por cascata). */
+  async deleteStudent(id: string): Promise<void> {
+    await pb.collection('students').delete(id)
   },
 
   async updateStudent(id: string, input: UpdateStudentInput): Promise<Student> {
