@@ -1,17 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
 import { beltLabel, beltBadgeClass } from '@/components/admin/StudentDialogs'
+import { classesService, classLevelLabel, classLevelBadgeClass, todayKey } from '@/services/classes'
 import { attendanceService, toLocalDateKey, AttendanceDayInput } from '@/services/attendance'
 import { studentsService } from '@/services/students'
-import { Attendance, AttendanceStatus, Student } from '@/types'
+import { Attendance, AttendanceStatus, Class, ClassStudent, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Save, Check, X, FileWarning, RotateCcw, ShieldAlert, Users } from 'lucide-react'
+import {
+  Loader2,
+  Save,
+  Check,
+  X,
+  FileWarning,
+  RotateCcw,
+  ShieldAlert,
+  Users,
+  Layers,
+  CalendarCheck,
+  Plus,
+} from 'lucide-react'
 
 const STATUS_OPTIONS: { value: AttendanceStatus; label: string; classes: string }[] = [
   {
@@ -43,65 +56,73 @@ const statusBadgeClass: Record<AttendanceStatus, string> = {
   justificado: 'bg-[#FAF6F0] text-[#6B6560] border-[#E8E0D5]',
 }
 
-/** Conta presenças nos últimos 30 dias por aluno (a partir dos registros carregados). */
-function last30PresentCount(attendances: Attendance[], userId: string): number {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 30)
-  return attendances.filter(
-    (a) => a.student === userId && a.status === 'presente' && new Date(a.date) >= cutoff,
-  ).length
-}
-
 export default function AdminAttendance() {
   const { user, isAdmin, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [students, setStudents] = useState<Student[]>([])
-  const [dateKey, setDateKey] = useState<string>(() => toLocalDateKey(new Date()))
+  const [classes, setClasses] = useState<Class[]>([])
+  const [selectedClassId, setSelectedClassId] = useState<string>('')
+  const [members, setMembers] = useState<Student[]>([])
+  const [dateKey, setDateKey] = useState<string>(() => todayKey())
   const [markings, setMarkings] = useState<Record<string, AttendanceStatus>>({})
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
-  const [history, setHistory] = useState<Attendance[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Alunos ativos (a lista de marcação ignora inativos, como nos alunos do painel)
-  const activeStudents = useMemo(() => students.filter((s) => s.active !== false), [students])
+  const selectedClass = useMemo(
+    () => classes.find((c) => c.id === selectedClassId) ?? null,
+    [classes, selectedClassId],
+  )
 
-  const loadData = useCallback(
-    async (key: string) => {
-      setIsLoading(true)
-      try {
-        const [allStudents, dayRecords, last30] = await Promise.all([
-          studentsService.listStudents(),
-          attendanceService.listByDate(key),
-          attendanceService.listRecent(30).catch(() => [] as Attendance[]),
-        ])
+  const loadData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const classList = await classesService.listClasses()
+      setClasses(classList)
 
-        setStudents(allStudents)
-        setHistory(last30)
-
+      if (selectedClassId && classList.some((c) => c.id === selectedClassId)) {
+        const roll = await classesService.listDayRoll(selectedClassId, dateKey)
+        setMembers(roll.students)
+        setMarkings(roll.markings)
+        setSavedIds(new Set(Object.keys(roll.markings)))
+      } else {
+        if (selectedClassId) {
+          // A turma deixou de existir (excluída em outra sessão)
+          setSelectedClassId('')
+          toast({
+            title: 'Turma indisponível',
+            description: 'A turma selecionada não existe mais. Escolha outra na lista.',
+            variant: 'destructive',
+          })
+        }
+        const allStudents = await studentsService.listActive()
+        const dayRecords = await attendanceService.listForDayAndStudents(
+          dateKey,
+          allStudents.map((s) => s.id),
+        )
         const nextMarkings: Record<string, AttendanceStatus> = {}
         const nextSaved = new Set<string>()
         dayRecords.forEach((r) => {
           nextMarkings[r.student] = r.status
           nextSaved.add(r.student)
         })
+        setMembers(allStudents)
         setMarkings(nextMarkings)
         setSavedIds(nextSaved)
-      } catch (err) {
-        console.error('Erro ao carregar presença:', err)
-        toast({
-          title: 'Erro ao carregar presença',
-          description: 'Não foi possível buscar os dados no servidor.',
-          variant: 'destructive',
-        })
-      } finally {
-        setIsLoading(false)
       }
-    },
-    [toast],
-  )
+    } catch (err) {
+      console.error('Erro ao carregar presença:', err)
+      toast({
+        title: 'Erro ao carregar presença',
+        description: 'Não foi possível buscar os dados no servidor.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassId, dateKey, toast])
 
   useEffect(() => {
     if (authLoading) return
@@ -118,9 +139,9 @@ export default function AdminAttendance() {
       navigate('/')
       return
     }
-    loadData(dateKey)
+    loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, authLoading, dateKey])
+  }, [user, isAdmin, authLoading, loadData])
 
   // Tempo real: presenças alteradas por outro admin aparecem na hora
   useRealtime<Attendance>('attendance', (e) => {
@@ -132,12 +153,16 @@ export default function AdminAttendance() {
       setSavedIds((prev) => new Set(prev).add(rec.student))
     }
   })
+  // Tempo real: matrícula de turma mudou — recarrega a chamada da turma aberta
+  useRealtime<ClassStudent>('class_students', (e) => {
+    if (selectedClassId && e.record.class === selectedClassId) loadData()
+  })
 
-  const handleSetStatus = (userId: string, status: AttendanceStatus | null) => {
+  const handleSetStatus = (studentId: string, status: AttendanceStatus | null) => {
     setMarkings((prev) => {
       const next = { ...prev }
-      if (status === null) delete next[userId]
-      else next[userId] = status
+      if (status === null) delete next[studentId]
+      else next[studentId] = status
       return next
     })
   }
@@ -186,7 +211,7 @@ export default function AdminAttendance() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-[#6B6560]">
         <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-        <p className="font-serif text-sm">Carregando presença do dia...</p>
+        <p className="font-serif text-sm">Carregando chamada...</p>
       </div>
     )
   }
@@ -206,23 +231,50 @@ export default function AdminAttendance() {
             Controle de Presença
           </h1>
           <p className="text-xs text-[#6B6560] mt-1">
-            Marque a presença dos alunos ativos em cada dia de treino e acompanhe a frequência.
+            Escolha uma turma para fazer a chamada dela — ou marque alunos sem turma na aba "Geral".
           </p>
         </div>
+        <Link
+          to="/painel/turmas"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C1272D] hover:underline shrink-0"
+        >
+          <Layers className="w-4 h-4" />
+          Gerenciar turmas
+        </Link>
       </div>
 
-      {/* Controles: data + resumo do dia */}
-      <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
-        <div className="flex-1 max-w-xs">
-          <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif">
-            Data do treino
-          </label>
-          <Input
-            type="date"
-            value={dateKey}
-            onChange={(e) => e.target.value && setDateKey(e.target.value)}
-            className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
-          />
+      {/* Controles: turma + data + resumo */}
+      <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-4 sm:p-5 mb-6 flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+          <div>
+            <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif">
+              Turma
+            </label>
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="w-full h-10 text-sm rounded-md border border-[#E8E0D5] bg-white px-3 text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]"
+            >
+              <option value="">Geral — todos os alunos ativos</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.active === false ? ' (inativa)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif">
+              Data do treino
+            </label>
+            <Input
+              type="date"
+              value={dateKey}
+              onChange={(e) => e.target.value && setDateKey(e.target.value)}
+              className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -236,16 +288,34 @@ export default function AdminAttendance() {
             Justificados: {justifiedCount}
           </Badge>
           <Badge className="bg-white text-[#1C1B1A] border-[#E8E0D5] text-xs font-semibold px-3 py-1">
-            Ativos: {activeStudents.length}
+            Na lista: {members.length}
           </Badge>
         </div>
       </div>
+
+      {/* Turma selecionada: atalho para o cadastro dela */}
+      {selectedClass && (
+        <div className="mb-4 flex items-center gap-3 text-xs text-[#6B6560] flex-wrap">
+          <Badge
+            className={`text-[10px] font-bold border ${classLevelBadgeClass(selectedClass.level)}`}
+          >
+            {classLevelLabel(selectedClass.level)}
+          </Badge>
+          <Link
+            to={`/painel/turmas/${selectedClass.id}`}
+            className="inline-flex items-center gap-1 text-[#C1272D] font-semibold hover:underline"
+          >
+            <CalendarCheck className="w-3.5 h-3.5" />
+            Abrir cadastro da turma (matricular/remover alunos)
+          </Link>
+        </div>
+      )}
 
       {/* Ações */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <Button
           onClick={handleSaveAll}
-          disabled={isSaving || activeStudents.length === 0}
+          disabled={isSaving || members.length === 0}
           className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
         >
           {isSaving ? (
@@ -262,7 +332,7 @@ export default function AdminAttendance() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => loadData(dateKey)}
+          onClick={() => loadData()}
           disabled={isSaving}
           className="h-10 border-[#E8E0D5] text-sm font-semibold text-[#1C1B1A] hover:bg-[#FAF6F0]"
         >
@@ -274,14 +344,24 @@ export default function AdminAttendance() {
         </p>
       </div>
 
-      {/* Lista de alunos ativos */}
-      {activeStudents.length === 0 ? (
+      {/* Lista de alunos da chamada */}
+      {members.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#E8E0D5] p-12 text-center max-w-md mx-auto my-6">
           <HankoStamp size="lg" className="mx-auto mb-4" />
-          <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">Nenhum aluno ativo</h3>
-          <p className="text-xs text-[#6B6560] mt-1">
-            Cadastre e ative alunos na Gestão de Alunos para registrar presença.
+          <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
+            {selectedClass ? 'Turma sem alunos' : 'Nenhum aluno ativo'}
+          </h3>
+          <p className="text-xs text-[#6B6560] mt-1 mb-6">
+            {selectedClass
+              ? 'Matricule alunos ativos nesta turma para registrá-los na chamada.'
+              : 'Cadastre e ative alunos na Gestão de Alunos para registrar presença.'}
           </p>
+          <Link to={selectedClass ? `/painel/turmas/${selectedClass.id}` : '/painel/alunos'}>
+            <Button className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold">
+              <Plus className="w-4 h-4 mr-2" />
+              {selectedClass ? 'Matricular alunos' : 'Ir para alunos'}
+            </Button>
+          </Link>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
@@ -293,15 +373,13 @@ export default function AdminAttendance() {
                   <th className="py-3 px-4">Aluno</th>
                   <th className="py-3 px-4">Faixa</th>
                   <th className="py-3 px-4 text-center">Presença do Dia</th>
-                  <th className="py-3 px-4 text-center">Presenças (30 dias)</th>
                   <th className="py-3 px-4 text-center">Status Salvo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E8E0D5]">
-                {activeStudents.map((student) => {
+                {members.map((student) => {
                   const current = markings[student.id]
                   const isSaved = savedIds.has(student.id)
-                  const last30 = last30PresentCount(history, student.id)
                   return (
                     <tr key={student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
                       <td className="py-3.5 px-4">
@@ -333,9 +411,6 @@ export default function AdminAttendance() {
                           ))}
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-center font-mono font-semibold text-[#1C1B1A]">
-                        {last30}
-                      </td>
                       <td className="py-3.5 px-4 text-center">
                         {isSaved && current ? (
                           <Badge
@@ -358,10 +433,9 @@ export default function AdminAttendance() {
 
           {/* Cartões (mobile) */}
           <div className="md:hidden divide-y divide-[#E8E0D5]">
-            {activeStudents.map((student) => {
+            {members.map((student) => {
               const current = markings[student.id]
               const isSaved = savedIds.has(student.id)
-              const last30 = last30PresentCount(history, student.id)
               return (
                 <div key={student.id} className="p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
@@ -395,11 +469,7 @@ export default function AdminAttendance() {
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-[#6B6560]">
-                    <span>
-                      <strong className="text-[#1C1B1A] font-mono">{last30}</strong> presenças em 30
-                      dias
-                    </span>
+                  <div className="flex items-center justify-end text-[11px] text-[#6B6560]">
                     {isSaved && current ? (
                       <Badge
                         className={`text-[10px] font-bold border ${statusBadgeClass[current]}`}
@@ -427,6 +497,10 @@ export default function AdminAttendance() {
         </span>
         <span className="inline-flex items-center gap-1">
           <FileWarning className="w-3 h-3 text-[#6B6560]" /> Falta justificada
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Users className="w-3 h-3 text-[#6B6560]" /> Apenas alunos da turma escolhida aparecem na
+          chamada
         </span>
       </div>
 

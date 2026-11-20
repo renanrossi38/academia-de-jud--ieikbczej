@@ -4,7 +4,8 @@ import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
 import { attendanceService, toLocalDateKey } from '@/services/attendance'
 import { studentsService } from '@/services/students'
-import { Attendance, AttendanceStatus, Student } from '@/types'
+import { Attendance, AttendanceStatus, Class, Student } from '@/types'
+import { classesService } from '@/services/classes'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -42,6 +43,7 @@ export default function MyAttendance() {
 
   const [records, setRecords] = useState<Attendance[]>([])
   const [student, setStudent] = useState<Student | null>(null)
+  const [myClasses, setMyClasses] = useState<Class[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Presença é vinculada ao registro de aluno (students), não ao usuário.
@@ -58,6 +60,7 @@ export default function MyAttendance() {
       setStudent(me)
       const data = me ? await attendanceService.listByStudent(me.id) : ([] as Attendance[])
       setRecords(data)
+      setMyClasses(me ? await classesService.listClassesOfStudent(me.id).catch(() => []) : [])
     } catch (err) {
       console.error('Erro ao carregar minha presença:', err)
     } finally {
@@ -124,6 +127,21 @@ export default function MyAttendance() {
           Acompanhe sua frequência nos treinos do Dojo Nippon. As marcações são feitas pelo
           professor.
         </p>
+        {myClasses.length > 0 && (
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-bold text-[#1C1B1A] uppercase tracking-wider font-serif">
+              Turmas:
+            </span>
+            {myClasses.map((c) => (
+              <Badge
+                key={c.id}
+                className="text-[10px] font-bold border bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20"
+              >
+                {c.name}
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Resumo do mês */}
@@ -222,6 +240,8 @@ export default function MyAttendance() {
                           month: '2-digit',
                           year: 'numeric',
                         })}
+                        {myClasses.length > 0 &&
+                          ` • via ${myClasses.map((c) => c.name).join(', ')}`}
                       </span>
                     </div>
                   </div>

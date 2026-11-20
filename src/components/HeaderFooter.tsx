@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Users,
   CalendarCheck,
+  Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -78,6 +79,20 @@ export const Header: React.FC = () => {
             >
               <CalendarCheck className="w-4 h-4" />
               Minha Presença
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/turmas"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
+                isActive('/painel/turmas') || isActive('/painel/turmas/')
+                  ? 'ring-2 ring-[#C1272D]'
+                  : ''
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              Turmas
             </Link>
           )}
 
@@ -213,6 +228,16 @@ export const Header: React.FC = () => {
               className="block py-2 text-base font-medium text-[#1C1B1A] hover:text-[#C1272D]"
             >
               Meus Pedidos
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/turmas"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-semibold text-[#C1272D]"
+            >
+              Turmas (Admin)
             </Link>
           )}
 

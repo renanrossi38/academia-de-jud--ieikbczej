@@ -55,6 +55,14 @@ export const studentsService = {
     return pb.collection('students').getFullList<Student>({ sort: '-created' })
   },
 
+  /** Alunos ativos (para matrícula em turmas e chamada). */
+  async listActive(): Promise<Student[]> {
+    return pb.collection('students').getFullList<Student>({
+      filter: 'active = true',
+      sort: 'name',
+    })
+  },
+
   /** Aluno vinculado a uma conta de acesso (ou null, ex.: contas de admin). */
   async getByUser(userId: string): Promise<Student | null> {
     const res = await pb

@@ -118,6 +118,36 @@ export interface CartItem {
 
 export type AttendanceStatus = 'presente' | 'ausente' | 'justificado'
 
+/** Nível de uma turma. */
+export type ClassLevel = 'iniciante' | 'intermediario' | 'avancado'
+
+/** Turma de treino (ex.: "Infantil — Ter/Qui"). */
+export interface Class {
+  collectionId: string
+  collectionName: string
+  id: string
+  name: string
+  level?: ClassLevel | ''
+  active: boolean
+  created: string
+  updated: string
+}
+
+/** Matrícula de um aluno em uma turma (junção class ↔ student). */
+export interface ClassStudent {
+  collectionId: string
+  collectionName: string
+  id: string
+  class: string
+  student: string
+  created: string
+  updated: string
+  expand?: {
+    student?: Student
+    class?: Class
+  }
+}
+
 export interface Attendance {
   collectionId: string
   collectionName: string
