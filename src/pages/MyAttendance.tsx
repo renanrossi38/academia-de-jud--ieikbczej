@@ -124,7 +124,7 @@ export default function MyAttendance() {
           Minha Presença
         </h1>
         <p className="text-xs text-[#6B6560] mt-1">
-          Acompanhe sua frequência nos treinos do Dojo Nippon. As marcações são feitas pelo
+          Acompanhe sua frequência nos treinos do Judô Tatsu. As marcações são feitas pelo
           professor.
         </p>
         {myClasses.length > 0 && (
@@ -259,7 +259,7 @@ export default function MyAttendance() {
         <CalendarCheck className="w-3.5 h-3.5 shrink-0" />
         <p>
           Frequência considera presenças e faltas justificadas. Em caso de divergência, fale com o
-          professor na recepção do dojo.
+          professor na recepção da academia.
         </p>
       </div>
     </div>

@@ -37,10 +37,10 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         {/* Brand / Logo */}
         <Link to="/" className="flex items-center gap-3 group">
-          <HankoStamp size="md" kanji="柔" className="group-hover:scale-105 transition-transform" />
+          <HankoStamp size="md" className="group-hover:scale-105 transition-transform" />
           <div className="flex flex-col">
             <span className="font-serif font-bold text-xl sm:text-2xl text-[#1C1B1A] tracking-tight leading-none">
-              Dojo Nippon
+              Judô Tatsu
             </span>
             <span className="text-[10px] tracking-widest text-[#C1272D] uppercase font-semibold font-serif mt-0.5">
               Academia de Judô
@@ -346,8 +346,8 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <HankoStamp size="sm" kanji="柔" />
-              <span className="font-serif font-bold text-lg text-[#1C1B1A]">Dojo Nippon</span>
+              <HankoStamp size="sm" />
+              <span className="font-serif font-bold text-lg text-[#1C1B1A]">Judô Tatsu</span>
             </div>
             <p className="text-sm leading-relaxed text-[#6B6560]">
               Tradição, disciplina e excelência no ensino do judô. Atendendo judocas de todas as
@@ -360,13 +360,13 @@ export const Footer: React.FC = () => {
               Localização & Contato
             </h4>
             <p className="text-sm leading-relaxed">
-              Rua do Dojo, 123 — Bairro Central
+              Rua da Sakura, 123 — Bairro Central
               <br />
               São Paulo - SP — CEP 01234-567
               <br />
               WhatsApp: (11) 98765-4321
               <br />
-              E-mail: contato@dojonippon.com
+              E-mail: contato@judotatsu.com
             </p>
           </div>
 
@@ -388,7 +388,7 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="mt-8 pt-6 border-t border-[#E8E0D5] flex flex-col sm:flex-row items-center justify-between text-xs text-[#6B6560]">
-          <p>© {new Date().getFullYear()} Dojo Nippon. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} Judô Tatsu. Todos os direitos reservados.</p>
           <p className="mt-2 sm:mt-0 font-serif">柔道 — O Caminho Suave</p>
         </div>
       </div>

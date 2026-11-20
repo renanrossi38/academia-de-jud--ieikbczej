@@ -86,7 +86,7 @@ export default function OrderConfirmation() {
           </div>
 
           <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">
-            Dojo Nippon — Registro de Pedido
+            Judô Tatsu — Registro de Pedido
           </span>
           <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
             Pedido Registrado com Sucesso!
@@ -174,7 +174,7 @@ export default function OrderConfirmation() {
             <p className="text-[#6B6560]">
               <strong>Tipo:</strong>{' '}
               {order.delivery_type === 'retirada'
-                ? 'Retirada no balcão do Dojo'
+                ? 'Retirada no balcão da academia'
                 : 'Entrega em domicílio'}
               <br />
               {order.address && (

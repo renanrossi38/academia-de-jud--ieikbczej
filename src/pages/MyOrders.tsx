@@ -101,7 +101,7 @@ export default function MyOrders() {
             Nenhum pedido realizado ainda
           </h3>
           <p className="text-xs text-[#6B6560] mt-1 mb-6">
-            Você ainda não registrou nenhum pedido em nosso dojo.
+            Você ainda não registrou nenhum pedido na nossa academia.
           </p>
           <Link to="/">
             <Button className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs">
@@ -215,11 +215,11 @@ export default function MyOrders() {
                       <div className="p-3 bg-white rounded-xl border border-[#E8E0D5]">
                         <span className="font-semibold text-[#1C1B1A] block mb-1">
                           {order.delivery_type === 'retirada'
-                            ? 'Retirada no Dojo'
+                            ? 'Retirada na academia'
                             : 'Entrega no Endereço'}
                         </span>
                         <p className="text-[#6B6560]">
-                          {order.address || 'Rua do Dojo, 123 — Bairro Central'}
+                          {order.address || 'Rua da Sakura, 123 — Bairro Central'}
                         </p>
                       </div>
 

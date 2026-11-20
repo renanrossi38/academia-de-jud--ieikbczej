@@ -106,7 +106,7 @@ export default function CartCheckout() {
       const fullAddress =
         deliveryType === 'entrega'
           ? `${street}, ${number} - ${neighborhood}, ${city}`
-          : 'Retirada no Dojo (Rua do Dojo, 123 — Bairro Central)'
+          : 'Retirada na academia (Rua da Sakura, 123 — Bairro Central)'
 
       const order = await ordersService.createOrder({
         customer_name: customerName.trim(),
@@ -355,7 +355,7 @@ export default function CartCheckout() {
                     <Building className="w-4 h-4 text-[#C1272D]" />
                     {deliveryType === 'retirada' && <Check className="w-4 h-4 text-[#C1272D]" />}
                   </div>
-                  <strong className="block text-xs text-[#1C1B1A]">Retirar no Dojo</strong>
+                  <strong className="block text-xs text-[#1C1B1A]">Retirar na academia</strong>
                   <span className="text-[11px] text-[#6B6560] block mt-0.5">Sem frete</span>
                 </button>
 
@@ -443,8 +443,8 @@ export default function CartCheckout() {
               </div>
             ) : (
               <div className="p-3 bg-[#FAF6F0] rounded-xl border border-[#E8E0D5] text-xs text-[#6B6560]">
-                📍 <strong>Local de retirada:</strong> Rua do Dojo, 123 — Bairro Central (Horário de
-                treino: Seg a Sex, das 07h às 21h30).
+                📍 <strong>Local de retirada:</strong> Rua da Sakura, 123 — Bairro Central (Horário
+                de treino: Seg a Sex, das 07h às 21h30).
               </div>
             )}
 

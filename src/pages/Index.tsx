@@ -46,7 +46,7 @@ const getCategoryLabel = (cat: ProductCategory): string => {
 
 /** Horário plausível quando a turma não tem o campo preenchido. */
 const scheduleOf = (c: Class): string =>
-  c.schedule && c.schedule.trim() !== '' ? c.schedule : 'Consulte os horários no dojo'
+  c.schedule && c.schedule.trim() !== '' ? c.schedule : 'Consulte os horários na academia'
 
 /** Mensalidade plausível quando a turma não tem o campo preenchido. */
 const feeOf = (c: Class): number =>
@@ -126,16 +126,17 @@ export default function Index() {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative bg-[#C1272D] text-white py-12 sm:py-16 overflow-hidden">
-        {/* Círculos concêntricos sutis (padrão de sol nascente) */}
+        {/* Círculos concêntricos sutis (sol nascente) + pétalas de sakura ao vento */}
         <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full border-4 border-white/10 pointer-events-none" />
         <div className="absolute -right-24 -bottom-24 w-96 h-96 rounded-full border-4 border-white/5 pointer-events-none" />
         <div className="absolute -left-16 -top-16 w-48 h-48 rounded-full border-4 border-white/5 pointer-events-none" />
+        <div className="absolute inset-0 pointer-events-none [background-image:radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.14)_2.5px,transparent_3px),radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.12)_2px,transparent_2.5px),radial-gradient(circle_at_60%_85%,rgba(255,255,255,0.1)_2px,transparent_2.5px)] [background-size:52px_52px,74px_74px,63px_63px]" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="max-w-2xl text-center md:text-left">
             <div className="inline-flex items-center gap-2 bg-white/15 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 border border-white/20">
               <Sparkles className="w-3.5 h-3.5" />
-              Bem-vindo ao Dojo Nippon
+              Bem-vindo ao Judô Tatsu
             </div>
             <h1 className="font-serif font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight">
               Vista-se para o tatame.
@@ -156,8 +157,8 @@ export default function Index() {
 
           <div className="shrink-0 flex items-center justify-center">
             <div className="p-3 rounded-full bg-white/10 backdrop-blur-xs border border-white/20">
-              {/* Selo hanko com o kanji do dojo (componente já existente) */}
-              <HankoStamp size="xl" className="bg-white text-[#C1272D] !ring-white/40" />
+              {/* Logo do dragão do Judô Tatsu (componente já existente) */}
+              <HankoStamp size="xl" className="bg-white !ring-white/40" />
             </div>
           </div>
         </div>
@@ -183,7 +184,7 @@ export default function Index() {
           {classesLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-[#6B6560]">
               <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-              <p className="font-serif text-sm">Carregando turmas do dojo...</p>
+              <p className="font-serif text-sm">Carregando turmas do Judô Tatsu...</p>
             </div>
           ) : classes.length === 0 ? (
             <div className="py-16 text-center bg-white rounded-2xl border border-[#E8E0D5] p-8 max-w-md mx-auto my-6">
@@ -202,10 +203,10 @@ export default function Index() {
                   key={c.id}
                   className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden"
                 >
-                  {/* Faixa superior vermelha com o selo do dojo */}
+                  {/* Faixa superior vermelha com pétalas de sakura */}
                   <div className="relative bg-[#C1272D] h-20 flex items-center justify-center overflow-hidden">
-                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(white_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
-                    <HankoStamp size="md" className="bg-white text-[#C1272D] !ring-white/40" />
+                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_30%,white_2px,transparent_3px),radial-gradient(circle_at_70%_60%,white_1.5px,transparent_2.5px),radial-gradient(circle_at_45%_80%,white_1px,transparent_2px)] [background-size:34px_34px,46px_46px,28px_28px] pointer-events-none" />
+                    <HankoStamp size="md" className="bg-white !ring-white/40" />
                   </div>
 
                   <div className="p-5 flex-1 flex flex-col">
@@ -284,7 +285,7 @@ export default function Index() {
           {productsLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-[#6B6560]">
               <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-              <p className="font-serif text-sm">Carregando catálogo do dojo...</p>
+              <p className="font-serif text-sm">Carregando catálogo da loja...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             /* Vazio */
@@ -378,7 +379,7 @@ export default function Index() {
               Simples & Transparente
             </span>
             <h2 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
-              Como funciona a matrícula e as compras no Dojo
+              Como funciona a matrícula e as compras no Judô Tatsu
             </h2>
             <p className="text-sm text-[#6B6560] mt-2">
               Escolha sua turma, crie sua conta e reserve online. O pagamento é combinado
@@ -416,7 +417,7 @@ export default function Index() {
                 3
               </div>
               <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-1">
-                Retire e pague no dojo
+                Retire e pague na academia
               </h3>
               <p className="text-xs text-[#6B6560] leading-relaxed max-w-xs">
                 O pedido é reservado imediatamente. Pagamento no balcão via Pix, dinheiro ou cartão

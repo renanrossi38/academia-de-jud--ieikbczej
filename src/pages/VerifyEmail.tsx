@@ -56,7 +56,7 @@ export default function VerifyEmail() {
             </div>
             <h2 className="font-serif font-bold text-2xl text-[#1C1B1A]">E-mail Confirmado!</h2>
             <p className="text-xs text-[#6B6560]">
-              Sua conta foi ativada com sucesso. Agora você tem acesso completo ao Dojo Nippon.
+              Sua conta foi ativada com sucesso. Agora você tem acesso completo ao Judô Tatsu.
             </p>
             <Button
               onClick={() => navigate('/')}

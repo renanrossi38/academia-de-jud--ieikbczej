@@ -135,7 +135,7 @@ export default function AdminProducts() {
             <div className="flex items-center gap-2">
               <HankoStamp size="sm" />
               <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">
-                Administração do Dojo
+                Administração do Judô Tatsu
               </span>
             </div>
             <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">Loja</h1>

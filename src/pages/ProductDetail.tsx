@@ -157,7 +157,7 @@ export default function ProductDetail() {
         <div className="space-y-6">
           <div>
             <span className="text-xs font-bold text-[#C1272D] tracking-wider uppercase font-serif">
-              Dojo Nippon Oficial
+              Judô Tatsu Oficial
             </span>
             <h1 className="font-serif font-bold text-2xl sm:text-3xl lg:text-4xl text-[#1C1B1A] mt-1 leading-tight">
               {product.name}
@@ -266,7 +266,7 @@ export default function ProductDetail() {
             <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] flex items-center gap-2.5">
               <MapPin className="w-4 h-4 text-[#C1272D] shrink-0" />
               <div className="text-[11px] leading-tight text-[#1C1B1A]">
-                <strong>Retirada no Dojo</strong>
+                <strong>Retirada na academia</strong>
                 <span className="text-[#6B6560] block">Sem custo de frete</span>
               </div>
             </div>

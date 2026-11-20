@@ -71,9 +71,9 @@ export default function ResetPassword() {
     <div className="min-h-[75vh] flex items-center justify-center px-4 py-12 animate-fade-rise">
       <div className="w-full max-w-md bg-white rounded-3xl border border-[#E8E0D5] p-8 shadow-md">
         <div className="text-center mb-8">
-          <HankoStamp size="lg" kanji="柔" className="mx-auto mb-3" />
+          <HankoStamp size="lg" className="mx-auto mb-3" />
           <span className="text-xs font-bold text-[#C1272D] uppercase tracking-widest font-serif">
-            Dojo Nippon
+            Judô Tatsu
           </span>
           <h1 className="font-serif font-bold text-2xl text-[#1C1B1A] mt-1">Nova Senha</h1>
         </div>

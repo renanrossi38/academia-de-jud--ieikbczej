@@ -1,61 +1,60 @@
 import React from 'react'
+import { cn } from '@/lib/utils'
+import logoUrl from '@/assets/logo-fundo-transp-4b2b2.png'
 
 interface HankoStampProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
-  text?: string
-  kanji?: string
   className?: string
-  variant?: 'solid' | 'outline'
+  /** Mantido por compatibilidade: agora o selo usa o logo oficial do dragão. */
+  kanji?: string
+  /** Texto do tooltip (marca da academia). */
+  text?: string
 }
 
-export const HankoStamp: React.FC<HankoStampProps> = ({
-  size = 'md',
-  text,
-  kanji = '柔',
-  className = '',
-  variant = 'solid',
-}) => {
-  const sizeMap = {
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-12 h-12 text-base',
-    lg: 'w-20 h-20 text-2xl',
-    xl: 'w-28 h-28 text-4xl',
-  }
+const sizeMap = {
+  sm: 'w-8 h-8',
+  md: 'w-10 h-10',
+  lg: 'w-14 h-14',
+  xl: 'w-20 h-20',
+}
 
-  const isSolid = variant === 'solid'
-
+/**
+ * Selo da academia. Com o rebranding passou a exibir o LOGO OFICIAL do
+ * Judô Tatsu (dragão vermelho sobre a estrela/sakura) em vez do kanji 柔.
+ */
+export const HankoStamp: React.FC<HankoStampProps> = ({ size = 'md', className, text }) => {
   return (
     <div
-      className={`relative inline-flex items-center justify-center rounded-full select-none shrink-0 font-serif font-bold transition-transform ${sizeMap[size]} ${
-        isSolid
-          ? 'bg-[#C1272D] text-white shadow-sm ring-2 ring-[#C1272D]/20'
-          : 'border-2 border-[#C1272D] text-[#C1272D] bg-[#F7E4E2]/40'
-      } ${className}`}
-      title={text || 'Dojo Nippon'}
-    >
-      <span className="leading-none pt-0.5">{kanji}</span>
-      {text && (
-        <span className="absolute -bottom-1 text-[9px] uppercase tracking-wider bg-white px-1 border border-[#C1272D] text-[#C1272D] rounded">
-          {text}
-        </span>
+      title={text || 'Judô Tatsu'}
+      className={cn(
+        'flex items-center justify-center rounded-full bg-white ring-1 ring-[#1C1B1A]/10 overflow-hidden',
+        sizeMap[size],
+        className,
       )}
+    >
+      <img
+        src={logoUrl}
+        alt="Judô Tatsu"
+        className="w-full h-full object-contain select-none"
+        draggable={false}
+      />
     </div>
   )
 }
 
 export const ProductPlaceholder: React.FC<{ name?: string; className?: string }> = ({
   name,
-  className = 'h-48',
+  className,
 }) => {
   return (
     <div
-      className={`w-full bg-[#F7E4E2]/50 flex flex-col items-center justify-center border-b border-[#E8E0D5] relative overflow-hidden ${className}`}
+      className={cn(
+        'flex flex-col items-center justify-center gap-2 text-[#6B6560] h-full w-full min-h-[180px] bg-[#FAF6F0]',
+        className,
+      )}
     >
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#C1272D_1px,transparent_1px)] [background-size:12px_12px]" />
-      <HankoStamp size="lg" kanji="柔" className="animate-stamp-pop" />
-      <span className="mt-2 text-xs font-medium text-[#6B6560] tracking-wider uppercase font-serif">
-        {name || 'Dojo Nippon'}
-      </span>
+      <img src={logoUrl} alt="Judô Tatsu" className="w-12 h-12 opacity-60" draggable={false} />
+      <span className="font-serif text-xs opacity-80">{name || 'Produto do Judô Tatsu'}</span>
     </div>
   )
 }

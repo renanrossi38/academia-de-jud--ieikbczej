@@ -171,9 +171,9 @@ export default function AdminOrders() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-2">
-            <HankoStamp size="sm" kanji="柔" />
+            <HankoStamp size="sm" />
             <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">
-              Administração do Dojo
+              Administração do Judô Tatsu
             </span>
           </div>
           <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
@@ -271,7 +271,7 @@ export default function AdminOrders() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="text-[#1C1B1A] font-medium capitalize">
-                          {order.delivery_type === 'retirada' ? 'Retirada no Dojo' : 'Entrega'}
+                          {order.delivery_type === 'retirada' ? 'Retirada na academia' : 'Entrega'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560]">{dateFormatted}</td>
@@ -457,7 +457,7 @@ export default function AdminOrders() {
                 <p>
                   <strong>Recebimento:</strong>{' '}
                   {activeOrder.delivery_type === 'retirada'
-                    ? 'Retirada presencial no dojo'
+                    ? 'Retirada presencial na academia'
                     : 'Entrega em domicílio'}
                 </p>
                 {activeOrder.address && (
