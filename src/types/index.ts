@@ -97,3 +97,20 @@ export interface CartItem {
   unitPrice: number
   quantity: number
 }
+
+export type AttendanceStatus = 'presente' | 'ausente' | 'justificado'
+
+export interface Attendance {
+  collectionId: string
+  collectionName: string
+  id: string
+  user: string
+  date: string
+  status: AttendanceStatus
+  notes?: string
+  created: string
+  updated: string
+  expand?: {
+    user?: User
+  }
+}

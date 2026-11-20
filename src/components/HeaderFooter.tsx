@@ -3,7 +3,17 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import { HankoStamp } from '@/components/HankoStamp'
-import { ShoppingBag, User, LogOut, ClipboardList, Menu, X, ShieldCheck, Users } from 'lucide-react'
+import {
+  ShoppingBag,
+  User,
+  LogOut,
+  ClipboardList,
+  Menu,
+  X,
+  ShieldCheck,
+  Users,
+  CalendarCheck,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export const Header: React.FC = () => {
@@ -56,6 +66,30 @@ export const Header: React.FC = () => {
             >
               <ClipboardList className="w-4 h-4" />
               Meus Pedidos
+            </Link>
+          )}
+
+          {user && (
+            <Link
+              to="/minha-presenca"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1.5 ${
+                isActive('/minha-presenca') ? 'text-[#C1272D] font-semibold' : 'text-[#1C1B1A]'
+              }`}
+            >
+              <CalendarCheck className="w-4 h-4" />
+              Minha Presença
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/presenca"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
+                isActive('/painel/presenca') ? 'ring-2 ring-[#C1272D]' : ''
+              }`}
+            >
+              <CalendarCheck className="w-4 h-4" />
+              Presença
             </Link>
           )}
 
@@ -189,6 +223,26 @@ export const Header: React.FC = () => {
               className="block py-2 text-base font-semibold text-[#C1272D]"
             >
               Alunos (Admin)
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/presenca"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-semibold text-[#C1272D]"
+            >
+              Presença (Admin)
+            </Link>
+          )}
+
+          {user && (
+            <Link
+              to="/minha-presenca"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-medium text-[#1C1B1A] hover:text-[#C1272D]"
+            >
+              Minha Presença
             </Link>
           )}
 

@@ -13,6 +13,8 @@ import OrderConfirmation from './pages/OrderConfirmation'
 import MyOrders from './pages/MyOrders'
 import AdminOrders from './pages/AdminOrders'
 import AdminStudents from './pages/AdminStudents'
+import AdminAttendance from './pages/AdminAttendance'
+import MyAttendance from './pages/MyAttendance'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import VerifyEmail from './pages/VerifyEmail'
@@ -39,6 +41,8 @@ const App = () => (
               <Route path="/meus-pedidos" element={<MyOrders />} />
               <Route path="/painel/pedidos" element={<AdminOrders />} />
               <Route path="/painel/alunos" element={<AdminStudents />} />
+              <Route path="/painel/presenca" element={<AdminAttendance />} />
+              <Route path="/minha-presenca" element={<MyAttendance />} />
               <Route path="/entrar" element={<Login />} />
               <Route path="/criar-conta" element={<Register />} />
               <Route path="/verificar-email" element={<VerifyEmail />} />
