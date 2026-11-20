@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { rankingService } from '@/services/ranking'
+import { toLocalDateKey } from '@/services/attendance'
 import { PointEntry, Student } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +23,14 @@ interface PointEntryDialogProps {
   onSaved: (entry: PointEntry) => void
 }
 
+/** Data em formato brasileiro a partir de "YYYY-MM-DD". */
+const fmtDate = (v?: string) => {
+  if (!v) return ''
+  const [y, m, d] = v.split('-')
+  if (!y || !m || !d) return ''
+  return `${d}/${m}/${y}`
+}
+
 /** Diálogo "Adicionar pontuação": lançamento manual de competição/evento. */
 const PointEntryDialog: React.FC<PointEntryDialogProps> = ({
   open,
@@ -32,12 +41,15 @@ const PointEntryDialog: React.FC<PointEntryDialogProps> = ({
   const { toast } = useToast()
   const [points, setPoints] = useState('')
   const [description, setDescription] = useState('')
+  const [date, setDate] = useState(() => toLocalDateKey(new Date()))
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (open) {
       setPoints('')
       setDescription('')
+      // Lançamento retroativo: a data começa em hoje e pode voltar no tempo.
+      setDate(toLocalDateKey(new Date()))
     }
   }, [open, student])
 
@@ -67,12 +79,15 @@ const PointEntryDialog: React.FC<PointEntryDialogProps> = ({
         studentId: student.id,
         points: pointsNum,
         description: description.trim(),
+        date,
       })
       onSaved(entry)
       onOpenChange(false)
       toast({
         title: 'Pontuação lançada!',
-        description: `${pointsNum} ponto(s) para ${student.name} — "${description.trim()}".`,
+        description: `${pointsNum} ponto(s) para ${student.name} — "${description.trim()}" (${fmtDate(
+          date,
+        )}).`,
       })
     } catch (err: any) {
       console.error('Erro ao lançar pontuação:', err)
@@ -98,6 +113,21 @@ const PointEntryDialog: React.FC<PointEntryDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="entry-date" className="text-xs font-bold text-[#1C1B1A]">
+              Data da competição / evento *
+            </Label>
+            <Input
+              id="entry-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="h-9 text-sm bg-white border-[#E8E0D5]"
+            />
+            <p className="text-[10px] text-[#6B6560]">
+              Padrão: hoje. Pode ser uma data passada (ex.: competição do mês anterior).
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="entry-points" className="text-xs font-bold text-[#1C1B1A]">
               Pontos *

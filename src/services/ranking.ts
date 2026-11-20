@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { toLocalDateKey } from '@/services/attendance'
 import { Attendance, ClassStudent, PointEntry, Student } from '@/types'
 
 /** Linha do ranking: um aluno matriculado em pelo menos uma turma. */
@@ -20,6 +21,8 @@ export interface CreatePointEntryInput {
   studentId: string
   points: number
   description: string
+  /** Data do lançamento (YYYY-MM-DD, permite retroativo). Padrão: hoje. */
+  date?: string
 }
 
 /** Computa as linhas do ranking a partir de matrículas, presenças e lançamentos. */
@@ -70,7 +73,8 @@ function buildRows(
   const rows = Array.from(byStudent.values())
   rows.forEach((r) => {
     r.totalPoints = r.presences + r.manualPoints
-    r.entries.sort((a, b) => (b.created || '').localeCompare(a.created || ''))
+    // Mais recente primeiro, pela data do lançamento (retroativos ordenam pela data escolhida).
+    r.entries.sort((a, b) => (b.date || b.created || '').localeCompare(a.date || a.created || ''))
   })
 
   // Maior pontuação primeiro; empate: ordem alfabética.
@@ -105,11 +109,12 @@ export const rankingService = {
   /** Cria um lançamento manual de pontuação para um aluno. */
   async createEntry(input: CreatePointEntryInput): Promise<PointEntry> {
     const points = Math.max(0, Math.round(input.points))
+    const dateKey = input.date || toLocalDateKey(new Date())
     return pb.collection('points_entries').create<PointEntry>({
       student: input.studentId,
       points,
       description: input.description.trim(),
-      date: new Date().toISOString().replace('T', ' ').slice(0, 19) + '.000Z',
+      date: `${dateKey} 12:00:00.000Z`,
     })
   },
 
