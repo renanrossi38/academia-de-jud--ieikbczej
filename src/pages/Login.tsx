@@ -136,7 +136,7 @@ export default function Login() {
             <span className="font-mono text-[#C1272D]">Skip@Pass</span>
           </p>
           <p>
-            • Aluno: <span className="font-mono text-[#C1272D]">aluno@judotatsu.com</span> /{' '}
+            • Aluno: <span className="font-mono text-[#C1272D]">aluno@dojo.com</span> /{' '}
             <span className="font-mono text-[#C1272D]">Skip@Pass</span>
           </p>
         </div>

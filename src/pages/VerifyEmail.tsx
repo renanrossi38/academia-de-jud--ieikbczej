@@ -62,7 +62,7 @@ export default function VerifyEmail() {
               onClick={() => navigate('/')}
               className="w-full h-11 bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
             >
-              Ir para a Loja do Dojo
+              Ir para a Loja
             </Button>
           </div>
         )}
