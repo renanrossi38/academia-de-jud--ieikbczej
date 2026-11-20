@@ -5,23 +5,13 @@ import { HankoStamp } from '@/components/HankoStamp'
 import { beltLabel, beltBadgeClass } from '@/components/admin/StudentDialogs'
 import { attendanceService, toLocalDateKey, AttendanceDayInput } from '@/services/attendance'
 import { studentsService } from '@/services/students'
-import { Attendance, AttendanceStatus, User } from '@/types'
+import { Attendance, AttendanceStatus, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import {
-  Loader2,
-  CalendarCheck,
-  Save,
-  Check,
-  X,
-  FileWarning,
-  RotateCcw,
-  ShieldAlert,
-  Users,
-} from 'lucide-react'
+import { Loader2, Save, Check, X, FileWarning, RotateCcw, ShieldAlert, Users } from 'lucide-react'
 
 const STATUS_OPTIONS: { value: AttendanceStatus; label: string; classes: string }[] = [
   {
@@ -58,7 +48,7 @@ function last30PresentCount(attendances: Attendance[], userId: string): number {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - 30)
   return attendances.filter(
-    (a) => a.user === userId && a.status === 'presente' && new Date(a.date) >= cutoff,
+    (a) => a.student === userId && a.status === 'presente' && new Date(a.date) >= cutoff,
   ).length
 }
 
@@ -67,7 +57,7 @@ export default function AdminAttendance() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [students, setStudents] = useState<User[]>([])
+  const [students, setStudents] = useState<Student[]>([])
   const [dateKey, setDateKey] = useState<string>(() => toLocalDateKey(new Date()))
   const [markings, setMarkings] = useState<Record<string, AttendanceStatus>>({})
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
@@ -94,8 +84,8 @@ export default function AdminAttendance() {
         const nextMarkings: Record<string, AttendanceStatus> = {}
         const nextSaved = new Set<string>()
         dayRecords.forEach((r) => {
-          nextMarkings[r.user] = r.status
-          nextSaved.add(r.user)
+          nextMarkings[r.student] = r.status
+          nextSaved.add(r.student)
         })
         setMarkings(nextMarkings)
         setSavedIds(nextSaved)
@@ -138,8 +128,8 @@ export default function AdminAttendance() {
       const rec = e.record
       const recKey = toLocalDateKey(new Date(rec.date))
       if (recKey !== dateKey) return
-      setMarkings((prev) => ({ ...prev, [rec.user]: rec.status }))
-      setSavedIds((prev) => new Set(prev).add(rec.user))
+      setMarkings((prev) => ({ ...prev, [rec.student]: rec.status }))
+      setSavedIds((prev) => new Set(prev).add(rec.student))
     }
   })
 
@@ -153,8 +143,8 @@ export default function AdminAttendance() {
   }
 
   const handleSaveAll = async () => {
-    const entries: AttendanceDayInput[] = Object.entries(markings).map(([userId, status]) => ({
-      userId,
+    const entries: AttendanceDayInput[] = Object.entries(markings).map(([studentId, status]) => ({
+      studentId,
       status,
     }))
     if (entries.length === 0) {
