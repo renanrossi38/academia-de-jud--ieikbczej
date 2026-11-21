@@ -37,11 +37,13 @@ export function feeStanding(fees: MonthlyFee[], now: Date = new Date()): FeeStan
   return hasOverdue ? 'inadimplente' : 'em_dia'
 }
 
-/** Data de vencimento padrão: dia 15 do mês de referência ("YYYY-MM"). */
+/** Data de vencimento padrão: dia 15 do mês SEGUINTE ao mês de referência ("YYYY-MM"). */
 export function defaultDueDate(referenceMonth: string): string {
   const [y, m] = (referenceMonth || '').split('-').map(Number)
   if (!y || !m) return ''
-  return `${y}-${String(m).padStart(2, '0')}-15`
+  // Dezembro → janeiro do ano seguinte (Date normaliza mês 12 como jan do y+1).
+  const d = new Date(y, m, 15)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-15`
 }
 
 /** Rótulo do método de pagamento. */
@@ -105,7 +107,7 @@ export const monthlyFeesService = {
     if (existing.items.length > 0) {
       throw new Error(`Já existe uma mensalidade lançada para ${monthLabel(month)}.`)
     }
-    // Vencimento: data escolhida ou, por padrão, dia 15 do mês de referência.
+    // Vencimento: data escolhida ou, por padrão, dia 15 do mês seguinte ao de referência.
     const dueDate = input.dueDate?.trim() || defaultDueDate(month)
     return pb.collection('monthly_fees').create<MonthlyFee>({
       student: input.studentId,

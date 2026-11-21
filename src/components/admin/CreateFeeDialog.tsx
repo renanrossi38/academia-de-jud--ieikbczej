@@ -69,7 +69,7 @@ export default function CreateFeeDialog({
     }
   }, [open, suggestedAmount])
 
-  // Vencimento padrão acompanha o mês escolhido: dia 15 do reference_month.
+  // Vencimento padrão acompanha o mês escolhido: dia 15 do mês seguinte ao reference_month.
   const handleMonthChange = (value: string) => {
     setMonth(value)
     if (value) setDueDate(defaultDueDate(value))
@@ -97,7 +97,8 @@ export default function CreateFeeDialog({
     if (!dueDate) {
       toast({
         title: 'Informe o vencimento',
-        description: 'Defina a data de vencimento (padrão: dia 15 do mês de referência).',
+        description:
+          'Defina a data de vencimento (padrão: dia 15 do mês seguinte ao mês de referência).',
         variant: 'destructive',
       })
       return
@@ -187,7 +188,9 @@ export default function CreateFeeDialog({
                 required
                 className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
               />
-              <p className="text-[10px] text-[#6B6560]">Padrão: dia 15 do mês de referência.</p>
+              <p className="text-[10px] text-[#6B6560]">
+                Padrão: dia 15 do mês seguinte ao mês de referência.
+              </p>
             </div>
           </div>
           <div className="space-y-1.5">
