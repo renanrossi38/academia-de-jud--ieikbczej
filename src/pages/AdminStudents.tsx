@@ -353,9 +353,18 @@ export default function AdminStudents() {
       setNotifyOpen(false)
     } catch (err: any) {
       console.error('Erro ao enviar avisos de atraso:', err)
+      const detail =
+        typeof err?.response === 'object' &&
+        err.response &&
+        typeof err.response.message === 'string'
+          ? err.response.message
+          : err?.message
       toast({
         title: 'Erro ao enviar avisos',
-        description: err?.message || 'Falha no envio dos avisos. Tente novamente.',
+        description:
+          detail && detail !== 'Something went wrong.' && !/failed to|client error/i.test(detail)
+            ? detail
+            : 'Falha no envio dos avisos no servidor. Tente novamente; se persistir, veja os logs do backend.',
         variant: 'destructive',
       })
     } finally {

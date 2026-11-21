@@ -182,6 +182,23 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     pendentesByStudent[sid].push(pendentes[p])
   }
 
+  // Alunos que JÁ têm a mensalidade do mês corrente PAGA (regra do dia 15).
+  // $app.countRecordsByFilter NÃO existe nesta JSVM do PocketBase (crashava a
+  // rota com "Object has no member 'countRecordsByFilter'") — então uma única
+  // consulta com findRecordsByFilter monta o conjunto de alunos pagantes.
+  var pagouMesCorrente = {}
+  var pagasDoMes = $app.findRecordsByFilter(
+    'monthly_fees',
+    'reference_month = {:mes} && status = "pago"',
+    '',
+    0,
+    0,
+    { mes: mesAtual },
+  )
+  for (var pg = 0; pg < pagasDoMes.length; pg++) {
+    pagouMesCorrente[pagasDoMes[pg].getString('student')] = true
+  }
+
   var limite =
     new Date(nowB.getTime() + 3 * 60 * 60 * 1000 - 7 * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -210,14 +227,9 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
       feeParaMes = atrasada
     } else if (depoisDoDia15 && student.getBool('active')) {
       // (b) regra do dia 15: aluno ATIVO sem mensalidade PAGA do mês corrente —
-      // vale mesmo sem nenhum lançamento para o mês. `fees` só tem pendentes,
-      // então a consulta considera a collection completa.
-      var pagasDoMes = $app.countRecordsByFilter(
-        'monthly_fees',
-        'student = {:sid} && reference_month = {:mes} && status = "pago"',
-        { sid: studentId, mes: mesAtual },
-      )
-      if (pagasDoMes === 0) {
+      // vale mesmo sem nenhum lançamento para o mês. O conjunto pagouMesCorrente
+      // (montado acima, uma consulta só) decide.
+      if (!pagouMesCorrente[studentId]) {
         mesCobranca = mesAtual
         feeParaMes = null // sem row pendente: nada a marcar em last_notice_at
       }
@@ -359,286 +371,313 @@ routerAdd(
       throw new ForbiddenError('Somente administradores podem enviar avisos de atraso.')
     }
 
-    var FORCE = true // manual: dispara sempre
-
-    function brasiliaNow() {
-      return new Date(Date.now() - 3 * 60 * 60 * 1000)
-    }
-    function chaveDoMes(b) {
-      return b.getUTCFullYear() + '-' + ('0' + (b.getUTCMonth() + 1)).slice(-2)
-    }
-    function chaveDoDia(b) {
-      return (
-        b.getUTCFullYear() +
-        '-' +
-        ('0' + (b.getUTCMonth() + 1)).slice(-2) +
-        '-' +
-        ('0' + b.getUTCDate()).slice(-2)
-      )
-    }
-
-    var nowB = brasiliaNow()
-    var mesAtual = chaveDoMes(nowB)
-    var depoisDoDia15 = nowB.getUTCDate() >= 15
-
-    function saudacao() {
-      var h = nowB.getUTCHours()
-      if (h < 12) return 'Bom dia'
-      if (h < 18) return 'Boa tarde'
-      return 'Boa noite'
-    }
-
-    function nomeMes(mesChave) {
-      var partes = mesChave.split('-')
-      var nomes = [
-        'janeiro',
-        'fevereiro',
-        'março',
-        'abril',
-        'maio',
-        'junho',
-        'julho',
-        'agosto',
-        'setembro',
-        'outubro',
-        'novembro',
-        'dezembro',
-      ]
-      return nomes[parseInt(partes[1], 10) - 1] + ' de ' + partes[0]
-    }
-
-    function aplicarPlaceholders(texto, nomeAluno, mesCobranca) {
-      return texto
-        .split('{saudacao}')
-        .join(saudacao())
-        .split('{aluno}')
-        .join(nomeAluno || 'aluno(a)')
-        .split('{mes}')
-        .join(nomeMes(mesCobranca))
-    }
-
-    function emailHtml(texto) {
-      return (
-        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222;line-height:1.6;">' +
-        texto +
-        '</div>'
-      )
-    }
-
-    var DEFAULT_TPL =
-      '<p>{saudacao}, {aluno}!</p>' +
-      '<p>Verificamos em nosso sistema que a sua mensalidade de <strong>{mes}</strong> ' +
-      'está pendente de pagamento na academia Judô Tatsu.</p>' +
-      '<p>Se o pagamento já foi realizado, desconsidere esta mensagem — o sistema ' +
-      'pode levar algumas horas para processar o lançamento.</p>' +
-      '<p>Caso contrário, pedimos que regularize o pagamento o quanto antes para ' +
-      'manter o seu acesso às aulas em dia.</p>' +
-      '<p>Qualquer dúvida, fale conosco.</p>' +
-      '<p style="margin-top:24px;">Atenciosamente,<br /><strong>Judô Tatsu</strong></p>'
-    var DEFAULT_SUBJECT = 'Judô Tatsu — Mensalidade pendente ({mes})'
-
-    var template = DEFAULT_TPL
-    var subject = DEFAULT_SUBJECT
+    // Blindagem: um erro não tratado nesta callback virava um 500 opaco no painel
+    // ("something went wrong"). Aqui qualquer falha volta como JSON com detalhe.
     try {
-      var settings = $app.findRecordsByFilter(
-        'app_settings',
-        'key = "fee_overdue_template"',
-        '',
-        1,
-        0,
-      )
-      if (settings.length > 0 && settings[0].getString('value')) {
-        template = settings[0].getString('value')
-      }
-      var subjects = $app.findRecordsByFilter(
-        'app_settings',
-        'key = "fee_overdue_subject"',
-        '',
-        1,
-        0,
-      )
-      if (subjects.length > 0 && subjects[0].getString('value')) {
-        subject = subjects[0].getString('value')
-      }
-    } catch (err) {
-      console.log(
-        '[notify-overdue manual] app_settings indisponível, usando template padrão: ' + err,
-      )
+      return processNotify(e)
+    } catch (errFatal) {
+      console.log('[notify-overdue manual] ERRO FATAL: ' + errFatal)
+      return e.json(500, {
+        message: 'Erro ao enviar avisos de atraso: ' + errFatal,
+      })
     }
 
-    function estaAtrasada(fee) {
-      if (fee.getString('reference_month') < mesAtual) return true
-      if (fee.getString('reference_month') > mesAtual) return false
-      var due = fee.getDateTime('due_date')
-      if (!due) return false
-      var dueDay = due.string().split(' ')[0]
-      return dueDay < chaveDoDia(nowB)
-    }
+    function processNotify(e) {
+      var FORCE = true // manual: dispara sempre
 
-    var alvo = []
-    var alunos = $app.findRecordsByFilter('students', '', '', 0, 0)
-    var pendentes = $app.findRecordsByFilter(
-      'monthly_fees',
-      'status = "pendente"',
-      'student,-reference_month',
-      0,
-      0,
-    )
-    var pendentesByStudent = {}
-    for (var p = 0; p < pendentes.length; p++) {
-      var sid = pendentes[p].getString('student')
-      if (!pendentesByStudent[sid]) pendentesByStudent[sid] = []
-      pendentesByStudent[sid].push(pendentes[p])
-    }
-
-    for (var i = 0; i < alunos.length; i++) {
-      var student = alunos[i]
-      var studentId = student.id
-      var fees = pendentesByStudent[studentId] || []
-
-      var mesCobranca = null
-      var feeParaMes = null
-      var atrasada = null
-
-      for (var j = 0; j < fees.length; j++) {
-        if (estaAtrasada(fees[j])) {
-          atrasada = fees[j]
-          break
-        }
+      function brasiliaNow() {
+        return new Date(Date.now() - 3 * 60 * 60 * 1000)
       }
-
-      if (atrasada) {
-        mesCobranca = atrasada.getString('reference_month')
-        feeParaMes = atrasada
-      } else if (depoisDoDia15 && student.getBool('active')) {
-        var pagasDoMes = $app.countRecordsByFilter(
-          'monthly_fees',
-          'student = {:sid} && reference_month = {:mes} && status = "pago"',
-          { sid: studentId, mes: mesAtual },
+      function chaveDoMes(b) {
+        return b.getUTCFullYear() + '-' + ('0' + (b.getUTCMonth() + 1)).slice(-2)
+      }
+      function chaveDoDia(b) {
+        return (
+          b.getUTCFullYear() +
+          '-' +
+          ('0' + (b.getUTCMonth() + 1)).slice(-2) +
+          '-' +
+          ('0' + b.getUTCDate()).slice(-2)
         )
-        if (pagasDoMes === 0) {
-          mesCobranca = mesAtual
-          feeParaMes = null
-        }
       }
 
-      if (!mesCobranca) continue
+      var nowB = brasiliaNow()
+      var mesAtual = chaveDoMes(nowB)
+      var depoisDoDia15 = nowB.getUTCDate() >= 15
 
-      alvo.push({
-        student: student,
-        studentId: studentId,
-        mesCobranca: mesCobranca,
-        feeParaMes: feeParaMes,
-      })
-    }
-
-    // ---- Envio (um e-mail por aluno) ----
-    var mailClient = $app.newMailClient()
-    var sent = 0
-    var skippedNoEmail = 0
-    var failed = 0
-    var sentNames = []
-    var failedNames = []
-    var skippedNoEmailNames = []
-
-    for (var i = 0; i < alvo.length; i++) {
-      var aluno = alvo[i]
-      var student = aluno.student
-      var email = (student.getString('email') || '').trim()
-      if (!email) {
-        skippedNoEmail++
-        skippedNoEmailNames.push(student.getString('name') || aluno.studentId)
-        continue
+      function saudacao() {
+        var h = nowB.getUTCHours()
+        if (h < 12) return 'Bom dia'
+        if (h < 18) return 'Boa tarde'
+        return 'Boa noite'
       }
 
-      var texto = aplicarPlaceholders(template, student.getString('name'), aluno.mesCobranca)
-      var mensagem = new MailerMessage({
-        from: {
-          address: $app.settings().meta.senderAddress,
-          name: $app.settings().meta.senderName || 'Judô Tatsu',
-        },
-        to: [{ address: email }],
-        subject: subject.split('{mes}').join(nomeMes(aluno.mesCobranca)),
-        html: emailHtml(texto),
-      })
+      function nomeMes(mesChave) {
+        var partes = mesChave.split('-')
+        var nomes = [
+          'janeiro',
+          'fevereiro',
+          'março',
+          'abril',
+          'maio',
+          'junho',
+          'julho',
+          'agosto',
+          'setembro',
+          'outubro',
+          'novembro',
+          'dezembro',
+        ]
+        return nomes[parseInt(partes[1], 10) - 1] + ' de ' + partes[0]
+      }
 
-      var enviado = true
+      function aplicarPlaceholders(texto, nomeAluno, mesCobranca) {
+        return texto
+          .split('{saudacao}')
+          .join(saudacao())
+          .split('{aluno}')
+          .join(nomeAluno || 'aluno(a)')
+          .split('{mes}')
+          .join(nomeMes(mesCobranca))
+      }
+
+      function emailHtml(texto) {
+        return (
+          '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#222;line-height:1.6;">' +
+          texto +
+          '</div>'
+        )
+      }
+
+      var DEFAULT_TPL =
+        '<p>{saudacao}, {aluno}!</p>' +
+        '<p>Verificamos em nosso sistema que a sua mensalidade de <strong>{mes}</strong> ' +
+        'está pendente de pagamento na academia Judô Tatsu.</p>' +
+        '<p>Se o pagamento já foi realizado, desconsidere esta mensagem — o sistema ' +
+        'pode levar algumas horas para processar o lançamento.</p>' +
+        '<p>Caso contrário, pedimos que regularize o pagamento o quanto antes para ' +
+        'manter o seu acesso às aulas em dia.</p>' +
+        '<p>Qualquer dúvida, fale conosco.</p>' +
+        '<p style="margin-top:24px;">Atenciosamente,<br /><strong>Judô Tatsu</strong></p>'
+      var DEFAULT_SUBJECT = 'Judô Tatsu — Mensalidade pendente ({mes})'
+
+      var template = DEFAULT_TPL
+      var subject = DEFAULT_SUBJECT
       try {
-        mailClient.send(mensagem)
-        sent++
-        sentNames.push(student.getString('name') || aluno.studentId)
+        var settings = $app.findRecordsByFilter(
+          'app_settings',
+          'key = "fee_overdue_template"',
+          '',
+          1,
+          0,
+        )
+        if (settings.length > 0 && settings[0].getString('value')) {
+          template = settings[0].getString('value')
+        }
+        var subjects = $app.findRecordsByFilter(
+          'app_settings',
+          'key = "fee_overdue_subject"',
+          '',
+          1,
+          0,
+        )
+        if (subjects.length > 0 && subjects[0].getString('value')) {
+          subject = subjects[0].getString('value')
+        }
       } catch (err) {
-        enviado = false
-        failed++
-        failedNames.push(student.getString('name') || aluno.studentId)
-        console.log('[notify-overdue manual] falha ao enviar para ' + email + ': ' + err)
+        console.log(
+          '[notify-overdue manual] app_settings indisponível, usando template padrão: ' + err,
+        )
       }
 
-      if (enviado) {
-        var agoraIso = new Date().toISOString().replace('T', ' ').substring(0, 19) + '.000Z'
-        if (aluno.feeParaMes) {
-          try {
-            aluno.feeParaMes.set('last_notice_at', agoraIso)
-            $app.save(aluno.feeParaMes)
-          } catch (errSave) {
-            console.log(
-              'Falha ao registrar last_notice_at da mensalidade ' +
-                aluno.feeParaMes.id +
-                ': ' +
-                errSave,
-            )
+      function estaAtrasada(fee) {
+        if (fee.getString('reference_month') < mesAtual) return true
+        if (fee.getString('reference_month') > mesAtual) return false
+        var due = fee.getDateTime('due_date')
+        if (!due) return false
+        var dueDay = due.string().split(' ')[0]
+        return dueDay < chaveDoDia(nowB)
+      }
+
+      var alvo = []
+      var alunos = $app.findRecordsByFilter('students', '', '', 0, 0)
+      var pendentes = $app.findRecordsByFilter(
+        'monthly_fees',
+        'status = "pendente"',
+        'student,-reference_month',
+        0,
+        0,
+      )
+      var pendentesByStudent = {}
+      for (var p = 0; p < pendentes.length; p++) {
+        var sid = pendentes[p].getString('student')
+        if (!pendentesByStudent[sid]) pendentesByStudent[sid] = []
+        pendentesByStudent[sid].push(pendentes[p])
+      }
+
+      // Alunos que JÁ têm a mensalidade do mês corrente PAGA (regra do dia 15).
+      // $app.countRecordsByFilter NÃO existe nesta JSVM do PocketBase (crashava a
+      // rota com "Object has no member 'countRecordsByFilter'") — então uma única
+      // consulta com findRecordsByFilter monta o conjunto de alunos pagantes.
+      var pagouMesCorrente = {}
+      var pagasDoMes = $app.findRecordsByFilter(
+        'monthly_fees',
+        'reference_month = {:mes} && status = "pago"',
+        '',
+        0,
+        0,
+        { mes: mesAtual },
+      )
+      for (var pg = 0; pg < pagasDoMes.length; pg++) {
+        pagouMesCorrente[pagasDoMes[pg].getString('student')] = true
+      }
+
+      for (var i = 0; i < alunos.length; i++) {
+        var student = alunos[i]
+        var studentId = student.id
+        var fees = pendentesByStudent[studentId] || []
+
+        var mesCobranca = null
+        var feeParaMes = null
+        var atrasada = null
+
+        for (var j = 0; j < fees.length; j++) {
+          if (estaAtrasada(fees[j])) {
+            atrasada = fees[j]
+            break
           }
-        } else {
-          var doAluno = $app.findRecordsByFilter('monthly_fees', 'student = {:sid}', '', 0, 0, {
-            sid: aluno.studentId,
-          })
-          for (var k = 0; k < doAluno.length; k++) {
+        }
+
+        if (atrasada) {
+          mesCobranca = atrasada.getString('reference_month')
+          feeParaMes = atrasada
+        } else if (depoisDoDia15 && student.getBool('active')) {
+          if (!pagouMesCorrente[studentId]) {
+            mesCobranca = mesAtual
+            feeParaMes = null
+          }
+        }
+
+        if (!mesCobranca) continue
+
+        alvo.push({
+          student: student,
+          studentId: studentId,
+          mesCobranca: mesCobranca,
+          feeParaMes: feeParaMes,
+        })
+      }
+
+      // ---- Envio (um e-mail por aluno) ----
+      var mailClient = $app.newMailClient()
+      var sent = 0
+      var skippedNoEmail = 0
+      var failed = 0
+      var sentNames = []
+      var failedNames = []
+      var skippedNoEmailNames = []
+
+      for (var i = 0; i < alvo.length; i++) {
+        var aluno = alvo[i]
+        var student = aluno.student
+        var email = (student.getString('email') || '').trim()
+        if (!email) {
+          skippedNoEmail++
+          skippedNoEmailNames.push(student.getString('name') || aluno.studentId)
+          continue
+        }
+
+        var texto = aplicarPlaceholders(template, student.getString('name'), aluno.mesCobranca)
+        var mensagem = new MailerMessage({
+          from: {
+            address: $app.settings().meta.senderAddress,
+            name: $app.settings().meta.senderName || 'Judô Tatsu',
+          },
+          to: [{ address: email }],
+          subject: subject.split('{mes}').join(nomeMes(aluno.mesCobranca)),
+          html: emailHtml(texto),
+        })
+
+        var enviado = true
+        try {
+          mailClient.send(mensagem)
+          sent++
+          sentNames.push(student.getString('name') || aluno.studentId)
+        } catch (err) {
+          enviado = false
+          failed++
+          failedNames.push(student.getString('name') || aluno.studentId)
+          console.log('[notify-overdue manual] falha ao enviar para ' + email + ': ' + err)
+        }
+
+        if (enviado) {
+          var agoraIso = new Date().toISOString().replace('T', ' ').substring(0, 19) + '.000Z'
+          if (aluno.feeParaMes) {
             try {
-              doAluno[k].set('last_notice_at', agoraIso)
-              $app.save(doAluno[k])
-            } catch (errSave2) {
+              aluno.feeParaMes.set('last_notice_at', agoraIso)
+              $app.save(aluno.feeParaMes)
+            } catch (errSave) {
               console.log(
                 'Falha ao registrar last_notice_at da mensalidade ' +
-                  doAluno[k].id +
+                  aluno.feeParaMes.id +
                   ': ' +
-                  errSave2,
+                  errSave,
               )
+            }
+          } else {
+            var doAluno = $app.findRecordsByFilter('monthly_fees', 'student = {:sid}', '', 0, 0, {
+              sid: aluno.studentId,
+            })
+            for (var k = 0; k < doAluno.length; k++) {
+              try {
+                doAluno[k].set('last_notice_at', agoraIso)
+                $app.save(doAluno[k])
+              } catch (errSave2) {
+                console.log(
+                  'Falha ao registrar last_notice_at da mensalidade ' +
+                    doAluno[k].id +
+                    ': ' +
+                    errSave2,
+                )
+              }
             }
           }
         }
       }
+
+      console.log(
+        '[notify-overdue manual] mes=' +
+          mesAtual +
+          ' depois_do_dia15=' +
+          depoisDoDia15 +
+          ' enviados=' +
+          sent +
+          ' sem_email=' +
+          skippedNoEmail +
+          ' falhas=' +
+          failed,
+      )
+      if (sent + skippedNoEmail + failed === 0) {
+        console.log(
+          '[notify-overdue manual] nenhum destinatário: mes_brasilia=' +
+            mesAtual +
+            ' dia_brasilia=' +
+            chaveDoDia(nowB) +
+            ' depois_do_dia15=' +
+            depoisDoDia15,
+        )
+      }
+      return e.json(200, {
+        sent: sent,
+        skippedNoEmail: skippedNoEmail,
+        failed: failed,
+        sentNames: sentNames,
+        skippedNoEmailNames: skippedNoEmailNames,
+        failedNames: failedNames,
+      })
     }
 
-    console.log(
-      '[notify-overdue manual] mes=' +
-        mesAtual +
-        ' depois_do_dia15=' +
-        depoisDoDia15 +
-        ' enviados=' +
-        sent +
-        ' sem_email=' +
-        skippedNoEmail +
-        ' falhas=' +
-        failed,
-    )
-    if (sent + skippedNoEmail + failed === 0) {
-      console.log(
-        '[notify-overdue manual] nenhum destinatário: mes_brasilia=' +
-          mesAtual +
-          ' dia_brasilia=' +
-          chaveDoDia(nowB) +
-          ' depois_do_dia15=' +
-          depoisDoDia15,
-      )
-    }
-    return e.json(200, {
-      sent: sent,
-      skippedNoEmail: skippedNoEmail,
-      failed: failed,
-      sentNames: sentNames,
-      skippedNoEmailNames: skippedNoEmailNames,
-      failedNames: failedNames,
-    })
+    return processNotify(e)
   },
   $apis.requireAuth(),
 )
