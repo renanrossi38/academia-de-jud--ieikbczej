@@ -12,7 +12,8 @@ import {
 } from '@/components/admin/StudentDialogs'
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { studentsService } from '@/services/students'
-import { Student } from '@/types'
+import { feeStanding, monthlyFeesService } from '@/services/monthlyFees'
+import { MonthlyFee, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -49,6 +50,7 @@ import {
   KeyRound,
   Trash2,
   Users,
+  Wallet,
 } from 'lucide-react'
 
 /** Insere ou substitui um aluno pelo id (evita duplicar com o realtime). */
@@ -66,6 +68,7 @@ export default function AdminStudents() {
   const { toast } = useToast()
 
   const [students, setStudents] = useState<Student[]>([])
+  const [feesByStudent, setFeesByStudent] = useState<Record<string, MonthlyFee[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -121,6 +124,75 @@ export default function AdminStudents() {
     }
     setStudents((prev) => upsert(prev, e.record))
   })
+
+  // Mensalidades: carregadas uma única vez e mapeadas por aluno (badge de situação)
+  useEffect(() => {
+    if (authLoading || !user || !isAdmin) return
+    let cancelled = false
+    monthlyFeesService
+      .listAll()
+      .then((fees) => {
+        if (cancelled) return
+        const map: Record<string, MonthlyFee[]> = {}
+        for (const fee of fees) {
+          ;(map[fee.student] ||= []).push(fee)
+        }
+        setFeesByStudent(map)
+      })
+      .catch((err) => {
+        console.error('Erro ao carregar mensalidades:', err)
+        // Silencioso: a listagem de alunos funciona mesmo sem o módulo de mensalidades
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, authLoading])
+
+  // Tempo real nas mensalidades: badge atualiza ao marcar pagamento na ficha do aluno
+  useRealtime<MonthlyFee>('monthly_fees', (e) => {
+    const fee = e.record
+    setFeesByStudent((prev) => {
+      if (e.action === 'delete') {
+        const next: Record<string, MonthlyFee[]> = {}
+        for (const sid of Object.keys(prev)) {
+          next[sid] = (prev[sid] || []).filter((f) => f.id !== fee.id)
+        }
+        return next
+      }
+      const list = (prev[fee.student] || []).filter((f) => f.id !== fee.id)
+      return { ...prev, [fee.student]: [fee, ...list] }
+    })
+  })
+
+  const delinquentCount = useMemo(
+    () =>
+      Object.keys(feesByStudent).filter(
+        (sid) =>
+          feesByStudent[sid].length > 0 && feeStanding(feesByStudent[sid]) === 'inadimplente',
+      ).length,
+    [feesByStudent],
+  )
+
+  const feeBadgeFor = (studentId: string): { label: string; className: string } => {
+    const fees = feesByStudent[studentId]
+    if (!fees || fees.length === 0) {
+      return {
+        label: 'sem lançamentos',
+        className: 'bg-[#F5F2EC] text-[#6B6560] border-[#E8E0D5]',
+      }
+    }
+    if (feeStanding(fees) === 'inadimplente') {
+      return {
+        label: 'Inadimplente',
+        className: 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20',
+      }
+    }
+    return {
+      label: 'Em dia',
+      className: 'bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20',
+    }
+  }
 
   const filteredStudents = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -227,6 +299,12 @@ export default function AdminStudents() {
             icon: <UserX className="w-4 h-4" />,
             tone: 'red',
           },
+          {
+            label: 'Inadimplentes',
+            value: delinquentCount,
+            icon: <Calendar className="w-4 h-4" />,
+            tone: delinquentCount > 0 ? 'red' : 'neutral',
+          },
         ]}
       />
 
@@ -287,6 +365,7 @@ export default function AdminStudents() {
                   <th className="py-3 px-4">Nascimento</th>
                   <th className="py-3 px-4">Endereço</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Mensalidade</th>
                   <th className="py-3 px-4">Cadastro</th>
                   <th className="py-3 px-4 text-right">Ações</th>
                 </tr>
@@ -337,6 +416,13 @@ export default function AdminStudents() {
                           }`}
                         >
                           {student.active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Badge
+                          className={`text-[10px] font-bold border ${feeBadgeFor(student.id).className}`}
+                        >
+                          {feeBadgeFor(student.id).label}
                         </Badge>
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560]">
@@ -444,6 +530,15 @@ export default function AdminStudents() {
                     <p className="flex items-center gap-1.5">
                       <Calendar className="w-3 h-3" />
                       Cadastro em {formatDate(student.created)}
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <Wallet className="w-3 h-3" />
+                      Mensalidade:
+                      <Badge
+                        className={`text-[10px] font-bold border ${feeBadgeFor(student.id).className}`}
+                      >
+                        {feeBadgeFor(student.id).label}
+                      </Badge>
                     </p>
                     {student.birth_date && (
                       <p className="flex items-center gap-1.5">
