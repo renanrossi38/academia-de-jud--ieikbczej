@@ -188,6 +188,30 @@ export interface RankingArchiveRow {
   updated: string
 }
 
+/** Status de uma mensalidade lançada (primeira versão: sem pagamento online). */
+export type MonthlyFeeStatus = 'pago' | 'pendente'
+
+/** Mensalidade lançada para um aluno em um mês de referência ("YYYY-MM"). */
+export interface MonthlyFee {
+  collectionId: string
+  collectionName: string
+  id: string
+  student: string
+  /** Mês de referência no formato "YYYY-MM". */
+  reference_month: string
+  /** Valor em R$. */
+  amount: number
+  status: MonthlyFeeStatus
+  /** Quando foi marcado como pago (presente só quando status = "pago"). */
+  paid_at?: string
+  notes?: string
+  created: string
+  updated: string
+  expand?: {
+    student?: Student
+  }
+}
+
 /** Lançamento manual de pontos do ranking (competição/evento). */
 export interface PointEntry {
   /** Ano a que o lançamento pertence (pela data da competição/evento). */

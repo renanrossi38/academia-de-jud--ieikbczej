@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-21T14:14:02.204Z",
+  "generatedAt": "2026-11-21T14:30:22.566Z",
   "collections": [
     {
       "name": "users",
@@ -762,6 +762,74 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_ranking_archives_year ON ranking_archives (year)"]
+    },
+    {
+      "name": "monthly_fees",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\" && @request.auth.role = \"admin\"",
+        "view": "@request.auth.id != \"\" && @request.auth.role = \"admin\"",
+        "create": "@request.auth.id != \"\" && @request.auth.role = \"admin\"",
+        "update": "@request.auth.id != \"\" && @request.auth.role = \"admin\"",
+        "delete": "@request.auth.id != \"\" && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "student",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "students"
+        },
+        {
+          "name": "reference_month",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pago", "pendente"]
+        },
+        {
+          "name": "paid_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_monthly_fees_student_month ON monthly_fees (student, reference_month)"
+      ]
     }
   ]
 }

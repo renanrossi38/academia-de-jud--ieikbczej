@@ -28,6 +28,7 @@ import {
   Medal,
   Archive,
   History,
+  Info,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -580,131 +581,141 @@ export default function AdminRanking() {
         </>
       )}
 
-      {/* Histórico: rankings de anos anteriores */}
-      {archiveYears.length > 0 && (
-        <div className="mt-10">
-          <h2 className="font-serif font-bold text-lg text-[#1C1B1A] mb-1 flex items-center gap-2">
-            <History className="w-5 h-5 text-[#C1272D]" />
-            Rankings arquivados
-          </h2>
-          <p className="text-xs text-[#6B6560] mb-3">
-            O ranking final de cada ano, do 1º ao último lugar — consultável a qualquer momento.
-          </p>
+      {/* Histórico: rankings de anos anteriores — seção sempre visível */}
+      <div className="mt-10">
+        <h2 className="font-serif font-bold text-lg text-[#1C1B1A] mb-1 flex items-center gap-2">
+          <History className="w-5 h-5 text-[#C1272D]" />
+          Rankings arquivados
+        </h2>
+        <p className="text-xs text-[#6B6560] mb-3">
+          O ranking final de cada ano, do 1º ao último lugar — consultável a qualquer momento.
+        </p>
 
-          <div className="flex items-center gap-2 flex-wrap mb-4">
-            {archiveYears.map((y) => (
-              <button
-                key={y}
-                type="button"
-                onClick={() => setSelectedArchive(selectedArchive === y ? null : y)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-                  selectedArchive === y
-                    ? 'bg-[#C1272D] text-white border-[#C1272D]'
-                    : 'bg-white text-[#6B6560] border-[#E8E0D5] hover:border-[#C1272D]/40 hover:text-[#C1272D]'
-                }`}
-              >
-                {y}
-              </button>
-            ))}
+        {archiveYears.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#D9D2C7] bg-[#FAF6F0]/50 px-4 py-6 text-center">
+            <p className="text-xs text-[#6B6560] flex items-center justify-center gap-2">
+              <Info className="w-3.5 h-3.5 shrink-0" />
+              Nenhum ranking arquivado ainda — quando você arquivar o ranking no fim do ano, a
+              classificação final daquele ano aparecerá aqui.
+            </p>
           </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              {archiveYears.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => setSelectedArchive(selectedArchive === y ? null : y)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                    selectedArchive === y
+                      ? 'bg-[#C1272D] text-white border-[#C1272D]'
+                      : 'bg-white text-[#6B6560] border-[#E8E0D5] hover:border-[#C1272D]/40 hover:text-[#C1272D]'
+                  }`}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
 
-          {selectedArchive !== null &&
-            (archiveLoading ? (
-              <div className="flex items-center gap-2 text-sm text-[#6B6560] py-4">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Carregando ranking de {selectedArchive}...
-              </div>
-            ) : archiveRows.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-[#E8E0D5] p-6 text-sm text-[#6B6560]">
-                Nenhum registro encontrado para {selectedArchive}.
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b border-[#E8E0D5] bg-[#FAF6F0]/60 text-[#6B6560] font-serif uppercase tracking-wider text-[11px]">
-                        <th className="py-3 px-4 w-14">#</th>
-                        <th className="py-3 px-4">Aluno</th>
-                        <th className="py-3 px-4">Faixa</th>
-                        <th className="py-3 px-4 text-center">Presenças</th>
-                        <th className="py-3 px-4 text-center">Competição</th>
-                        <th className="py-3 px-4 text-center">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#E8E0D5]">
-                      {archiveRows.map((r) => (
-                        <tr key={r.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
-                          <td className="py-3.5 px-4 font-serif font-bold text-[#6B6560]">
-                            {r.rank}
-                          </td>
-                          <td className="py-3.5 px-4 font-bold text-[#1C1B1A]">
-                            {r.student_id ? (
-                              <Link
-                                to={`/painel/alunos/${r.student_id}`}
-                                className="text-[#C1272D] hover:underline"
-                                title="Abrir ficha do aluno"
-                              >
-                                {r.student_name}
-                              </Link>
-                            ) : (
-                              r.student_name
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <Badge
-                              className={`text-[10px] font-bold border ${beltBadgeClass((r.belt || '') as any)}`}
-                            >
-                              {beltLabel((r.belt || '') as any)}
-                            </Badge>
-                          </td>
-                          <td className="py-3.5 px-4 text-center text-[#2E7D4F] font-bold">
-                            {r.presences}
-                          </td>
-                          <td className="py-3.5 px-4 text-center text-[#C1272D] font-bold">
-                            {r.manual_points}
-                          </td>
-                          <td className="py-3.5 px-4 text-center font-serif font-bold text-base text-[#1C1B1A]">
-                            {r.total_points}
-                          </td>
+            {selectedArchive !== null &&
+              (archiveLoading ? (
+                <div className="flex items-center gap-2 text-sm text-[#6B6560] py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Carregando ranking de {selectedArchive}...
+                </div>
+              ) : archiveRows.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-[#E8E0D5] p-6 text-sm text-[#6B6560]">
+                  Nenhum registro encontrado para {selectedArchive}.
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#E8E0D5] bg-[#FAF6F0]/60 text-[#6B6560] font-serif uppercase tracking-wider text-[11px]">
+                          <th className="py-3 px-4 w-14">#</th>
+                          <th className="py-3 px-4">Aluno</th>
+                          <th className="py-3 px-4">Faixa</th>
+                          <th className="py-3 px-4 text-center">Presenças</th>
+                          <th className="py-3 px-4 text-center">Competição</th>
+                          <th className="py-3 px-4 text-center">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-[#E8E0D5]">
+                        {archiveRows.map((r) => (
+                          <tr key={r.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
+                            <td className="py-3.5 px-4 font-serif font-bold text-[#6B6560]">
+                              {r.rank}
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-[#1C1B1A]">
+                              {r.student_id ? (
+                                <Link
+                                  to={`/painel/alunos/${r.student_id}`}
+                                  className="text-[#C1272D] hover:underline"
+                                  title="Abrir ficha do aluno"
+                                >
+                                  {r.student_name}
+                                </Link>
+                              ) : (
+                                r.student_name
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <Badge
+                                className={`text-[10px] font-bold border ${beltBadgeClass((r.belt || '') as any)}`}
+                              >
+                                {beltLabel((r.belt || '') as any)}
+                              </Badge>
+                            </td>
+                            <td className="py-3.5 px-4 text-center text-[#2E7D4F] font-bold">
+                              {r.presences}
+                            </td>
+                            <td className="py-3.5 px-4 text-center text-[#C1272D] font-bold">
+                              {r.manual_points}
+                            </td>
+                            <td className="py-3.5 px-4 text-center font-serif font-bold text-base text-[#1C1B1A]">
+                              {r.total_points}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                {/* Cartões (mobile) */}
-                <div className="md:hidden divide-y divide-[#E8E0D5]">
-                  {archiveRows.map((r) => (
-                    <div key={r.id} className="p-4 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-serif font-bold text-[#6B6560] text-xs">
-                            {r.rank}º
-                          </span>
-                          <span className="font-semibold text-sm text-[#1C1B1A] truncate">
-                            {r.student_name}
-                          </span>
+                  {/* Cartões (mobile) */}
+                  <div className="md:hidden divide-y divide-[#E8E0D5]">
+                    {archiveRows.map((r) => (
+                      <div key={r.id} className="p-4 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-serif font-bold text-[#6B6560] text-xs">
+                              {r.rank}º
+                            </span>
+                            <span className="font-semibold text-sm text-[#1C1B1A] truncate">
+                              {r.student_name}
+                            </span>
+                          </div>
+                          <Badge
+                            className={`text-[10px] font-bold border mt-1 ${beltBadgeClass((r.belt || '') as any)}`}
+                          >
+                            {beltLabel((r.belt || '') as any)}
+                          </Badge>
                         </div>
-                        <Badge
-                          className={`text-[10px] font-bold border mt-1 ${beltBadgeClass((r.belt || '') as any)}`}
-                        >
-                          {beltLabel((r.belt || '') as any)}
-                        </Badge>
+                        <div className="text-right shrink-0">
+                          <p className="font-serif font-bold text-xl text-[#C1272D]">
+                            {r.total_points}
+                          </p>
+                          <p className="text-[10px] text-[#6B6560]">pontos</p>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-serif font-bold text-xl text-[#C1272D]">
-                          {r.total_points}
-                        </p>
-                        <p className="text-[10px] text-[#6B6560]">pontos</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-        </div>
-      )}
+              ))}
+          </>
+        )}
+      </div>
 
       <PointEntryDialog
         open={entryOpen}

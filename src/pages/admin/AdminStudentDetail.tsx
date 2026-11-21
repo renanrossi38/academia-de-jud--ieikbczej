@@ -23,6 +23,7 @@ import {
   fmtBRL,
   PersonalDataPanel,
 } from './StudentDetailPanels'
+import { MonthlyFeesPanel } from './MonthlyFeesPanel'
 
 const TAB_CLASS =
   'rounded-lg text-[11px] sm:text-xs font-serif font-semibold text-[#6B6560] data-[state=active]:bg-white data-[state=active]:text-[#C1272D] data-[state=active]:shadow-xs px-3 py-2'
@@ -207,7 +208,12 @@ export default function AdminStudentDetail() {
           <CompetitionPanel entries={points} />
         </TabsContent>
 
-        <TabsContent value="financeiro" className="mt-4">
+        <TabsContent value="financeiro" className="mt-4 space-y-4">
+          <MonthlyFeesPanel
+            studentId={student.id}
+            studentName={student.name || 'Aluno'}
+            classes={classes}
+          />
           <FinancePanel student={student} orders={orders} itemsByOrder={itemsByOrder} />
         </TabsContent>
       </Tabs>
