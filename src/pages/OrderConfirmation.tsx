@@ -81,7 +81,7 @@ export default function OrderConfirmation() {
 
         {/* Hanko Stamp celebration with seal-spin animation */}
         <div className="flex flex-col items-center text-center">
-          <div className="p-2 rounded-full border-2 border-[#C1272D]/30 mb-3 bg-[#FAF6F0]">
+          <div className="p-2 rounded-lg border-2 border-[#C1272D]/30 mb-3 bg-[#FAF6F0]">
             <HankoStamp size="xl" kanji="柔" className="animate-seal-spin" />
           </div>
 

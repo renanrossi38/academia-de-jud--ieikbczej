@@ -1,6 +1,7 @@
 import React from 'react'
 import { useCart } from '@/context/CartContext'
 import { Button } from '@/components/ui/button'
+import { BrushDivider } from '@/components/hero/HeroDecor'
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -22,7 +23,14 @@ export const CartDrawer: React.FC = () => {
       {/* Drawer */}
       <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-250 border-l border-[#E8E0D5]">
         {/* Header */}
-        <div className="p-4 border-b border-[#E8E0D5] flex items-center justify-between bg-[#FAF6F0]">
+        <div className="p-4 border-b border-[#E8E0D5] flex items-center justify-between bg-[#FAF6F0] relative overflow-hidden">
+          {/* Traço de pincel vermelho na base do cabeçalho do carrinho (identidade do folder) */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-1.5 text-[#C1272D] pointer-events-none"
+            aria-hidden
+          >
+            <BrushDivider className="w-full h-full" preserveAspectRatio="none" />
+          </div>
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-[#C1272D]" />
             <h2 className="font-serif font-bold text-lg text-[#1C1B1A]">Seu Carrinho</h2>

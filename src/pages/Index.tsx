@@ -5,6 +5,8 @@ import { productsService } from '@/services/products'
 import { classLevelLabel, classLevelBadgeClass } from '@/services/classes'
 import { Product, ProductCategory, Class } from '@/types'
 import { HankoStamp, ProductPlaceholder } from '@/components/HankoStamp'
+import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero/HeroDecor'
+import { BrushDivider } from '@/components/hero/HeroDecor'
 import { Badge } from '@/components/ui/badge'
 import {
   ArrowRight,
@@ -116,49 +118,67 @@ export default function Index() {
   })
 
   const tabClass = (tab: HomeTab) =>
-    `flex-1 sm:flex-none sm:min-w-[220px] px-4 sm:px-6 py-3.5 rounded-xl text-sm sm:text-base font-semibold font-serif transition-all flex items-center justify-center gap-2 select-none ${
+    `flex-1 sm:flex-none sm:min-w-[220px] px-4 sm:px-6 py-3.5 text-sm sm:text-base font-semibold font-brush font-serif transition-all flex items-center justify-center gap-2 select-none ${
       activeTab === tab
-        ? 'bg-[#C1272D] text-white shadow-sm ring-2 ring-[#C1272D]/25'
-        : 'bg-white text-[#1C1B1A] border border-[#E8E0D5] hover:border-[#C1272D]/50 hover:bg-[#F7E4E2]/40'
+        ? 'bg-[#C1272D] text-white shadow-sm ring-2 ring-[#C1272D]/25 [clip-path:polygon(2%_18%,97%_8%,100%_55%,98%_88%,3%_96%,0_60%)]'
+        : 'bg-white text-[#1C1B1A] border border-[#E8E0D5] hover:border-[#C1272D]/50 hover:bg-[#F7E4E2]/40 rounded-xl'
     }`
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative bg-[#C1272D] text-white py-12 sm:py-16 overflow-hidden">
-        {/* Círculos concêntricos sutis (sol nascente) + pétalas de sakura ao vento */}
-        <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full border-4 border-white/10 pointer-events-none" />
-        <div className="absolute -right-24 -bottom-24 w-96 h-96 rounded-full border-4 border-white/5 pointer-events-none" />
-        <div className="absolute -left-16 -top-16 w-48 h-48 rounded-full border-4 border-white/5 pointer-events-none" />
-        <div className="absolute inset-0 pointer-events-none [background-image:radial-gradient(circle_at_15%_25%,rgba(255,255,255,0.14)_2.5px,transparent_3px),radial-gradient(circle_at_80%_15%,rgba(255,255,255,0.12)_2px,transparent_2.5px),radial-gradient(circle_at_60%_85%,rgba(255,255,255,0.1)_2px,transparent_2.5px)] [background-size:52px_52px,74px_74px,63px_63px]" />
+      {/* Hero Section — inspirado no folder: papel branco, sol vermelho texturizado, kanji vertical */}
+      <section className="relative bg-[#FAF6F0] text-[#1C1B1A] py-14 sm:py-20 overflow-hidden">
+        {/* Sol vermelho texturizado (sem imagem externa) */}
+        <HeroSun className="absolute right-[-14%] top-1/2 -translate-y-1/2 w-[420px] h-[420px] sm:w-[520px] sm:h-[520px] md:right-[4%] md:w-[460px] md:h-[460px] pointer-events-none" />
+
+        {/* Ondas sumi-e na base (tinta preta) */}
+        <HeroWaves className="absolute bottom-0 left-0 right-0 w-full pointer-events-none" />
+
+        {/* Kanji 柔道 em coluna vertical + hanko, à esquerda como no folder */}
+        <div className="absolute left-4 sm:left-8 top-10 hidden sm:flex flex-col items-center gap-2 pointer-events-none">
+          <span className="text-[#1C1B1A] font-serif font-black leading-[1.05] text-5xl md:text-6xl [writing-mode:vertical-rl] tracking-widest">
+            柔道
+          </span>
+          <HankoStamp size="sm" />
+        </div>
+
+        {/* Pétalas de sakura caindo */}
+        <HeroPetals />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="max-w-2xl text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-white/15 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 border border-white/20">
+            <div className="inline-flex items-center gap-2 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] mb-5 border border-[#C1272D]/25 text-[#C1272D] [clip-path:polygon(3%_20%,97%_10%,100%_55%,97%_90%,3%_96%,0_50%)]">
               <Sparkles className="w-3.5 h-3.5" />
               Bem-vindo ao Judô Tatsu
             </div>
-            <h1 className="font-serif font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-tight">
-              Vista-se para o tatame.
+            <h1 className="font-brush text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.08] text-[#1C1B1A]">
+              Vista-se para o{' '}
+              <span className="relative inline-block text-[#C1272D]">
+                tatame
+                <HeroUnderline className="absolute left-0 right-0 -bottom-2 sm:-bottom-3 w-full h-3 sm:h-4" />
+              </span>
+              .
             </h1>
-            <p className="mt-3 text-base sm:text-lg text-white/90 leading-relaxed font-sans max-w-xl">
+            <p className="mt-5 text-base sm:text-lg text-[#6B6560] leading-relaxed font-sans max-w-xl">
               Conheça nossas turmas, escolha um horário para começar e adquira seu kimono, faixa e
               acessórios oficiais com tradição e honra.
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-white/80">
+            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-[#1C1B1A]/80">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" /> Aulas para todas as idades
+                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> Aulas para todas as idades
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" /> Matrícula aberta todo mês
+                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> Matrícula aberta todo mês
               </span>
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center justify-center">
-            <div className="p-3 rounded-full bg-white/10 backdrop-blur-xs border border-white/20">
-              {/* Logo do dragão do Judô Tatsu (componente já existente) */}
-              <HankoStamp size="xl" className="bg-white !ring-white/40" />
+          <div className="shrink-0 hidden md:flex items-center justify-center relative z-10">
+            <div className="relative">
+              <HeroSun className="absolute -inset-10 w-[calc(100%+80px)] h-[calc(100%+80px)] opacity-20" />
+              <div className="relative rounded-xl bg-white/70 backdrop-blur-xs border border-[#C1272D]/20 p-4 shadow-sm">
+                <HankoStamp size="xl" />
+              </div>
             </div>
           </div>
         </div>
@@ -201,12 +221,15 @@ export default function Index() {
               {classes.map((c) => (
                 <div
                   key={c.id}
-                  className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden"
+                  className="group relative bg-white rounded-2xl border border-[#E8E0D5] shadow-xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden"
                 >
-                  {/* Faixa superior vermelha com pétalas de sakura */}
-                  <div className="relative bg-[#C1272D] h-20 flex items-center justify-center overflow-hidden">
-                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_30%,white_2px,transparent_3px),radial-gradient(circle_at_70%_60%,white_1.5px,transparent_2.5px),radial-gradient(circle_at_45%_80%,white_1px,transparent_2px)] [background-size:34px_34px,46px_46px,28px_28px] pointer-events-none" />
-                    <HankoStamp size="md" className="bg-white !ring-white/40" />
+                  {/* Cabeçalho washi com sol vermelho + traço de pincel na base (folder) */}
+                  <div className="relative bg-[#FAF6F0] h-24 flex items-center justify-center overflow-hidden">
+                    <HeroSun className="absolute -right-8 -top-10 w-40 h-40 opacity-90" />
+                    <div className="relative z-10">
+                      <HankoStamp size="lg" />
+                    </div>
+                    <BrushDivider className="absolute bottom-0 left-0 right-0 w-full text-[#C1272D]" />
                   </div>
 
                   <div className="p-5 flex-1 flex flex-col">
@@ -245,7 +268,7 @@ export default function Index() {
 
                     <Link
                       to="/criar-conta"
-                      className="mt-5 pt-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#C1272D] text-white text-sm font-semibold hover:bg-[#A01E23] transition-colors mt-auto"
+                      className="mt-5 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-white text-sm font-semibold transition-all mt-auto bg-[#C1272D] hover:bg-[#A01E23] [clip-path:polygon(2%_18%,97%_8%,100%_55%,98%_88%,3%_96%,0_60%)] hover:[clip-path:polygon(1%_12%,98%_14%,100%_60%,97%_92%,2%_90%,0_55%)]"
                     >
                       Quero me matricular
                       <ArrowRight className="w-4 h-4" />

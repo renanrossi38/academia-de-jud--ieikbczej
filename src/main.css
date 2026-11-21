@@ -84,6 +84,23 @@
     }
   }
 
+  @keyframes petal-fall {
+    0% {
+      transform: translateY(-12px) rotate(0deg);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.8;
+    }
+    100% {
+      transform: translateY(88px) rotate(200deg);
+      opacity: 0;
+    }
+  }
+  .animate-petal-fall {
+    animation: petal-fall 10s linear infinite;
+  }
+
   @keyframes seal-spin {
     0% {
       transform: rotate(0deg) scale(0.8);
@@ -133,6 +150,37 @@
 
   .animate-row-flash {
     animation: row-flash 1.2s ease-out;
+  }
+
+  /* Tipografia de pincel (folder): títulos com peso de tinta */
+  .font-brush {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    text-shadow:
+      0.5px 0.5px 0 rgba(28, 27, 26, 0.18),
+      1px 1px 0 rgba(28, 27, 26, 0.08);
+  }
+
+  /* Fitas/traços de pincel: pequenos arremates de tinta nas extremidades */
+  .brush-tail-left::before,
+  .brush-tail-right::after {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.85;
+    vertical-align: middle;
+  }
+  .brush-tail-left::before {
+    margin-right: 8px;
+    transform: rotate(-4deg);
+  }
+  .brush-tail-right::after {
+    margin-left: 8px;
+    transform: rotate(4deg);
   }
 
   /* Sunburst subtle background */

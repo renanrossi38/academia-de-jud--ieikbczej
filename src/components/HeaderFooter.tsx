@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import { HankoStamp } from '@/components/HankoStamp'
+import { BrushDivider } from '@/components/hero/HeroDecor'
 import {
   User,
   LogOut,
@@ -37,7 +38,10 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         {/* Brand / Logo */}
         <Link to="/" className="flex items-center gap-3 group">
-          <HankoStamp size="md" className="group-hover:scale-105 transition-transform" />
+          <HankoStamp
+            size="md"
+            className="group-hover:scale-105 group-hover:-rotate-3 transition-transform"
+          />
           <div className="flex flex-col">
             <span className="font-serif font-bold text-xl sm:text-2xl text-[#1C1B1A] tracking-tight leading-none">
               Judô Tatsu
@@ -196,7 +200,7 @@ export const Header: React.FC = () => {
                 </Button>
               </Link>
               <Link to="/criar-conta">
-                <Button className="text-sm font-medium bg-[#C1272D] hover:bg-[#A01E23] text-white">
+                <Button className="text-sm font-medium bg-[#C1272D] hover:bg-[#A01E23] text-white [clip-path:polygon(2%_18%,97%_8%,100%_55%,98%_88%,3%_96%,0_60%)]">
                   Criar conta
                 </Button>
               </Link>
@@ -341,22 +345,29 @@ export const Header: React.FC = () => {
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="mt-auto border-t border-[#E8E0D5] bg-[#FAF6F0] py-10 text-[#6B6560]">
+    <footer className="mt-auto bg-[#1C1B1A] py-10 text-[#CFC8BE] relative">
+      {/* Traço de pincel preto-tinta no topo do rodapé (folder) */}
+      <div
+        className="absolute -top-3 left-0 right-0 h-6 text-[#1C1B1A] pointer-events-none"
+        aria-hidden
+      >
+        <BrushDivider className="w-full h-full" preserveAspectRatio="none" />
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-3">
               <HankoStamp size="sm" />
-              <span className="font-serif font-bold text-lg text-[#1C1B1A]">Judô Tatsu</span>
+              <span className="font-serif font-bold text-lg text-white">Judô Tatsu</span>
             </div>
-            <p className="text-sm leading-relaxed text-[#6B6560]">
+            <p className="text-sm leading-relaxed text-[#CFC8BE]">
               Tradição, disciplina e excelência no ensino do judô. Atendendo judocas de todas as
               idades desde a faixa branca até a preta.
             </p>
           </div>
 
           <div>
-            <h4 className="font-serif font-bold text-sm text-[#1C1B1A] mb-3 uppercase tracking-wider">
+            <h4 className="font-serif font-bold text-sm text-white mb-3 uppercase tracking-wider">
               Localização & Contato
             </h4>
             <p className="text-sm leading-relaxed">
@@ -371,7 +382,7 @@ export const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="font-serif font-bold text-sm text-[#1C1B1A] mb-3 uppercase tracking-wider">
+            <h4 className="font-serif font-bold text-sm text-white mb-3 uppercase tracking-wider">
               Horários de Treino
             </h4>
             <p className="text-sm leading-relaxed">
@@ -381,13 +392,13 @@ export const Footer: React.FC = () => {
               <br />
               Domingo: Fechado
             </p>
-            <div className="mt-3 text-xs bg-[#F7E4E2] text-[#C1272D] p-2 rounded-md inline-block font-medium">
+            <div className="mt-3 text-xs bg-[#C1272D] text-white p-2 rounded-md inline-block font-medium">
               * Retirada de pedidos diretamente no balcão da academia
             </div>
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-[#E8E0D5] flex flex-col sm:flex-row items-center justify-between text-xs text-[#6B6560]">
+        <div className="mt-8 pt-6 border-t border-white/15 flex flex-col sm:flex-row items-center justify-between text-xs text-[#9B948A]">
           <p>© {new Date().getFullYear()} Judô Tatsu. Todos os direitos reservados.</p>
           <p className="mt-2 sm:mt-0 font-serif">柔道 — O Caminho Suave</p>
         </div>

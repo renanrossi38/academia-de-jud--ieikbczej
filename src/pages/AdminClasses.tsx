@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
 import { classesService, classLevelLabel, classLevelBadgeClass } from '@/services/classes'
+import { BrushDivider } from '@/components/hero/HeroDecor'
 import { Class, ClassStudent } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
@@ -453,8 +454,15 @@ export default function AdminClasses() {
           {classes.map((c) => (
             <div
               key={c.id}
-              className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-5 flex flex-col gap-3 hover:border-[#C1272D]/40 transition-colors"
+              className="relative overflow-hidden bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-5 pt-6 flex flex-col gap-3 hover:border-[#C1272D]/40 transition-colors"
             >
+              {/* Traço de pincel vermelho no topo do card (identidade do folder) */}
+              <div
+                className="absolute top-0 left-0 right-0 h-2 text-[#C1272D] pointer-events-none"
+                aria-hidden
+              >
+                <BrushDivider className="w-full h-full" preserveAspectRatio="none" />
+              </div>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-[#F7E4E2]/60 border border-[#C1272D]/20 flex items-center justify-center shrink-0">

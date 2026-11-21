@@ -147,10 +147,17 @@ export default function Register() {
     <div className="min-h-[75vh] flex items-center justify-center px-4 py-12 animate-fade-rise">
       <div className="w-full max-w-md bg-white rounded-3xl border border-[#E8E0D5] p-8 shadow-md">
         <div className="text-center mb-8">
-          <HankoStamp size="lg" className="mx-auto mb-3" />
-          <span className="text-xs font-bold text-[#C1272D] uppercase tracking-widest font-serif">
-            Judô Tatsu
-          </span>
+          <div className="inline-flex items-center gap-3 mb-3">
+            <HankoStamp size="lg" />
+            <div className="text-left">
+              <span className="block font-serif font-bold text-2xl text-[#1C1B1A] leading-none">
+                Judô Tatsu
+              </span>
+              <span className="block text-[10px] font-bold text-[#C1272D] uppercase tracking-[0.25em] font-serif mt-1">
+                Academia de Judô
+              </span>
+            </div>
+          </div>
           <h1 className="font-serif font-bold text-2xl text-[#1C1B1A] mt-1">Cadastro de Aluno</h1>
           <p className="text-xs text-[#6B6560] mt-1">
             Crie sua conta para registrar pedidos e acompanhar treinos.
