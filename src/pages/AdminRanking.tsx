@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { HankoStamp } from '@/components/HankoStamp'
 import { beltLabel, beltBadgeClass } from '@/components/admin/StudentDialogs'
+import {
+  AdminPageHeader,
+  AdminSummary,
+  AdminEmptyState,
+  AdminPageLoader,
+} from '@/components/admin/AdminPage'
 import PointEntryDialog from '@/components/admin/PointEntryDialog'
 import { rankingService, RankingRow } from '@/services/ranking'
 import { Attendance, PointEntry, Student } from '@/types'
@@ -202,34 +207,17 @@ export default function AdminRanking() {
   }
 
   if (authLoading || isLoading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-[#6B6560]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-        <p className="font-serif text-sm">Carregando ranking...</p>
-      </div>
-    )
+    return <AdminPageLoader label="Carregando ranking..." />
   }
+
+  const leader = rows[0]
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
-      {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <HankoStamp size="sm" />
-            <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">
-              Administração do Judô Tatsu
-            </span>
-          </div>
-          <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1 flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-[#C1272D]" />
-            Ranking dos Alunos
-          </h1>
-          <p className="text-xs text-[#6B6560] mt-1">
-            Todos os alunos matriculados em turmas, ordenados por pontos: cada presença vale 1
-            ponto; competições e eventos são lançados manualmente.
-          </p>
-        </div>
+      <AdminPageHeader
+        title="Ranking dos Alunos"
+        description="Todos os alunos matriculados em turmas, ordenados por pontos: cada presença vale 1 ponto; competições e eventos são lançados manualmente."
+      >
         <Button
           onClick={() => {
             setEntryStudent(rows[0]?.student ?? null)
@@ -241,22 +229,39 @@ export default function AdminRanking() {
           <Plus className="w-4 h-4 mr-2" />
           Adicionar pontuação
         </Button>
-      </div>
+      </AdminPageHeader>
+
+      <AdminSummary
+        counts={[
+          { label: 'Alunos no ranking', value: rows.length, icon: Users },
+          {
+            label: 'Líder',
+            value: leader ? leader.student.name || '—' : '—',
+            hint: leader ? `${leader.totalPoints} pts` : undefined,
+            icon: Trophy,
+            tone: 'red',
+          },
+          {
+            label: 'Lançamentos de competição',
+            value: rows.reduce((sum, r) => sum + r.entries.length, 0),
+            icon: Award,
+          },
+        ]}
+      />
 
       {rows.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E8E0D5] p-12 text-center max-w-md mx-auto my-6">
-          <HankoStamp size="lg" className="mx-auto mb-4" />
-          <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">Nenhum aluno no ranking</h3>
-          <p className="text-xs text-[#6B6560] mt-1 mb-6">
-            Matricule alunos em turmas para que apareçam aqui — cada presença marcada vira ponto.
-          </p>
-          <Link to="/painel/turmas">
-            <Button className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold">
-              <Users className="w-4 h-4 mr-2" />
-              Gerenciar turmas
-            </Button>
-          </Link>
-        </div>
+        <AdminEmptyState
+          title="Nenhum aluno no ranking"
+          hint="Matricule alunos em turmas para que apareçam aqui — cada presença marcada vira ponto automaticamente."
+          action={
+            <Link to="/painel/turmas">
+              <Button className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold">
+                <Users className="w-4 h-4 mr-2" />
+                Gerenciar turmas
+              </Button>
+            </Link>
+          }
+        />
       ) : (
         <>
           {/* Pódio — 1º, 2º e 3º */}

@@ -6,10 +6,18 @@ import logoUrl from '@/assets/logo-fundo-transp-4b2b2.png'
  * LOGO OFICIAL (dragão) — única marca do app, em todos os tamanhos.
  *
  * O PNG original (1163x1163, fundo transparente) tem o texto "JUDÔ TATSU"
- * na parte inferior, que o usuário pediu para NÃO exibir (aparecia cortado
- * e ilegível nos tamanhos pequenos). Um wrapper quadrado com recorte CSS
- * elimina a faixa de texto inteira: só a arte do dragão é renderizada,
- * sem distorção e sem sobra, em qualquer escala.
+ * na faixa inferior, que o usuário pediu para NÃO exibir: mesmo com
+ * recortes anteriores (78% e depois 70% visíveis) o topo das letras
+ * aparecia apagado, sem contraste contra fundos claros e escuros. O
+ * recorte atual mostra apenas os 55% SUPERIORES da arte — a faixa de
+ * texto inteira fica MUITO fora do quadro em qualquer escala, e as
+ * pinceladas do dragão concentram-se no terço médio/superior, então nada
+ * importante se perde. Só o dragão é renderizado.
+ *
+ * Cálculo: para mostrar 55% da altura, a imagem precisa ter 100/55 ≈
+ * 181.82% da largura do quadro; o deslocamento horizontal de -18.2%
+ * (metade dos 36.4% excedentes, relativo à própria largura da imagem)
+ * mantém a arte centrada sem distorção.
  */
 export const OfficialLogo: React.FC<{ className?: string; alt?: string }> = ({
   className,
@@ -18,7 +26,7 @@ export const OfficialLogo: React.FC<{ className?: string; alt?: string }> = ({
   return (
     <span
       className={cn(
-        'block aspect-square overflow-hidden shrink-0 select-none [&>img]:w-[128%] [&>img]:h-auto [&>img]:max-w-none [&>img]:-translate-x-[10.94%] [&>img]:object-contain',
+        'block aspect-square overflow-hidden shrink-0 select-none [&>img]:w-[181.82%] [&>img]:h-auto [&>img]:max-w-none [&>img]:-translate-x-[18.2%] [&>img]:object-contain',
         className,
       )}
       aria-label={alt}

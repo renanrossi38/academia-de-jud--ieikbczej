@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { HankoStamp } from '@/components/HankoStamp'
+import { Loader2 } from 'lucide-react'
 import {
   CreateStudentDialog,
   EditStudentDialog,
@@ -28,7 +28,12 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import {
-  Loader2,
+  AdminPageHeader,
+  AdminSummary,
+  AdminEmptyState,
+  AdminPageLoader,
+} from '@/components/admin/AdminPage'
+import {
   Search,
   X,
   UserPlus,
@@ -42,6 +47,7 @@ import {
   UserX,
   KeyRound,
   Trash2,
+  Users,
 } from 'lucide-react'
 
 /** Insere ou substitui um aluno pelo id (evita duplicar com o realtime). */
@@ -180,48 +186,34 @@ export default function AdminStudents() {
   }
 
   if (authLoading || isLoading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-[#6B6560]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-        <p className="font-serif text-sm">Carregando painel de alunos...</p>
-      </div>
-    )
+    return <AdminPageLoader label="Carregando painel de alunos..." />
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
-      {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <HankoStamp size="sm" />
-            <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">
-              Administração do Judô Tatsu
-            </span>
-          </div>
-          <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
-            Gestão de Alunos
-          </h1>
-          <p className="text-xs text-[#6B6560] mt-1">
-            Cadastre, edite e acompanhe os alunos matriculados na academia.
-          </p>
-        </div>
+      <AdminPageHeader
+        title="Gestão de Alunos"
+        description="Cadastre, edite e acompanhe os alunos matriculados na academia."
+      >
+        <Button
+          onClick={() => setCreateOpen(true)}
+          className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Cadastrar Aluno
+        </Button>
+      </AdminPageHeader>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge className="bg-[#FAF6F0] text-[#1C1B1A] border-[#E8E0D5] text-xs font-semibold px-3 py-1">
-            Total de Alunos: {students.length}
-          </Badge>
-          <Badge className="bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20 text-xs font-semibold px-3 py-1">
-            Ativos: {activeCount}
-          </Badge>
-          <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-xs font-semibold px-3 py-1">
-            Inativos: {inactiveCount}
-          </Badge>
-        </div>
-      </div>
+      <AdminSummary
+        counts={[
+          { label: 'Total de alunos', value: students.length, icon: Users },
+          { label: 'Ativos', value: activeCount, icon: UserCheck, tone: 'green' },
+          { label: 'Inativos', value: inactiveCount, icon: UserX, tone: 'red' },
+        ]}
+      />
 
-      {/* Busca + botão de cadastro */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
+      {/* Busca */}
+      <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B6560]" />
           <Input
@@ -240,28 +232,29 @@ export default function AdminStudents() {
             </button>
           )}
         </div>
-        <Button
-          onClick={() => setCreateOpen(true)}
-          className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Cadastrar Aluno
-        </Button>
       </div>
 
       {/* Lista: tabela no desktop / cartões no mobile */}
       {filteredStudents.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E8E0D5] p-12 text-center max-w-md mx-auto my-6">
-          <HankoStamp size="lg" className="mx-auto mb-4" />
-          <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
-            {search ? 'Nenhum aluno encontrado' : 'Nenhum aluno por aqui'}
-          </h3>
-          <p className="text-xs text-[#6B6560] mt-1">
-            {search
+        <AdminEmptyState
+          title={search ? 'Nenhum aluno encontrado' : 'Nenhum aluno por aqui'}
+          hint={
+            search
               ? 'Tente buscar por outro nome, e-mail ou telefone.'
-              : 'Cadastre o primeiro aluno da academia para começar.'}
-          </p>
-        </div>
+              : 'Cadastre o primeiro aluno da academia para começar — ele já aparece aqui na hora.'
+          }
+          action={
+            !search ? (
+              <Button
+                onClick={() => setCreateOpen(true)}
+                className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Cadastrar primeiro aluno
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
           {/* Tabela (desktop) */}
@@ -501,13 +494,15 @@ export default function AdminStudents() {
       />
 
       {/* Aviso: e-mail e conta de acesso são opcionais */}
-      <div className="mt-6 flex items-start gap-2 text-[11px] text-[#6B6560]">
-        <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-        <p>
-          O cadastro é um controle interno da academia: o e-mail é opcional. Alunos com e-mail podem
-          receber um acesso ao site pelo botão "Gerar acesso".
-        </p>
-      </div>
+      {students.length > 0 && (
+        <div className="mt-6 flex items-start gap-2 text-[11px] text-[#6B6560]">
+          <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <p>
+            O cadastro é um controle interno da academia: o e-mail é opcional. Alunos com e-mail
+            podem receber um acesso ao site pelo botão "Gerar acesso".
+          </p>
+        </div>
+      )}
 
       {/* Confirmação de exclusão definitiva */}
       <AlertDialog

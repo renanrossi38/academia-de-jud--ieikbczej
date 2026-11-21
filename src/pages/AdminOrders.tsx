@@ -4,7 +4,12 @@ import { useAuth } from '@/context/AuthContext'
 import { ordersService } from '@/services/orders'
 import { Order, OrderItem, OrderStatus } from '@/types'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
-import { HankoStamp } from '@/components/HankoStamp'
+import {
+  AdminPageHeader,
+  AdminSummary,
+  AdminEmptyState,
+  AdminPageLoader,
+} from '@/components/admin/AdminPage'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
@@ -142,12 +147,7 @@ export default function AdminOrders() {
   }
 
   if (authLoading || isLoading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-[#6B6560]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-        <p className="font-serif text-sm">Carregando painel de pedidos...</p>
-      </div>
-    )
+    return <AdminPageLoader label="Carregando pedidos..." />
   }
 
   // Filtered list
@@ -167,29 +167,28 @@ export default function AdminOrders() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <HankoStamp size="sm" />
-            <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">
-              Administração do Judô Tatsu
-            </span>
-          </div>
-          <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
-            Painel de Pedidos
-          </h1>
-          <p className="text-xs text-[#6B6560] mt-1">
-            Gerencie e atualize os pedidos dos alunos em tempo real.
-          </p>
-        </div>
+      <AdminPageHeader
+        title="Painel de Pedidos"
+        description="Gerencie e atualize os pedidos dos alunos em tempo real."
+      />
 
-        <div className="flex items-center gap-2">
-          <Badge className="bg-[#FAF6F0] text-[#1C1B1A] border-[#E8E0D5] text-xs font-semibold px-3 py-1">
-            Total de Pedidos: {orders.length}
-          </Badge>
-        </div>
-      </div>
+      <AdminSummary
+        counts={[
+          { label: 'Total de pedidos', value: orders.length, icon: ShoppingBag },
+          {
+            label: 'Novos (aguardando)',
+            value: countsByStatus['novo'] || 0,
+            icon: Filter,
+            tone: 'red',
+          },
+          {
+            label: 'Em preparação',
+            value: countsByStatus['em_preparacao'] || 0,
+            icon: Calendar,
+          },
+          { label: 'Entregues', value: countsByStatus['entregue'] || 0, icon: CheckCircle2 },
+        ]}
+      />
 
       {/* Status Filter Chips */}
       <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none">
@@ -222,15 +221,14 @@ export default function AdminOrders() {
 
       {/* Orders View: Desktop Table / Mobile Cards */}
       {filteredOrders.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E8E0D5] p-12 text-center max-w-md mx-auto my-6">
-          <HankoStamp size="lg" kanji="柔" className="mx-auto mb-4" />
-          <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">Nenhum pedido por aqui</h3>
-          <p className="text-xs text-[#6B6560] mt-1">
-            {selectedStatus === 'todos'
-              ? 'Nenhum pedido foi registrado ainda no sistema.'
-              : `Não existem pedidos com status "${selectedStatus}".`}
-          </p>
-        </div>
+        <AdminEmptyState
+          title="Nenhum pedido por aqui"
+          hint={
+            selectedStatus === 'todos'
+              ? 'Nenhum pedido foi registrado ainda. Assim que um aluno finalizar a compra na loja, ele aparece aqui automaticamente.'
+              : 'Não existem pedidos com esse status. Troque o filtro acima para ver os outros pedidos.'
+          }
+        />
       ) : (
         <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
           {/* Desktop Table */}
