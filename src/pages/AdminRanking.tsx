@@ -9,8 +9,8 @@ import {
   AdminPageLoader,
 } from '@/components/admin/AdminPage'
 import PointEntryDialog from '@/components/admin/PointEntryDialog'
-import { rankingService, RankingRow } from '@/services/ranking'
-import { Attendance, PointEntry, Student } from '@/types'
+import { rankingService, RankingRow, currentYear } from '@/services/ranking'
+import { Attendance, PointEntry, RankingArchiveRow, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +26,8 @@ import {
   Search,
   Users,
   Medal,
+  Archive,
+  History,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -120,10 +122,21 @@ export default function AdminRanking() {
   const [deletingEntry, setDeletingEntry] = useState<PointEntry | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Arquivar ranking: confirmação + execução
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+
+  // Consulta de rankings de anos anteriores
+  const [archiveYears, setArchiveYears] = useState<number[]>([])
+  const [selectedArchive, setSelectedArchive] = useState<number | null>(null)
+  const [archiveRows, setArchiveRows] = useState<RankingArchiveRow[]>([])
+  const [archiveLoading, setArchiveLoading] = useState(false)
+
   const loadRanking = useCallback(async () => {
     setIsLoading(true)
     try {
       setRows(await rankingService.getRanking())
+      setArchiveYears(await rankingService.listArchiveYears())
     } catch (err) {
       console.error('Erro ao carregar ranking:', err)
       toast({
@@ -164,6 +177,37 @@ export default function AdminRanking() {
   useRealtime<PointEntry>('points_entries', () => {
     loadRanking()
   })
+
+  // Consulta do snapshot de um ano arquivado
+  useEffect(() => {
+    if (selectedArchive === null) {
+      setArchiveRows([])
+      return
+    }
+    let cancelled = false
+    setArchiveLoading(true)
+    rankingService
+      .getArchive(selectedArchive)
+      .then((r) => {
+        if (!cancelled) setArchiveRows(r)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast({
+            title: 'Erro ao carregar arquivo',
+            description: 'Não foi possível buscar o ranking arquivado.',
+            variant: 'destructive',
+          })
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setArchiveLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArchive])
 
   const podium = rows.slice(0, 3)
   const rest = rows.slice(3)
@@ -212,6 +256,30 @@ export default function AdminRanking() {
     }
   }
 
+  const handleArchive = async () => {
+    setArchiving(true)
+    const year = currentYear()
+    try {
+      const count = await rankingService.archiveYear(year)
+      toast({
+        title: `Ranking de ${year} arquivado`,
+        description: `${count} aluno(s) arquivado(s). O ranking de ${year + 1} começa do zero.`,
+      })
+      setArchiveOpen(false)
+      setSelectedArchive(year)
+      await loadRanking()
+    } catch (err: any) {
+      console.error('Erro ao arquivar ranking:', err)
+      toast({
+        title: 'Erro ao arquivar',
+        description: err?.message || 'Falha ao arquivar no servidor. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setArchiving(false)
+    }
+  }
+
   if (authLoading || isLoading) {
     return <AdminPageLoader label="Carregando ranking..." />
   }
@@ -221,22 +289,32 @@ export default function AdminRanking() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
       <AdminPageHeader
-        title="Ranking dos Alunos"
+        title={`Ranking ${currentYear()}`}
         breadcrumb="Ranking"
         breadcrumbTo="/painel/ranking"
-        description="Todos os alunos matriculados em turmas, ordenados por pontos: cada presença vale 1 ponto; competições e eventos são lançados manualmente."
+        description={`Todos os alunos matriculados em turmas, ordenados pelos pontos de ${currentYear()}: cada presença vale 1 ponto; competições e eventos são lançados manualmente, com data retroativa indo para o ano da data. Anos anteriores ficam arquivados no fim da página.`}
         action={
-          <Button
-            onClick={() => {
-              setEntryStudent(rows[0]?.student ?? null)
-              setEntryOpen(true)
-            }}
-            disabled={rows.length === 0}
-            className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold shrink-0"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar pontuação
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setArchiveOpen(true)}
+              className="h-10 border-[#E8E0D5] text-[#1C1B1A] text-sm font-semibold hover:bg-[#FAF6F0]"
+            >
+              <Archive className="w-4 h-4 mr-2" />
+              Arquivar ranking
+            </Button>
+            <Button
+              onClick={() => {
+                setEntryStudent(rows[0]?.student ?? null)
+                setEntryOpen(true)
+              }}
+              disabled={rows.length === 0}
+              className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar pontuação
+            </Button>
+          </div>
         }
       />
 
@@ -502,12 +580,187 @@ export default function AdminRanking() {
         </>
       )}
 
+      {/* Histórico: rankings de anos anteriores */}
+      {archiveYears.length > 0 && (
+        <div className="mt-10">
+          <h2 className="font-serif font-bold text-lg text-[#1C1B1A] mb-1 flex items-center gap-2">
+            <History className="w-5 h-5 text-[#C1272D]" />
+            Rankings arquivados
+          </h2>
+          <p className="text-xs text-[#6B6560] mb-3">
+            O ranking final de cada ano, do 1º ao último lugar — consultável a qualquer momento.
+          </p>
+
+          <div className="flex items-center gap-2 flex-wrap mb-4">
+            {archiveYears.map((y) => (
+              <button
+                key={y}
+                type="button"
+                onClick={() => setSelectedArchive(selectedArchive === y ? null : y)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                  selectedArchive === y
+                    ? 'bg-[#C1272D] text-white border-[#C1272D]'
+                    : 'bg-white text-[#6B6560] border-[#E8E0D5] hover:border-[#C1272D]/40 hover:text-[#C1272D]'
+                }`}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
+
+          {selectedArchive !== null &&
+            (archiveLoading ? (
+              <div className="flex items-center gap-2 text-sm text-[#6B6560] py-4">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Carregando ranking de {selectedArchive}...
+              </div>
+            ) : archiveRows.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-[#E8E0D5] p-6 text-sm text-[#6B6560]">
+                Nenhum registro encontrado para {selectedArchive}.
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-[#E8E0D5] bg-[#FAF6F0]/60 text-[#6B6560] font-serif uppercase tracking-wider text-[11px]">
+                        <th className="py-3 px-4 w-14">#</th>
+                        <th className="py-3 px-4">Aluno</th>
+                        <th className="py-3 px-4">Faixa</th>
+                        <th className="py-3 px-4 text-center">Presenças</th>
+                        <th className="py-3 px-4 text-center">Competição</th>
+                        <th className="py-3 px-4 text-center">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8E0D5]">
+                      {archiveRows.map((r) => (
+                        <tr key={r.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
+                          <td className="py-3.5 px-4 font-serif font-bold text-[#6B6560]">
+                            {r.rank}
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-[#1C1B1A]">
+                            {r.student_id ? (
+                              <Link
+                                to={`/painel/alunos/${r.student_id}`}
+                                className="text-[#C1272D] hover:underline"
+                                title="Abrir ficha do aluno"
+                              >
+                                {r.student_name}
+                              </Link>
+                            ) : (
+                              r.student_name
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <Badge
+                              className={`text-[10px] font-bold border ${beltBadgeClass((r.belt || '') as any)}`}
+                            >
+                              {beltLabel((r.belt || '') as any)}
+                            </Badge>
+                          </td>
+                          <td className="py-3.5 px-4 text-center text-[#2E7D4F] font-bold">
+                            {r.presences}
+                          </td>
+                          <td className="py-3.5 px-4 text-center text-[#C1272D] font-bold">
+                            {r.manual_points}
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-serif font-bold text-base text-[#1C1B1A]">
+                            {r.total_points}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Cartões (mobile) */}
+                <div className="md:hidden divide-y divide-[#E8E0D5]">
+                  {archiveRows.map((r) => (
+                    <div key={r.id} className="p-4 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-serif font-bold text-[#6B6560] text-xs">
+                            {r.rank}º
+                          </span>
+                          <span className="font-semibold text-sm text-[#1C1B1A] truncate">
+                            {r.student_name}
+                          </span>
+                        </div>
+                        <Badge
+                          className={`text-[10px] font-bold border mt-1 ${beltBadgeClass((r.belt || '') as any)}`}
+                        >
+                          {beltLabel((r.belt || '') as any)}
+                        </Badge>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-serif font-bold text-xl text-[#C1272D]">
+                          {r.total_points}
+                        </p>
+                        <p className="text-[10px] text-[#6B6560]">pontos</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
       <PointEntryDialog
         open={entryOpen}
         student={entryStudent}
         onOpenChange={setEntryOpen}
         onSaved={handleEntrySaved}
       />
+
+      {/* Confirmação: arquivar ranking e iniciar novo ano */}
+      <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <AlertDialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-[#1C1B1A] flex items-center gap-2">
+              <Archive className="w-5 h-5 text-[#C1272D]" />
+              Arquivar ranking de {currentYear()}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#6B6560] text-xs leading-relaxed space-y-2">
+              <span className="block">
+                O ranking de <strong className="text-[#1C1B1A]">{currentYear()}</strong> será salvo
+                como histórico (você poderá consultá-lo a qualquer momento, com a classificação
+                final de todos os alunos) e{' '}
+                <strong className="text-[#1C1B1A]">
+                  o ranking de {currentYear() + 1} começa do zero
+                </strong>
+                .
+              </span>
+              <span className="block">
+                Presenças e lançamentos de anos anteriores não contam mais pontos no novo ranking.
+                Nenhum dado é apagado — só deixam de valer para o ano corrente.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#E8E0D5] text-[#1C1B1A] text-xs font-semibold">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleArchive()
+              }}
+              disabled={archiving}
+              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+            >
+              {archiving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Arquivando...
+                </>
+              ) : (
+                `Arquivar ${currentYear()} e zerar`
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirmação de remoção de lançamento */}
       <AlertDialog open={!!deletingEntry} onOpenChange={(open) => !open && setDeletingEntry(null)}>

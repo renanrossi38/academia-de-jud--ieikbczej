@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { KeyRound, UserRound } from 'lucide-react'
+import { ArrowLeft, KeyRound, UserRound } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
@@ -148,6 +149,14 @@ export default function AdminStudentDetail() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
+      <Button
+        variant="ghost"
+        onClick={() => navigate('/painel/alunos')}
+        className="mb-4 -ml-2 text-[#6B6560] hover:text-[#C1272D] hover:bg-[#FAF6F0] text-xs font-serif font-semibold uppercase tracking-wider"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Voltar para alunos
+      </Button>
       <AdminPageHeader
         title={student.name || 'Aluno'}
         breadcrumb="Ficha do aluno"

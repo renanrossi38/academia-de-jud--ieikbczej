@@ -1,0 +1,2 @@
+> Ranking de 2025 arquivado (exemplo de dados para validar o histórico) — ranking_archives
+{"collection":"ranking_archives","filter":"year=2025","sort":"rank"}

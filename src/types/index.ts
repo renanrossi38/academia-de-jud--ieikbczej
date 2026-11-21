@@ -171,8 +171,27 @@ export interface Attendance {
   }
 }
 
+/** Linha do snapshot arquivado de um ranking de um ano encerrado. */
+export interface RankingArchiveRow {
+  collectionId: string
+  collectionName: string
+  id: string
+  year: number
+  rank: number
+  student_name: string
+  student_id?: string
+  belt?: Belt | ''
+  total_points: number
+  presences: number
+  manual_points: number
+  created: string
+  updated: string
+}
+
 /** Lançamento manual de pontos do ranking (competição/evento). */
 export interface PointEntry {
+  /** Ano a que o lançamento pertence (pela data da competição/evento). */
+  year?: number
   collectionId: string
   collectionName: string
   id: string
