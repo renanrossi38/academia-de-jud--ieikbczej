@@ -165,14 +165,22 @@ export default function AdminStudents() {
     })
   })
 
-  const delinquentCount = useMemo(
-    () =>
-      Object.keys(feesByStudent).filter(
-        (sid) =>
-          feesByStudent[sid].length > 0 && feeStanding(feesByStudent[sid]) === 'inadimplente',
-      ).length,
-    [feesByStudent],
-  )
+  // Situação de mensalidade por aluno — a MESMA lógica dos badges da tabela
+  // (feeStanding), para que contadores e badges nunca discordem:
+  //  - "Em dia": tem lançamentos e nenhum mês já vencido em aberto;
+  //  - "Atrasados": há mensalidade pendente com vencimento/mês já passado;
+  //  - sem lançamentos = neutro, não entra em nenhum dos dois contadores.
+  const { upToDateCount, overdueCount } = useMemo(() => {
+    let emDia = 0
+    let atrasados = 0
+    for (const s of students) {
+      const fees = feesByStudent[s.id] || []
+      if (fees.length === 0) continue
+      if (feeStanding(fees) === 'inadimplente') atrasados += 1
+      else emDia += 1
+    }
+    return { upToDateCount: emDia, overdueCount: atrasados }
+  }, [students, feesByStudent])
 
   const feeBadgeFor = (studentId: string): { label: string; className: string } => {
     const fees = feesByStudent[studentId]
@@ -281,11 +289,24 @@ export default function AdminStudents() {
       />
 
       <AdminSummary
+        className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
         stats={[
           {
             label: 'Total de alunos',
             value: students.length,
             icon: <Users className="w-4 h-4" />,
+          },
+          {
+            label: 'Em dia (mensalidade)',
+            value: upToDateCount,
+            icon: <Wallet className="w-4 h-4" />,
+            tone: 'green',
+          },
+          {
+            label: 'Atrasados (mensalidade)',
+            value: overdueCount,
+            icon: <Calendar className="w-4 h-4" />,
+            tone: overdueCount > 0 ? 'red' : 'neutral',
           },
           {
             label: 'Ativos',
@@ -298,12 +319,6 @@ export default function AdminStudents() {
             value: inactiveCount,
             icon: <UserX className="w-4 h-4" />,
             tone: 'red',
-          },
-          {
-            label: 'Inadimplentes',
-            value: delinquentCount,
-            icon: <Calendar className="w-4 h-4" />,
-            tone: delinquentCount > 0 ? 'red' : 'neutral',
           },
         ]}
       />
