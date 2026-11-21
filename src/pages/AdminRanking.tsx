@@ -216,35 +216,41 @@ export default function AdminRanking() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
       <AdminPageHeader
         title="Ranking dos Alunos"
+        breadcrumb="Ranking"
+        breadcrumbTo="/painel/ranking"
         description="Todos os alunos matriculados em turmas, ordenados por pontos: cada presença vale 1 ponto; competições e eventos são lançados manualmente."
-      >
-        <Button
-          onClick={() => {
-            setEntryStudent(rows[0]?.student ?? null)
-            setEntryOpen(true)
-          }}
-          disabled={rows.length === 0}
-          className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold shrink-0"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Adicionar pontuação
-        </Button>
-      </AdminPageHeader>
+        action={
+          <Button
+            onClick={() => {
+              setEntryStudent(rows[0]?.student ?? null)
+              setEntryOpen(true)
+            }}
+            disabled={rows.length === 0}
+            className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold shrink-0"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar pontuação
+          </Button>
+        }
+      />
 
       <AdminSummary
-        counts={[
-          { label: 'Alunos no ranking', value: rows.length, icon: Users },
+        stats={[
           {
-            label: 'Líder',
-            value: leader ? leader.student.name || '—' : '—',
-            hint: leader ? `${leader.totalPoints} pts` : undefined,
-            icon: Trophy,
+            label: 'Alunos no ranking',
+            value: rows.length,
+            icon: <Users className="w-4 h-4" />,
+          },
+          {
+            label: 'Líder do ranking',
+            value: leader ? `${leader.student.name || '—'} · ${leader.totalPoints} pts` : '—',
+            icon: <Trophy className="w-4 h-4" />,
             tone: 'red',
           },
           {
             label: 'Lançamentos de competição',
             value: rows.reduce((sum, r) => sum + r.entries.length, 0),
-            icon: Award,
+            icon: <Award className="w-4 h-4" />,
           },
         ]}
       />
@@ -252,7 +258,7 @@ export default function AdminRanking() {
       {rows.length === 0 ? (
         <AdminEmptyState
           title="Nenhum aluno no ranking"
-          hint="Matricule alunos em turmas para que apareçam aqui — cada presença marcada vira ponto automaticamente."
+          description="Matricule alunos em turmas para que apareçam aqui — cada presença marcada vira ponto automaticamente."
           action={
             <Link to="/painel/turmas">
               <Button className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold">
@@ -293,124 +299,138 @@ export default function AdminRanking() {
           </div>
 
           {/* Lista completa (a partir do 4º) */}
-          <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-[#E8E0D5] bg-[#FAF6F0]/60 text-[#6B6560] font-serif uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-4 w-14">#</th>
-                    <th className="py-3 px-4">Aluno</th>
-                    <th className="py-3 px-4">Faixa</th>
-                    <th className="py-3 px-4">Turmas</th>
-                    <th className="py-3 px-4 text-center">Presenças</th>
-                    <th className="py-3 px-4 text-center">Competição</th>
-                    <th className="py-3 px-4 text-center">Total</th>
-                    <th className="py-3 px-4 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E8E0D5]">
-                  {filteredRest.map((row, i) => (
-                    <tr key={row.student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
-                      <td className="py-3.5 px-4 font-serif font-bold text-[#6B6560]">{i + 4}</td>
-                      <td className="py-3.5 px-4">
-                        <strong className="text-[#1C1B1A] block">{row.student.name || '—'}</strong>
-                        {row.student.email && (
-                          <span className="text-[11px] text-[#6B6560]">{row.student.email}</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <Badge
-                          className={`text-[10px] font-bold border ${beltBadgeClass(row.student.belt)}`}
-                        >
-                          {beltLabel(row.student.belt)}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-4 text-[#6B6560]">{row.classes.join(', ')}</td>
-                      <td className="py-3.5 px-4 text-center text-[#2E7D4F] font-bold">
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarCheck className="w-3.5 h-3.5" />
-                          {row.presences}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center text-[#C1272D] font-bold">
-                        {row.manualPoints}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="font-serif font-bold text-base text-[#1C1B1A]">
-                          {row.totalPoints}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openEntryDialog(row)}
-                            className="text-[#6B6560] hover:text-[#C1272D] font-semibold text-[11px] inline-flex items-center gap-1"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            Pontuar
-                          </button>
-                        </div>
-                      </td>
+          {filteredRest.length === 0 ? (
+            <AdminEmptyState
+              className="my-6"
+              title="Nada além do pódio"
+              description={
+                search
+                  ? 'Nenhum aluno encontrado nessa busca — tente outro nome ou turma.'
+                  : 'Existem 3 alunos ou menos no ranking. Cada presença marcada vale 1 ponto!'
+              }
+            />
+          ) : (
+            <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs overflow-hidden">
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-[#E8E0D5] bg-[#FAF6F0]/60 text-[#6B6560] font-serif uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-4 w-14">#</th>
+                      <th className="py-3 px-4">Aluno</th>
+                      <th className="py-3 px-4">Faixa</th>
+                      <th className="py-3 px-4">Turmas</th>
+                      <th className="py-3 px-4 text-center">Presenças</th>
+                      <th className="py-3 px-4 text-center">Competição</th>
+                      <th className="py-3 px-4 text-center">Total</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#E8E0D5]">
+                    {filteredRest.map((row, i) => (
+                      <tr key={row.student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
+                        <td className="py-3.5 px-4 font-serif font-bold text-[#6B6560]">{i + 4}</td>
+                        <td className="py-3.5 px-4">
+                          <strong className="text-[#1C1B1A] block">
+                            {row.student.name || '—'}
+                          </strong>
+                          {row.student.email && (
+                            <span className="text-[11px] text-[#6B6560]">{row.student.email}</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <Badge
+                            className={`text-[10px] font-bold border ${beltBadgeClass(row.student.belt)}`}
+                          >
+                            {beltLabel(row.student.belt)}
+                          </Badge>
+                        </td>
+                        <td className="py-3.5 px-4 text-[#6B6560]">{row.classes.join(', ')}</td>
+                        <td className="py-3.5 px-4 text-center text-[#2E7D4F] font-bold">
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarCheck className="w-3.5 h-3.5" />
+                            {row.presences}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-[#C1272D] font-bold">
+                          {row.manualPoints}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="font-serif font-bold text-base text-[#1C1B1A]">
+                            {row.totalPoints}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEntryDialog(row)}
+                              className="text-[#6B6560] hover:text-[#C1272D] font-semibold text-[11px] inline-flex items-center gap-1"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Pontuar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Cartões (mobile) */}
-            <div className="md:hidden divide-y divide-[#E8E0D5]">
-              {filteredRest.map((row, i) => (
-                <div key={row.student.id} className="p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-serif font-bold text-[#6B6560] text-xs">
-                          {i + 4}º
-                        </span>
-                        <h4 className="font-semibold text-sm text-[#1C1B1A] truncate">
-                          {row.student.name || '—'}
-                        </h4>
+              {/* Cartões (mobile) */}
+              <div className="md:hidden divide-y divide-[#E8E0D5]">
+                {filteredRest.map((row, i) => (
+                  <div key={row.student.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-serif font-bold text-[#6B6560] text-xs">
+                            {i + 4}º
+                          </span>
+                          <h4 className="font-semibold text-sm text-[#1C1B1A] truncate">
+                            {row.student.name || '—'}
+                          </h4>
+                        </div>
+                        <p className="text-[11px] text-[#6B6560] truncate">
+                          {row.classes.join(', ')}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-[#6B6560] truncate">
-                        {row.classes.join(', ')}
-                      </p>
+                      <div className="text-right shrink-0">
+                        <p className="font-serif font-bold text-xl text-[#C1272D]">
+                          {row.totalPoints}
+                        </p>
+                        <p className="text-[10px] text-[#6B6560]">pontos</p>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-serif font-bold text-xl text-[#C1272D]">
-                        {row.totalPoints}
-                      </p>
-                      <p className="text-[10px] text-[#6B6560]">pontos</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge
+                        className={`text-[10px] font-bold border ${beltBadgeClass(row.student.belt)}`}
+                      >
+                        {beltLabel(row.student.belt)}
+                      </Badge>
+                      <Badge className="bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20 text-[10px] font-semibold">
+                        <CalendarCheck className="w-3 h-3 mr-1" />
+                        {row.presences} presença(s)
+                      </Badge>
+                      <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-[10px] font-semibold">
+                        {row.manualPoints} competição
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => openEntryDialog(row)}
+                        className="text-[#C1272D] hover:underline font-semibold text-[11px] inline-flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Lançar pontos
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Badge
-                      className={`text-[10px] font-bold border ${beltBadgeClass(row.student.belt)}`}
-                    >
-                      {beltLabel(row.student.belt)}
-                    </Badge>
-                    <Badge className="bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20 text-[10px] font-semibold">
-                      <CalendarCheck className="w-3 h-3 mr-1" />
-                      {row.presences} presença(s)
-                    </Badge>
-                    <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-[10px] font-semibold">
-                      {row.manualPoints} competição
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => openEntryDialog(row)}
-                      className="text-[#C1272D] hover:underline font-semibold text-[11px] inline-flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Lançar pontos
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Lançamentos manuais de todos os alunos */}
           {rows.some((r) => r.entries.length > 0) && (

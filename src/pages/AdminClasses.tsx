@@ -401,29 +401,37 @@ export default function AdminClasses() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
       <AdminPageHeader
         title="Turmas"
+        breadcrumb="Turmas"
+        breadcrumbTo="/painel/turmas"
         description="Organize os alunos por turma e faça a chamada de presença dentro de cada uma."
-      >
-        <Button
-          onClick={() => {
-            setEditingClass(null)
-            setFormOpen(true)
-          }}
-          className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Turma
-        </Button>
-      </AdminPageHeader>
+        action={
+          <Button
+            onClick={() => {
+              setEditingClass(null)
+              setFormOpen(true)
+            }}
+            className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Turma
+          </Button>
+        }
+      />
 
       <AdminSummary
-        counts={[
-          { label: 'Turmas', value: classes.length, icon: Layers },
-          { label: 'Ativas', value: activeCount, icon: CalendarCheck, tone: 'green' },
+        stats={[
+          { label: 'Turmas', value: classes.length, icon: <Layers className="w-4 h-4" /> },
           {
-            label: 'Vagas ocupadas',
-            value: `${totalMatriculados}/${totalVagas}`,
-            icon: Users,
-            tone: totalMatriculados >= totalVagas && totalVagas > 0 ? 'red' : 'default',
+            label: 'Ativas',
+            value: activeCount,
+            icon: <CalendarCheck className="w-4 h-4" />,
+            tone: 'green',
+          },
+          {
+            label: 'Alunos matriculados',
+            value: totalMatriculados,
+            icon: <Users className="w-4 h-4" />,
+            tone: totalMatriculados >= totalVagas && totalVagas > 0 ? 'red' : 'neutral',
           },
         ]}
       />
@@ -432,7 +440,7 @@ export default function AdminClasses() {
       {classes.length === 0 ? (
         <AdminEmptyState
           title="Nenhuma turma criada"
-          hint="Crie a primeira turma para começar a matricular alunos e registrar presenças diárias."
+          description="Crie a primeira turma para começar a matricular alunos e registrar presenças diárias."
           action={
             <Button
               onClick={() => {

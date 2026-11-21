@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { ordersService } from '@/services/orders'
 import { Order, OrderItem, OrderStatus } from '@/types'
@@ -10,23 +10,8 @@ import {
   AdminEmptyState,
   AdminPageLoader,
 } from '@/components/admin/AdminPage'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import {
-  ShieldAlert,
-  Loader2,
-  X,
-  ExternalLink,
-  MessageSquare,
-  Building,
-  MapPin,
-  Calendar,
-  Phone,
-  User,
-  ShoppingBag,
-  Filter,
-} from 'lucide-react'
+import { Loader2, X, MessageSquare, ShoppingBag, Filter, CheckCircle2 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'todos' }[] = [
@@ -168,25 +153,36 @@ export default function AdminOrders() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
       <AdminPageHeader
-        title="Painel de Pedidos"
+        title="Pedidos"
+        breadcrumb="Pedidos"
+        breadcrumbTo="/painel/pedidos"
         description="Gerencie e atualize os pedidos dos alunos em tempo real."
       />
 
       <AdminSummary
-        counts={[
-          { label: 'Total de pedidos', value: orders.length, icon: ShoppingBag },
+        stats={[
+          {
+            label: 'Total de pedidos',
+            value: orders.length,
+            icon: <ShoppingBag className="w-4 h-4" />,
+          },
           {
             label: 'Novos (aguardando)',
             value: countsByStatus['novo'] || 0,
-            icon: Filter,
+            icon: <Filter className="w-4 h-4" />,
             tone: 'red',
           },
           {
             label: 'Em preparação',
             value: countsByStatus['em_preparacao'] || 0,
-            icon: Calendar,
+            icon: <Loader2 className="w-4 h-4" />,
           },
-          { label: 'Entregues', value: countsByStatus['entregue'] || 0, icon: CheckCircle2 },
+          {
+            label: 'Entregues',
+            value: countsByStatus['entregue'] || 0,
+            icon: <CheckCircle2 className="w-4 h-4" />,
+            tone: 'green',
+          },
         ]}
       />
 
@@ -223,7 +219,7 @@ export default function AdminOrders() {
       {filteredOrders.length === 0 ? (
         <AdminEmptyState
           title="Nenhum pedido por aqui"
-          hint={
+          description={
             selectedStatus === 'todos'
               ? 'Nenhum pedido foi registrado ainda. Assim que um aluno finalizar a compra na loja, ele aparece aqui automaticamente.'
               : 'Não existem pedidos com esse status. Troque o filtro acima para ver os outros pedidos.'

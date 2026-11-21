@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { HankoStamp } from '@/components/HankoStamp'
+import {
+  AdminPageHeader,
+  AdminSummary,
+  AdminEmptyState,
+  AdminPageLoader,
+} from '@/components/admin/AdminPage'
 import {
   ProductFormDialog,
   ProductStockDialog,
@@ -151,43 +156,59 @@ export default function AdminProducts() {
   }
 
   if (authLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center bg-[#FAF6F0]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#C1272D]" />
-      </div>
-    )
+    return <AdminPageLoader label="Carregando loja..." />
   }
+
+  const activeProducts = products.filter((p) => p.active !== false).length
+  const totalPiecesInStock = products.reduce(
+    (sum, p) => sum + totalPieces(varsByProduct.get(p.id) || []),
+    0,
+  )
 
   return (
     <div className="min-h-screen bg-[#FAF6F0]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2">
-              <HankoStamp size="sm" />
-              <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">
-                Administração do Judô Tatsu
-              </span>
-            </div>
-            <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
-              Loja — Gerenciar Produtos
-            </h1>
-            <p className="text-sm text-[#6B6560] mt-2 max-w-xl">
-              Adicione e remova produtos, ative/desative itens e controle o estoque de cada tamanho
-              (variação). Produtos ativos aparecem na aba “Kimonos e Acessórios” da página inicial.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-            className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold shrink-0"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Novo produto
-          </Button>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
+        <AdminPageHeader
+          title="Loja — Gerenciar Produtos"
+          breadcrumb="Loja"
+          breadcrumbTo="/painel/produtos"
+          description="Adicione e remova produtos, ative/desative itens e controle o estoque de cada tamanho (variação). Produtos ativos aparecem na aba “Kimonos e Acessórios” da página inicial."
+          icon={<Package className="w-6 h-6" />}
+          action={
+            <Button
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+              className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold shrink-0"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Novo produto
+            </Button>
+          }
+        />
+
+        <AdminSummary
+          stats={[
+            {
+              label: 'Total de produtos',
+              value: products.length,
+              icon: <Package className="w-4 h-4" />,
+            },
+            {
+              label: 'Ativos',
+              value: activeProducts,
+              icon: <ToggleRight className="w-4 h-4" />,
+              tone: 'green',
+            },
+            {
+              label: 'Peças em estoque',
+              value: totalPiecesInStock,
+              icon: <Boxes className="w-4 h-4" />,
+              tone: totalPiecesInStock === 0 ? 'red' : 'neutral',
+            },
+          ]}
+        />
 
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9A948C]" />
@@ -199,19 +220,30 @@ export default function AdminProducts() {
           />
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-[#C1272D]" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-[#E8E0D5]">
-            <Package className="w-10 h-10 text-[#9A948C] mx-auto mb-3" />
-            <p className="text-sm text-[#6B6560]">
-              {search
-                ? 'Nenhum produto encontrado para a busca.'
-                : 'Nenhum produto cadastrado ainda. Use “Novo produto” para começar.'}
-            </p>
-          </div>
+        {filtered.length === 0 ? (
+          <AdminEmptyState
+            icon={<Package className="w-10 h-10" />}
+            title={search ? 'Nenhum produto encontrado' : 'Loja vazia'}
+            description={
+              search
+                ? 'Nenhum produto corresponde a essa busca — tente outro nome, slug ou categoria.'
+                : 'Nenhum produto cadastrado ainda. Use “Novo produto” para começar a montar o catálogo.'
+            }
+            action={
+              !search ? (
+                <Button
+                  onClick={() => {
+                    setEditing(null)
+                    setFormOpen(true)
+                  }}
+                  className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Cadastrar primeiro produto
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((p) => {

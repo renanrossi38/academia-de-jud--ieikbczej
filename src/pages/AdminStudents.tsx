@@ -193,22 +193,39 @@ export default function AdminStudents() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
       <AdminPageHeader
         title="Gestão de Alunos"
+        breadcrumb="Alunos"
+        breadcrumbTo="/painel/alunos"
         description="Cadastre, edite e acompanhe os alunos matriculados na academia."
-      >
-        <Button
-          onClick={() => setCreateOpen(true)}
-          className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Cadastrar Aluno
-        </Button>
-      </AdminPageHeader>
+        action={
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Cadastrar Aluno
+          </Button>
+        }
+      />
 
       <AdminSummary
-        counts={[
-          { label: 'Total de alunos', value: students.length, icon: Users },
-          { label: 'Ativos', value: activeCount, icon: UserCheck, tone: 'green' },
-          { label: 'Inativos', value: inactiveCount, icon: UserX, tone: 'red' },
+        stats={[
+          {
+            label: 'Total de alunos',
+            value: students.length,
+            icon: <Users className="w-4 h-4" />,
+          },
+          {
+            label: 'Ativos',
+            value: activeCount,
+            icon: <UserCheck className="w-4 h-4" />,
+            tone: 'green',
+          },
+          {
+            label: 'Inativos',
+            value: inactiveCount,
+            icon: <UserX className="w-4 h-4" />,
+            tone: 'red',
+          },
         ]}
       />
 
@@ -238,7 +255,7 @@ export default function AdminStudents() {
       {filteredStudents.length === 0 ? (
         <AdminEmptyState
           title={search ? 'Nenhum aluno encontrado' : 'Nenhum aluno por aqui'}
-          hint={
+          description={
             search
               ? 'Tente buscar por outro nome, e-mail ou telefone.'
               : 'Cadastre o primeiro aluno da academia para começar — ele já aparece aqui na hora.'
