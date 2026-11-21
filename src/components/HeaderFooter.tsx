@@ -357,7 +357,10 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <HankoStamp size="sm" />
+              {/* Chip claro atrás do logo: o PNG tem fundo transparente e o rodapé é escuro */}
+              <span className="inline-flex items-center justify-center rounded-full bg-[#FAF6F0] p-1">
+                <HankoStamp size="sm" />
+              </span>
               <span className="font-serif font-bold text-lg text-white">Judô Tatsu</span>
             </div>
             <p className="text-sm leading-relaxed text-[#CFC8BE]">
