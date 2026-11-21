@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { Loader2 } from 'lucide-react'
 import {
@@ -297,7 +298,13 @@ export default function AdminStudents() {
                   return (
                     <tr key={student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
                       <td className="py-3.5 px-4">
-                        <strong className="text-[#1C1B1A] block">{student.name || '—'}</strong>
+                        <Link
+                          to={`/painel/alunos/${student.id}`}
+                          className="text-[#C1272D] font-bold hover:underline"
+                          title="Abrir ficha do aluno"
+                        >
+                          {student.name || '—'}
+                        </Link>
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560]">{student.phone || '—'}</td>
                       <td className="py-3.5 px-4">
@@ -401,7 +408,15 @@ export default function AdminStudents() {
                   className="p-4 space-y-3 hover:bg-[#FAF6F0]/40 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-semibold text-sm text-[#1C1B1A]">{student.name || '—'}</h4>
+                    <h4 className="font-semibold text-sm text-[#1C1B1A]">
+                      <Link
+                        to={`/painel/alunos/${student.id}`}
+                        className="text-[#C1272D] hover:underline"
+                        title="Abrir ficha do aluno"
+                      >
+                        {student.name || '—'}
+                      </Link>
+                    </h4>
                     <Badge
                       className={`text-[10px] font-bold border ${
                         student.active

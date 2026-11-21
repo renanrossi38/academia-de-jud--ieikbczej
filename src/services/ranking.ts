@@ -106,6 +106,14 @@ export const rankingService = {
     return pb.collection('points_entries').getFullList<PointEntry>({ sort: '-created' })
   },
 
+  /** Lançamentos de um aluno específico (ficha individual), mais recentes primeiro. */
+  async listEntriesByStudent(studentId: string): Promise<PointEntry[]> {
+    return pb.collection('points_entries').getFullList<PointEntry>({
+      filter: `student = "${studentId}"`,
+      sort: '-date',
+    })
+  },
+
   /** Cria um lançamento manual de pontuação para um aluno. */
   async createEntry(input: CreatePointEntryInput): Promise<PointEntry> {
     const points = Math.max(0, Math.round(input.points))

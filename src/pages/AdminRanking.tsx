@@ -63,7 +63,13 @@ const PodiumCard: React.FC<PodiumCardProps> = ({ row, place, styles, onAddPoints
       {place}
     </div>
     <h3 className="font-serif font-bold text-base text-[#1C1B1A] mt-2 truncate max-w-full">
-      {row.student.name || '—'}
+      <Link
+        to={`/painel/alunos/${row.student.id}`}
+        className="text-[#C1272D] hover:underline"
+        title="Abrir ficha do aluno"
+      >
+        {row.student.name || '—'}
+      </Link>
     </h3>
     <Badge className={`text-[10px] font-bold border mt-1 ${beltBadgeClass(row.student.belt)}`}>
       {beltLabel(row.student.belt)}
@@ -330,9 +336,13 @@ export default function AdminRanking() {
                       <tr key={row.student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
                         <td className="py-3.5 px-4 font-serif font-bold text-[#6B6560]">{i + 4}</td>
                         <td className="py-3.5 px-4">
-                          <strong className="text-[#1C1B1A] block">
+                          <Link
+                            to={`/painel/alunos/${row.student.id}`}
+                            className="text-[#C1272D] font-bold hover:underline"
+                            title="Abrir ficha do aluno"
+                          >
                             {row.student.name || '—'}
-                          </strong>
+                          </Link>
                           {row.student.email && (
                             <span className="text-[11px] text-[#6B6560]">{row.student.email}</span>
                           )}
@@ -388,7 +398,13 @@ export default function AdminRanking() {
                             {i + 4}º
                           </span>
                           <h4 className="font-semibold text-sm text-[#1C1B1A] truncate">
-                            {row.student.name || '—'}
+                            <Link
+                              to={`/painel/alunos/${row.student.id}`}
+                              className="text-[#C1272D] hover:underline"
+                              title="Abrir ficha do aluno"
+                            >
+                              {row.student.name || '—'}
+                            </Link>
                           </h4>
                         </div>
                         <p className="text-[11px] text-[#6B6560] truncate">

@@ -71,6 +71,15 @@ export const studentsService = {
     return res.items[0] ?? null
   },
 
+  /** Busca um aluno pelo id (null quando não existe, ex.: link antigo). */
+  async getStudentById(id: string): Promise<Student | null> {
+    try {
+      return await pb.collection('students').getOne<Student>(id)
+    } catch (_) {
+      return null
+    }
+  },
+
   async createStudent(input: CreateStudentInput): Promise<Student> {
     return pb.collection('students').create<Student>({
       name: input.name.trim(),

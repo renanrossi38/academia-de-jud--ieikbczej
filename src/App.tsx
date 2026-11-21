@@ -17,6 +17,7 @@ import AdminStudents from './pages/AdminStudents'
 import AdminRanking from './pages/AdminRanking'
 import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
+import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import MyAttendance from './pages/MyAttendance'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/painel/pedidos" element={<AdminOrders />} />
               <Route path="/painel/produtos" element={<AdminProducts />} />
               <Route path="/painel/alunos" element={<AdminStudents />} />
+              <Route path="/painel/alunos/:id" element={<AdminStudentDetail />} />
               <Route path="/painel/ranking" element={<AdminRanking />} />
               <Route path="/painel/turmas" element={<AdminClasses />} />
               <Route path="/painel/turmas/:classId" element={<AdminClassDetail />} />
