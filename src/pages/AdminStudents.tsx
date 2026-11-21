@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
@@ -126,31 +126,61 @@ export default function AdminStudents() {
     setStudents((prev) => upsert(prev, e.record))
   })
 
-  // Mensalidades: carregadas uma única vez e mapeadas por aluno (badge de situação)
+  // Mensalidades: carregadas do servidor e mapeadas por aluno (badge de situação).
+  // O mapa é sempre RECONSTRUÍDO do servidor — nunca só corrigido localmente —
+  // para que badge e contadores não fiquem presos num estado otimista errado.
+  const feesLoadingRef = useRef(false)
+  const loadFees = useCallback(async () => {
+    if (feesLoadingRef.current) return
+    feesLoadingRef.current = true
+    try {
+      const fees = await monthlyFeesService.listAll()
+      const map: Record<string, MonthlyFee[]> = {}
+      for (const fee of fees) {
+        ;(map[fee.student] ||= []).push(fee)
+      }
+      setFeesByStudent(map)
+    } catch (err) {
+      console.error('Erro ao carregar mensalidades:', err)
+      // Silencioso: a listagem de alunos funciona mesmo sem o módulo de mensalidades
+    } finally {
+      feesLoadingRef.current = false
+    }
+  }, [])
+
   useEffect(() => {
     if (authLoading || !user || !isAdmin) return
-    let cancelled = false
-    monthlyFeesService
-      .listAll()
-      .then((fees) => {
-        if (cancelled) return
-        const map: Record<string, MonthlyFee[]> = {}
-        for (const fee of fees) {
-          ;(map[fee.student] ||= []).push(fee)
-        }
-        setFeesByStudent(map)
-      })
-      .catch((err) => {
-        console.error('Erro ao carregar mensalidades:', err)
-        // Silencioso: a listagem de alunos funciona mesmo sem o módulo de mensalidades
-      })
-    return () => {
-      cancelled = true
+    loadFees()
+    // Refetch ao voltar o foco da aba: cobre eventos SSE perdidos (aba em
+    // background, queda de conexão) que deixariam o badge desatualizado.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadFees()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, authLoading])
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [user, isAdmin, authLoading, loadFees])
 
-  // Tempo real nas mensalidades: badge atualiza ao marcar pagamento na ficha do aluno
+  // Tempo real nas mensalidades: atualização otimista imediata (marcar pagamento,
+  // excluir lançamento) + refetch com debounce, que é a fonte da verdade.
+  const feeRefetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scheduleFeeRefetch = useCallback(() => {
+    if (feeRefetchTimer.current) clearTimeout(feeRefetchTimer.current)
+    feeRefetchTimer.current = setTimeout(() => {
+      feeRefetchTimer.current = null
+      loadFees()
+    }, 400)
+  }, [loadFees])
+  useEffect(
+    () => () => {
+      if (feeRefetchTimer.current) clearTimeout(feeRefetchTimer.current)
+    },
+    [],
+  )
+
   useRealtime<MonthlyFee>('monthly_fees', (e) => {
     const fee = e.record
     setFeesByStudent((prev) => {
@@ -164,6 +194,7 @@ export default function AdminStudents() {
       const list = (prev[fee.student] || []).filter((f) => f.id !== fee.id)
       return { ...prev, [fee.student]: [fee, ...list] }
     })
+    scheduleFeeRefetch()
   })
 
   // Situação de mensalidade por aluno — a MESMA lógica dos badges da tabela

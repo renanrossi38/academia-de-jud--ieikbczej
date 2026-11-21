@@ -27,13 +27,17 @@ export type FeeStanding = 'sem_lancamentos' | 'em_dia' | 'inadimplente'
 /**
  * Situação de um aluno a partir das mensalidades dele:
  *  - sem lançamentos → "sem_lancamentos" (neutro, sem alarme);
- *  - há pendente com mês de referência <= mês atual → "inadimplente";
+ *  - há pendente com mês de referência anterior ao atual OU (mês corrente com
+ *    vencimento já passado) → "inadimplente";
  *  - caso contrário → "em_dia".
+ *
+ * Regra definida pelo usuário: o mês corrente com vencimento FUTURO não conta
+ * como atrasado (o aluno ainda está no prazo). Alinhado com o critério do hook
+ * de e-mail (fee_overdue_notice.js), que usa reference_month < mês atual.
  */
 export function feeStanding(fees: MonthlyFee[], now: Date = new Date()): FeeStanding {
   if (fees.length === 0) return 'sem_lancamentos'
-  const thisMonth = monthKeyOf(now)
-  const hasOverdue = fees.some((f) => f.status === 'pendente' && f.reference_month <= thisMonth)
+  const hasOverdue = fees.some((f) => isOverdue(f, now) || f.reference_month < monthKeyOf(now))
   return hasOverdue ? 'inadimplente' : 'em_dia'
 }
 
