@@ -55,12 +55,12 @@ const STANDING_META: Record<FeeStanding, { label: string; cls: string; hint: str
   em_dia: {
     label: 'Em dia',
     cls: 'bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20',
-    hint: 'Nenhuma mensalidade pendente vencida até o mês atual.',
+    hint: 'Mensalidade do mês corrente paga — ou, antes do dia 15, nenhuma pendência vencida.',
   },
   inadimplente: {
     label: 'Inadimplente',
     cls: 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20',
-    hint: 'Há mensalidade pendente com mês de referência já vencido.',
+    hint: 'Pendência vencida — ou, a partir do dia 15, mensalidade do mês corrente ainda não paga.',
   },
   sem_lancamentos: {
     label: 'Sem lançamentos',
@@ -79,7 +79,9 @@ export const MonthlyFeesPanel: React.FC<{
   studentName: string
   classes: Class[]
   refreshKey?: number
-}> = ({ studentId, studentName, classes, refreshKey = 0 }) => {
+  /** Aluno ativo? A regra do dia 15 (inadimplência sem lançamento) vale só p/ ativos. */
+  studentActive?: boolean
+}> = ({ studentId, studentName, classes, refreshKey = 0, studentActive = true }) => {
   const { toast } = useToast()
   const [fees, setFees] = useState<MonthlyFee[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -114,7 +116,7 @@ export const MonthlyFeesPanel: React.FC<{
     loadFees()
   })
 
-  const standing = feeStanding(fees)
+  const standing = feeStanding(fees, new Date(), studentActive)
   const standingMeta = STANDING_META[standing]
   const paidThisYear = paidTotalInYear(fees, new Date().getFullYear())
 

@@ -199,16 +199,21 @@ export default function AdminStudents() {
 
   // Situação de mensalidade por aluno — a MESMA lógica dos badges da tabela
   // (feeStanding), para que contadores e badges nunca discordem:
-  //  - "Em dia": tem lançamentos e nenhum mês já vencido em aberto;
-  //  - "Atrasados": há mensalidade pendente com vencimento/mês já passado;
-  //  - sem lançamentos = neutro, não entra em nenhum dos dois contadores.
+  //  - "Em dia": mensalidade do mês corrente paga (ou, antes do dia 15, nenhum
+  //    mês já vencido em aberto);
+  //  - "Atrasados": pendência vencida OU — a partir do dia 15 — aluno ativo
+  //    sem a mensalidade do mês corrente paga (mesmo sem lançamento);
+  //  - "sem lançamentos" = neutro, só antes do dia 15.
   const { upToDateCount, overdueCount } = useMemo(() => {
     let emDia = 0
     let atrasados = 0
     for (const s of students) {
       const fees = feesByStudent[s.id] || []
-      if (fees.length === 0) continue
-      if (feeStanding(fees) === 'inadimplente') atrasados += 1
+      // Regra do dia 15: antes dela, "sem lançamentos" é neutro (não entra em
+      // nenhum contador); a partir do dia 15, aluno ativo sem o mês corrente
+      // pago já é inadimplente — mesmo sem lançamento algum.
+      if (feeStanding(fees, new Date(), s.active) === 'sem_lancamentos') continue
+      if (feeStanding(fees, new Date(), s.active) === 'inadimplente') atrasados += 1
       else emDia += 1
     }
     return { upToDateCount: emDia, overdueCount: atrasados }
@@ -216,13 +221,21 @@ export default function AdminStudents() {
 
   const feeBadgeFor = (studentId: string): { label: string; className: string } => {
     const fees = feesByStudent[studentId]
+    const student = students.find((s) => s.id === studentId)
     if (!fees || fees.length === 0) {
+      // A partir do dia 15, ativo sem lançamento nenhum já é inadimplente.
+      if (feeStanding(fees || [], new Date(), student?.active ?? true) === 'inadimplente') {
+        return {
+          label: 'Inadimplente',
+          className: 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20',
+        }
+      }
       return {
         label: 'sem lançamentos',
         className: 'bg-[#F5F2EC] text-[#6B6560] border-[#E8E0D5]',
       }
     }
-    if (feeStanding(fees) === 'inadimplente') {
+    if (feeStanding(fees, new Date(), student?.active ?? true) === 'inadimplente') {
       return {
         label: 'Inadimplente',
         className: 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20',
@@ -253,7 +266,8 @@ export default function AdminStudents() {
     let count = 0
     for (const s of students) {
       const fees = feesByStudent[s.id] || []
-      if (feeStanding(fees) === 'inadimplente' && (s.email || '').trim()) count += 1
+      if (feeStanding(fees, new Date(), s.active) === 'inadimplente' && (s.email || '').trim())
+        count += 1
     }
     return count
   }, [students, feesByStudent])

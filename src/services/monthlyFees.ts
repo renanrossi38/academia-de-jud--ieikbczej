@@ -38,23 +38,42 @@ export function brasiliaDayKey(): string {
 /** Situação do aluno em relação às mensalidades. */
 export type FeeStanding = 'sem_lancamentos' | 'em_dia' | 'inadimplente'
 
+/** Passou do dia 15 do mês corrente, em Brasília (UTC-3 o ano todo)? */
+export function isPastFeeDay15(now: Date = new Date()): boolean {
+  const b = new Date(now.getTime() - 3 * 60 * 60 * 1000)
+  return b.getUTCDate() >= 15
+}
+
 /**
- * Situação de um aluno a partir das mensalidades dele:
- *  - sem lançamentos → "sem_lancamentos" (neutro, sem alarme);
- *  - há pendente com mês de referência anterior ao atual OU (mês corrente com
- *    vencimento já passado) → "inadimplente";
- *  - caso contrário → "em_dia".
+ * Situação de um aluno a partir das mensalidades dele — MESMA regra do hook de
+ * e-mail (fee_overdue_notice.js), sempre em Brasília:
+ *  - REGRA DO DIA 15 (definida pelo usuário): a partir do dia 15 do mês
+ *    corrente, aluno ATIVO sem a mensalidade do mês corrente PAGA é
+ *    "inadimplente" — mesmo sem nenhum lançamento para o mês (aqui o
+ *    julgamento considera o conjunto de mensalidades do aluno, não uma row
+ *    pendente). Antes do dia 15, o mês corrente vazio/pendente não conta;
+ *  - mensalidade PENDENTE com mês de referência anterior ao atual OU (mês
+ *    corrente com vencimento já passado) → "inadimplente", em qualquer dia;
+ *  - sem lançamentos (e sem a regra do dia 15) → "sem_lancamentos" (neutro);
+ *  - caso contrário → "em_dia". Mensalidade PAGA nunca é inadimplente.
  *
- * Regra definida pelo usuário: o mês corrente com vencimento FUTURO não conta
- * como atrasado (o aluno ainda está no prazo). Alinhado com o critério do hook
- * de e-mail (fee_overdue_notice.js), que usa reference_month < mês atual.
+ * `active` = aluno ativo? A regra do dia 15 vale só para ativos; a pendência
+ * vencida conta para qualquer aluno (alinhado ao hook, que não filtra status).
  */
-export function feeStanding(fees: MonthlyFee[], now: Date = new Date()): FeeStanding {
-  if (fees.length === 0) return 'sem_lancamentos'
+export function feeStanding(
+  fees: MonthlyFee[],
+  now: Date = new Date(),
+  active = true,
+): FeeStanding {
+  const month = monthKeyOf(now)
   const hasOverdue = fees.some(
-    (f) => f.status === 'pendente' && (isOverdue(f, now) || f.reference_month < monthKeyOf(now)),
+    (f) => f.status === 'pendente' && (isOverdue(f, now) || f.reference_month < month),
   )
-  return hasOverdue ? 'inadimplente' : 'em_dia'
+  if (hasOverdue) return 'inadimplente'
+  const currentMonthPaid = fees.some((f) => f.reference_month === month && f.status === 'pago')
+  if (active && isPastFeeDay15(now) && !currentMonthPaid) return 'inadimplente'
+  if (fees.length === 0) return 'sem_lancamentos'
+  return 'em_dia'
 }
 
 /** Data de vencimento padrão: dia 15 do mês SEGUINTE ao mês de referência ("YYYY-MM"). */

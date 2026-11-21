@@ -213,6 +213,7 @@ export default function AdminStudentDetail() {
             studentId={student.id}
             studentName={student.name || 'Aluno'}
             classes={classes}
+            studentActive={student.active}
           />
           <FinancePanel student={student} orders={orders} itemsByOrder={itemsByOrder} />
         </TabsContent>
