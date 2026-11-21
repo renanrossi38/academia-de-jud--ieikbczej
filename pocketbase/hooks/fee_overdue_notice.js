@@ -329,7 +329,6 @@ routerAdd(
           ' pendentes=' +
           pendentes,
       )
-      s
     }
     return e.json(200, {
       sent: sent,
