@@ -202,6 +202,10 @@ export interface MonthlyFee {
   /** Valor em R$. */
   amount: number
   status: MonthlyFeeStatus
+  /** Método de pagamento registrado pelo admin (opcional). */
+  payment_method?: PaymentMethod
+  /** Vencimento (padrão do app: dia 15 do mês de referência). */
+  due_date?: string
   /** Quando foi marcado como pago (presente só quando status = "pago"). */
   paid_at?: string
   notes?: string
@@ -211,6 +215,9 @@ export interface MonthlyFee {
     student?: Student
   }
 }
+
+/** Método de pagamento registrado em uma mensalidade (opcional). */
+export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao'
 
 /** Lançamento manual de pontos do ranking (competição/evento). */
 export interface PointEntry {

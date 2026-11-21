@@ -24,15 +24,16 @@ import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useRealtime } from '@/hooks/use-realtime'
-import { fmtBRL, fmtDateTime } from './StudentDetailPanels'
+import { fmtBRL, fmtDate, fmtDateTime } from './StudentDetailPanels'
 import CreateFeeDialog from '@/components/admin/CreateFeeDialog'
-import { MonthlyFee, MonthlyFeeStatus } from '@/types'
+import { MonthlyFee, MonthlyFeeStatus, PaymentMethod } from '@/types'
 import {
-  currentMonthKey,
   feeStanding,
+  isOverdue,
   monthlyFeesService,
   monthLabel,
   paidTotalInYear,
+  paymentMethodLabel,
   type FeeStanding,
 } from '@/services/monthlyFees'
 import { Class } from '@/types'
@@ -42,6 +43,12 @@ const cardCls = 'bg-white rounded-2xl border border-[#E8E0D5] shadow-xs'
 const STATUS_BADGE: Record<MonthlyFeeStatus, string> = {
   pago: 'bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20',
   pendente: 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20',
+}
+
+const METHOD_BADGE: Record<PaymentMethod, string> = {
+  pix: 'bg-[#E8EAF6] text-[#283593] border-[#283593]/20',
+  dinheiro: 'bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20',
+  cartao: 'bg-[#F3E5F5] text-[#6A1B9A] border-[#6A1B9A]/20',
 }
 
 const STANDING_META: Record<FeeStanding, { label: string; cls: string; hint: string }> = {
@@ -222,7 +229,8 @@ export const MonthlyFeesPanel: React.FC<{
                     <th className="py-3 px-5">Mês de referência</th>
                     <th className="py-3 px-4">Valor</th>
                     <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Data de pagamento</th>
+                    <th className="py-3 px-4">Vencimento</th>
+                    <th className="py-3 px-4">Pagamento</th>
                     <th className="py-3 px-5 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -234,11 +242,28 @@ export const MonthlyFeesPanel: React.FC<{
                       </td>
                       <td className="py-3.5 px-4 text-[#1C1B1A]">{fmtBRL(fee.amount)}</td>
                       <td className="py-3.5 px-4">
-                        <Badge
-                          className={`text-[10px] font-bold border ${STATUS_BADGE[fee.status]}`}
-                        >
-                          {fee.status === 'pago' ? 'Pago' : 'Pendente'}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge
+                            className={`text-[10px] font-bold border ${STATUS_BADGE[fee.status]}`}
+                          >
+                            {fee.status === 'pago' ? 'Pago' : 'Pendente'}
+                          </Badge>
+                          {fee.payment_method && (
+                            <Badge
+                              className={`text-[10px] font-semibold border ${METHOD_BADGE[fee.payment_method]}`}
+                            >
+                              {paymentMethodLabel[fee.payment_method]}
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td
+                        className={`py-3.5 px-4 font-semibold ${
+                          isOverdue(fee) ? 'text-[#C1272D]' : 'text-[#6B6560]'
+                        }`}
+                      >
+                        {fee.due_date ? fmtDate(fee.due_date) : '—'}
+                        {isOverdue(fee) && ' (vencida)'}
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560]">
                         {fee.status === 'pago' ? fmtDateTime(fee.paid_at) : '—'}
@@ -280,17 +305,33 @@ export const MonthlyFeesPanel: React.FC<{
                     <span className="font-semibold text-sm text-[#1C1B1A]">
                       {monthLabel(fee.reference_month)}
                     </span>
-                    <Badge className={`text-[10px] font-bold border ${STATUS_BADGE[fee.status]}`}>
-                      {fee.status === 'pago' ? 'Pago' : 'Pendente'}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      {fee.payment_method && (
+                        <Badge
+                          className={`text-[10px] font-semibold border ${METHOD_BADGE[fee.payment_method]}`}
+                        >
+                          {paymentMethodLabel[fee.payment_method]}
+                        </Badge>
+                      )}
+                      <Badge className={`text-[10px] font-bold border ${STATUS_BADGE[fee.status]}`}>
+                        {fee.status === 'pago' ? 'Pago' : 'Pendente'}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-[#6B6560]">
                     <span className="font-serif font-bold text-[#1C1B1A]">
                       {fmtBRL(fee.amount)}
                     </span>
-                    <span>
-                      {fee.status === 'pago' ? `Pago em ${fmtDateTime(fee.paid_at)}` : '—'}
+                    <span className={isOverdue(fee) ? 'text-[#C1272D] font-semibold' : undefined}>
+                      {isOverdue(fee)
+                        ? `Venceu em ${fmtDate(fee.due_date)}`
+                        : fee.due_date
+                          ? `Vence ${fmtDate(fee.due_date)}`
+                          : '—'}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-end text-[11px] text-[#6B6560]">
+                    {fee.status === 'pago' ? `Pago em ${fmtDateTime(fee.paid_at)}` : '—'}
                   </div>
                   <div className="flex items-center justify-end gap-3 pt-1">
                     {fee.status === 'pendente' && (

@@ -30,6 +30,13 @@ import { Attendance, AttendanceStatus, Class, Order, OrderItem, PointEntry, Stud
 export const fmtBRL = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+export const fmtDate = (iso?: string) => {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 export const fmtDateTime = (iso?: string) => {
   if (!iso) return '—'
   const d = new Date(iso)

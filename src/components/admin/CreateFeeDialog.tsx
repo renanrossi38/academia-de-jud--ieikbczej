@@ -12,8 +12,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Class, MonthlyFee } from '@/types'
-import { monthlyFeesService } from '@/services/monthlyFees'
+import { Class, MonthlyFee, PaymentMethod } from '@/types'
+import { defaultDueDate, monthlyFeesService, paymentMethodLabel } from '@/services/monthlyFees'
 
 /** Converte a mensalidade de referência da turma em texto de input ("120,00"). */
 const formatFeeForInput = (value: number | undefined) =>
@@ -46,6 +46,8 @@ export default function CreateFeeDialog({
   const [month, setMonth] = useState('')
   const [amountInput, setAmountInput] = useState('')
   const [notes, setNotes] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
+  const [dueDate, setDueDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   // Mensalidade de referência da primeira turma ativa do aluno.
@@ -62,8 +64,16 @@ export default function CreateFeeDialog({
       setMonth(key)
       setAmountInput(formatFeeForInput(suggestedAmount))
       setNotes('')
+      setPaymentMethod('')
+      setDueDate(defaultDueDate(key))
     }
   }, [open, suggestedAmount])
+
+  // Vencimento padrão acompanha o mês escolhido: dia 15 do reference_month.
+  const handleMonthChange = (value: string) => {
+    setMonth(value)
+    if (value) setDueDate(defaultDueDate(value))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,6 +94,14 @@ export default function CreateFeeDialog({
       })
       return
     }
+    if (!dueDate) {
+      toast({
+        title: 'Informe o vencimento',
+        description: 'Defina a data de vencimento (padrão: dia 15 do mês de referência).',
+        variant: 'destructive',
+      })
+      return
+    }
     setIsSaving(true)
     try {
       const created = await monthlyFeesService.create({
@@ -91,6 +109,8 @@ export default function CreateFeeDialog({
         referenceMonth: month,
         amount,
         notes: notes.trim() || undefined,
+        paymentMethod: paymentMethod || undefined,
+        dueDate,
       })
       toast({
         title: 'Mensalidade lançada',
@@ -135,31 +155,66 @@ export default function CreateFeeDialog({
               id="fee-month"
               type="month"
               value={month}
-              onChange={(e) => setMonth(e.target.value)}
+              onChange={(e) => handleMonthChange(e.target.value)}
               required
               className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="fee-amount" className="text-xs font-semibold text-[#1C1B1A]">
+                Valor (R$)
+              </Label>
+              <Input
+                id="fee-amount"
+                inputMode="decimal"
+                placeholder="Ex.: 120,00"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+                required
+                className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fee-due" className="text-xs font-semibold text-[#1C1B1A]">
+                Vencimento
+              </Label>
+              <Input
+                id="fee-due"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                required
+                className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+              />
+              <p className="text-[10px] text-[#6B6560]">Padrão: dia 15 do mês de referência.</p>
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="fee-amount" className="text-xs font-semibold text-[#1C1B1A]">
-              Valor (R$)
+            <Label className="text-xs font-semibold text-[#1C1B1A]">
+              Método de pagamento (opcional)
             </Label>
-            <Input
-              id="fee-amount"
-              inputMode="decimal"
-              placeholder="Ex.: 120,00"
-              value={amountInput}
-              onChange={(e) => setAmountInput(e.target.value)}
-              required
-              className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
-            />
-            {suggestedAmount != null && suggestedAmount > 0 && (
-              <p className="text-[10px] text-[#6B6560]">
-                Sugerido pela mensalidade da turma: R${' '}
-                {suggestedAmount.toFixed(2).replace('.', ',')}
-              </p>
-            )}
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(paymentMethodLabel) as PaymentMethod[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPaymentMethod(paymentMethod === m ? '' : m)}
+                  className={`h-8 px-3 rounded-full border text-xs font-semibold transition-colors ${
+                    paymentMethod === m
+                      ? 'bg-[#C1272D] border-[#C1272D] text-white'
+                      : 'bg-white border-[#E8E0D5] text-[#6B6560] hover:border-[#C1272D]/40'
+                  }`}
+                >
+                  {paymentMethodLabel[m]}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-[#6B6560]">
+              Como o aluno combinou pagar — pix, dinheiro ou cartão. Pode ficar vazio.
+            </p>
           </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="fee-notes" className="text-xs font-semibold text-[#1C1B1A]">
               Observações (opcional)

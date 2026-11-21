@@ -1,5 +1,5 @@
 import pb from '@/lib/pocketbase/client'
-import { MonthlyFee } from '@/types'
+import { MonthlyFee, PaymentMethod } from '@/types'
 
 /** Mês de referência (YYYY-MM) de hoje, no fuso local. */
 export function currentMonthKey(): string {
@@ -37,6 +37,29 @@ export function feeStanding(fees: MonthlyFee[], now: Date = new Date()): FeeStan
   return hasOverdue ? 'inadimplente' : 'em_dia'
 }
 
+/** Data de vencimento padrão: dia 15 do mês de referência ("YYYY-MM"). */
+export function defaultDueDate(referenceMonth: string): string {
+  const [y, m] = (referenceMonth || '').split('-').map(Number)
+  if (!y || !m) return ''
+  return `${y}-${String(m).padStart(2, '0')}-15`
+}
+
+/** Rótulo do método de pagamento. */
+export const paymentMethodLabel: Record<PaymentMethod, string> = {
+  pix: 'Pix',
+  dinheiro: 'Dinheiro',
+  cartao: 'Cartão',
+}
+
+/** A mensalidade venceu (vencimento no passado) e continua pendente? */
+export function isOverdue(fee: MonthlyFee, now: Date = new Date()): boolean {
+  if (fee.status !== 'pendente' || !fee.due_date) return false
+  const due = new Date(fee.due_date)
+  if (Number.isNaN(due.getTime())) return false
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return due.getTime() < today.getTime()
+}
+
 /** Total pago no ano (YYYY) — soma das mensalidades com status "pago". */
 export function paidTotalInYear(fees: MonthlyFee[], year: number): number {
   return fees
@@ -69,6 +92,8 @@ export const monthlyFeesService = {
     referenceMonth: string
     amount: number
     notes?: string
+    paymentMethod?: PaymentMethod
+    dueDate?: string
   }): Promise<MonthlyFee> {
     const month = (input.referenceMonth || '').trim()
     if (!/^\d{4}-\d{2}$/.test(month)) {
@@ -80,12 +105,17 @@ export const monthlyFeesService = {
     if (existing.items.length > 0) {
       throw new Error(`Já existe uma mensalidade lançada para ${monthLabel(month)}.`)
     }
+    // Vencimento: data escolhida ou, por padrão, dia 15 do mês de referência.
+    const dueDate = input.dueDate?.trim() || defaultDueDate(month)
     return pb.collection('monthly_fees').create<MonthlyFee>({
       student: input.studentId,
       reference_month: month,
       amount: Math.max(0, Number(input.amount) || 0),
       status: 'pendente',
       notes: input.notes?.trim() || '',
+      payment_method: input.paymentMethod || '',
+      // PocketBase date: "YYYY-MM-DD HH:mm:ss.SSSZ"
+      due_date: dueDate ? `${dueDate} 12:00:00.000Z` : '',
     })
   },
 
