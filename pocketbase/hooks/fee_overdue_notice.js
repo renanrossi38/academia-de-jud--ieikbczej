@@ -15,7 +15,9 @@
 //   {aluno}    — nome do aluno;
 //   {mes}      — mês da cobrança: o MÊS CORRENTE quando a inadimplência vem da
 //                regra do dia 15 (sem lançamento para o mês), ou o mês de
-//                referência da pendência vencida, nos demais casos.
+//                referência da pendência vencida, nos demais casos. Um mês JÁ
+//                PAGO nunca é citado — nem via lançamento pendente duplicado
+//                do mesmo mês.
 // Sem registro de configuração, usa o texto padrão inline (mesmo do fallback do
 // painel em src/services/appSettings.ts).
 //
@@ -182,21 +184,18 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     pendentesByStudent[sid].push(pendentes[p])
   }
 
-  // Alunos que JÁ têm a mensalidade do mês corrente PAGA (regra do dia 15).
-  // $app.countRecordsByFilter NÃO existe nesta JSVM do PocketBase (crashava a
-  // rota com "Object has no member 'countRecordsByFilter'") — então uma única
-  // consulta com findRecordsByFilter monta o conjunto de alunos pagantes.
-  var pagouMesCorrente = {}
-  var pagasDoMes = $app.findRecordsByFilter(
-    'monthly_fees',
-    'reference_month = {:mes} && status = "pago"',
-    '',
-    0,
-    0,
-    { mes: mesAtual },
-  )
-  for (var pg = 0; pg < pagasDoMes.length; pg++) {
-    pagouMesCorrente[pagasDoMes[pg].getString('student')] = true
+  // Meses JÁ PAGOS, por aluno ("id|2026-11"), em uma única consulta com
+  // findRecordsByFilter ($app.countRecordsByFilter NÃO existe nesta JSVM do
+  // PocketBase — crashava a rota com "Object has no member"). Serve para:
+  //  (1) a regra do dia 15 — aluno com o mês corrente pago não é destinatário;
+  //  (2) garantir que {mes} NUNCA cite um mês pago, mesmo que exista também um
+  //      lançamento pendente duplicado para o mesmo mês (v0.0.42).
+  var pagosPorAlunoMes = {}
+  var pagas = $app.findRecordsByFilter('monthly_fees', 'status = "pago"', '', 0, 0)
+  for (var pg = 0; pg < pagas.length; pg++) {
+    pagosPorAlunoMes[
+      pagas[pg].getString('student') + '|' + pagas[pg].getString('reference_month')
+    ] = true
   }
 
   var limite =
@@ -214,12 +213,13 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     var feeParaMes = null
     var atrasada = null
 
-    // (a) pendência vencida: mês de referência MAIS RECENTE em atraso.
+    // (a) pendência vencida: mês de referência MAIS RECENTE em atraso — mas
+    // NUNCA um mês que o aluno já PAGOU (lançamento pendente duplicado).
     for (var j = 0; j < fees.length; j++) {
-      if (estaAtrasada(fees[j])) {
-        atrasada = fees[j]
-        break // ordenado por -reference_month: o primeiro já é o mais recente
-      }
+      if (!estaAtrasada(fees[j])) continue
+      if (pagosPorAlunoMes[studentId + '|' + fees[j].getString('reference_month')]) continue
+      atrasada = fees[j]
+      break // ordenado por -reference_month: o primeiro já é o mais recente
     }
 
     if (atrasada) {
@@ -227,9 +227,9 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
       feeParaMes = atrasada
     } else if (depoisDoDia15 && student.getBool('active')) {
       // (b) regra do dia 15: aluno ATIVO sem mensalidade PAGA do mês corrente —
-      // vale mesmo sem nenhum lançamento para o mês. O conjunto pagouMesCorrente
-      // (montado acima, uma consulta só) decide.
-      if (!pagouMesCorrente[studentId]) {
+      // vale mesmo sem nenhum lançamento para o mês. O conjunto pagosPorAlunoMes
+      // (montado acima, uma consulta só) decide. {mes} = mês CORRENTE.
+      if (!pagosPorAlunoMes[studentId + '|' + mesAtual]) {
         mesCobranca = mesAtual
         feeParaMes = null // sem row pendente: nada a marcar em last_notice_at
       }
@@ -515,21 +515,18 @@ routerAdd(
         pendentesByStudent[sid].push(pendentes[p])
       }
 
-      // Alunos que JÁ têm a mensalidade do mês corrente PAGA (regra do dia 15).
-      // $app.countRecordsByFilter NÃO existe nesta JSVM do PocketBase (crashava a
-      // rota com "Object has no member 'countRecordsByFilter'") — então uma única
-      // consulta com findRecordsByFilter monta o conjunto de alunos pagantes.
-      var pagouMesCorrente = {}
-      var pagasDoMes = $app.findRecordsByFilter(
-        'monthly_fees',
-        'reference_month = {:mes} && status = "pago"',
-        '',
-        0,
-        0,
-        { mes: mesAtual },
-      )
-      for (var pg = 0; pg < pagasDoMes.length; pg++) {
-        pagouMesCorrente[pagasDoMes[pg].getString('student')] = true
+      // Meses JÁ PAGOS, por aluno ("id|2026-11"), em uma única consulta com
+      // findRecordsByFilter ($app.countRecordsByFilter NÃO existe nesta JSVM do
+      // PocketBase — crashava a rota com "Object has no member"). Serve para:
+      //  (1) a regra do dia 15 — aluno com o mês corrente pago não é destinatário;
+      //  (2) garantir que {mes} NUNCA cite um mês pago, mesmo que exista também um
+      //      lançamento pendente duplicado para o mesmo mês (v0.0.42).
+      var pagosPorAlunoMes = {}
+      var pagas = $app.findRecordsByFilter('monthly_fees', 'status = "pago"', '', 0, 0)
+      for (var pg = 0; pg < pagas.length; pg++) {
+        pagosPorAlunoMes[
+          pagas[pg].getString('student') + '|' + pagas[pg].getString('reference_month')
+        ] = true
       }
 
       for (var i = 0; i < alunos.length; i++) {
@@ -541,20 +538,24 @@ routerAdd(
         var feeParaMes = null
         var atrasada = null
 
+        // (a) pendência vencida: mês MAIS RECENTE em atraso — mas NUNCA um mês
+        // que o aluno já PAGOU (lançamento pendente duplicado).
         for (var j = 0; j < fees.length; j++) {
-          if (estaAtrasada(fees[j])) {
-            atrasada = fees[j]
-            break
-          }
+          if (!estaAtrasada(fees[j])) continue
+          if (pagosPorAlunoMes[studentId + '|' + fees[j].getString('reference_month')]) continue
+          atrasada = fees[j]
+          break // ordenado por -reference_month: o primeiro já é o mais recente
         }
 
         if (atrasada) {
           mesCobranca = atrasada.getString('reference_month')
           feeParaMes = atrasada
         } else if (depoisDoDia15 && student.getBool('active')) {
-          if (!pagouMesCorrente[studentId]) {
+          // (b) regra do dia 15: aluno ATIVO sem o mês corrente pago — vale mesmo
+          // sem lançamento para o mês. {mes} = mês CORRENTE.
+          if (!pagosPorAlunoMes[studentId + '|' + mesAtual]) {
             mesCobranca = mesAtual
-            feeParaMes = null
+            feeParaMes = null // sem row pendente: nada a marcar em last_notice_at
           }
         }
 
