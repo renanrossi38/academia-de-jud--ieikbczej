@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
+import { ClassRosterList, STATUS_ORDER } from '@/components/admin/ClassRosterList'
 import { classesService, classLevelLabel, classLevelBadgeClass, todayKey } from '@/services/classes'
-import { attendanceService } from '@/services/attendance'
 import { studentsService } from '@/services/students'
 import { Attendance, AttendanceStatus, Class, ClassStudent, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -29,34 +29,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import {
-  Loader2,
-  ArrowLeft,
-  UserPlus,
-  UserMinus,
-  Check,
-  X,
-  FileWarning,
-  Save,
-  Search,
-  CalendarDays,
-  Users,
-  Ban,
-} from 'lucide-react'
-
-const statusMeta: Record<AttendanceStatus, { label: string; icon: React.ReactNode }> = {
-  presente: { label: 'Presente', icon: <Check className="w-3.5 h-3.5" /> },
-  ausente: { label: 'Ausente', icon: <X className="w-3.5 h-3.5" /> },
-  justificado: { label: 'Justificado', icon: <FileWarning className="w-3.5 h-3.5" /> },
-}
-
-const statusBtnClass: Record<AttendanceStatus, string> = {
-  presente: 'bg-[#2E7D4F] text-white border-[#2E7D4F] shadow-xs',
-  ausente: 'bg-[#C1272D] text-white border-[#C1272D] shadow-xs',
-  justificado: 'bg-[#6B6560] text-white border-[#6B6560] shadow-xs',
-}
-
-const STATUS_ORDER: AttendanceStatus[] = ['presente', 'ausente', 'justificado']
+import { Loader2, ArrowLeft, UserPlus, Save, Search, CalendarDays, Users, Ban } from 'lucide-react'
 
 export default function AdminClassDetail() {
   const { classId } = useParams<{ classId: string }>()
@@ -423,55 +396,14 @@ export default function AdminClassDetail() {
                 />
               </div>
             </div>
-            <div className="divide-y divide-[#E8E0D5]">
-              {filteredLinks.map((l) => {
-                const s = l.expand?.student
-                if (!s) return null
-                const st = markings[s.id]
-                return (
-                  <div key={l.id} className="p-4 flex flex-wrap items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="text-sm font-semibold text-[#1C1B1A] block truncate">
-                        {s.name}
-                      </span>
-                      <span className="text-[11px] text-[#6B6560] capitalize">
-                        {s.belt ? `Faixa ${s.belt}` : 'Sem faixa'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {STATUS_ORDER.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setMarkings((prev) => ({ ...prev, [s.id]: opt }))}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border text-[11px] font-semibold transition-colors ${
-                            st === opt
-                              ? statusBtnClass[opt]
-                              : 'bg-white text-[#6B6560] border-[#E8E0D5] hover:border-[#C1272D]/40 hover:text-[#C1272D]'
-                          }`}
-                        >
-                          {statusMeta[opt].icon}
-                          {statusMeta[opt].label}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setRemovingLink(l)}
-                      className="text-[#6B6560] hover:text-[#C1272D] p-1.5 rounded-md hover:bg-[#F7E4E2]/50 transition-colors"
-                      title="Remover da turma"
-                    >
-                      <UserMinus className="w-4 h-4" />
-                    </button>
-                  </div>
-                )
-              })}
-              {filteredLinks.length === 0 && (
-                <div className="p-6 text-center text-xs text-[#6B6560]">
-                  Nenhum aluno encontrado com esse nome.
-                </div>
-              )}
-            </div>
+            <ClassRosterList
+              links={filteredLinks}
+              markings={markings}
+              onMark={(studentId, status) =>
+                setMarkings((prev) => ({ ...prev, [studentId]: status }))
+              }
+              onRemove={(link) => setRemovingLink(link)}
+            />
           </div>
 
           <div className="flex justify-end">
