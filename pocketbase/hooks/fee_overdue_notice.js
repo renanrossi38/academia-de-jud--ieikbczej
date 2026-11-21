@@ -24,14 +24,17 @@
 // (feeStanding/isOverdue em src/services/monthlyFees.ts).
 // Alunos sem e-mail no cadastro são pulados, sem erro, e contados.
 //
+// FUSO: todo "hoje"/"este mês" aqui é calculado em Brasília (UTC-3 o ano todo —
+// o Brasil não observa horário de verão desde 2019), deslocando o relógio
+// manualmente e lendo os componentes UTC. `now.getMonth()` direto daria a data
+// do SERVIDOR (UTC) e às vésperas da virada do mês/dia o backend julga menos
+// mensalidades atrasadas do que o painel — exatamente a divergência v0.0.37:
+// o painel contava 2 alunos e a rota respondia enviados=0.
+//
 // IMPORTANTE (JSVM do PocketBase): callbacks rodam em um pool de VMs separado e
 // NÃO enxergam declarações de nível superior deste arquivo — por isso a rotina
 // de envio está colada inline dentro de cada callback (rota manual e cron).
 //
-
-// Texto de fallback (mesmo semeado pela migration 0019, usado só se o registro
-// de configuração não existir mais) fica DENTRO de cada callback — os callbacks
-// da JSVM não enxergam declarações de nível superior.
 
 // Rota manual usada pelo botão "Notificar atrasados" do painel de alunos.
 // Exige login ($apis.requireAuth); o handler confere role = "admin" (admins são
@@ -58,10 +61,28 @@ routerAdd(
       'dar baixa.\n\n' +
       'Atenciosamente: Equipe Tatsu'
 
-    // Saudação conforme o horário de Brasília (America/Sao_Paulo, UTC-3 o ano
-    // todo — o Brasil não observa horário de verão desde 2019). Calculado à mão
-    // em vez de toLocaleString({timeZone}): a JSVM (goja) não tem suporte a Intl
-    // por fuso e ignora a opção, o que cairia no horário UTC do servidor.
+    // Relógio de Brasília: desloca 3h para trás e lê os componentes UTC.
+    function brasilia(d) {
+      return new Date(d.getTime() - 3 * 60 * 60 * 1000)
+    }
+    // "2026-11" (Brasília).
+    function chaveDoMes(d) {
+      var b = brasilia(d)
+      return b.getUTCFullYear() + '-' + ('0' + (b.getUTCMonth() + 1)).slice(-2)
+    }
+    // "2026-11-21" (Brasília) — comparada com a parte de DATA do due_date.
+    function chaveDoDia(d) {
+      var b = brasilia(d)
+      return (
+        b.getUTCFullYear() +
+        '-' +
+        ('0' + (b.getUTCMonth() + 1)).slice(-2) +
+        '-' +
+        ('0' + b.getUTCDate()).slice(-2)
+      )
+    }
+
+    // Saudação conforme o horário de Brasília. Mesma base do chaveDoDia.
     function saudacao() {
       var h = (now.getUTCHours() + 21) % 24 // UTC-3 → (hora + 24 - 3) % 24
       if (h >= 5 && h < 12) return 'Bom dia'
@@ -90,37 +111,18 @@ routerAdd(
       return meses[m - 1]
     }
 
-    function chaveDoMes(d) {
-      return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2)
-    }
-
     // Mensalidade atrasada = pendente com mês de referência anterior ao mês atual
     // OU mês corrente cujo vencimento (due_date) já passou — MESMA regra do
-    // feeStanding/isOverdue do painel (src/services/monthlyFees.ts).
+    // feeStanding/isOverdue do painel (src/services/monthlyFees.ts), em Brasília.
     function estaAtrasada(fee) {
       if (fee.getString('status') !== 'pendente') return false
       if (fee.getString('reference_month') < chaveDoMes(now)) return true
-      // Mês corrente: só conta se o vencimento já passou (compara por DIA local
-      // do servidor, sem depender da hora — data "2026-11-20" vence antes de
-      // qualquer hora do dia 21).
+      // Mês corrente: só conta se o vencimento já passou (compara por DIA —
+      // data "2026-11-20" vence antes de qualquer hora do dia 21).
       var due = fee.getDateTime('due_date')
       if (!due || !due.string()) return false
       var dueDay = due.string().split(' ')[0]
-      var hoje = chaveDoDia(now)
-      return dueDay < hoje
-    }
-
-    // "2026-11-21" (data local do SERVIDOR — as datas do PocketBase são gravadas
-    // em UTC, e esta comparação é só um guard-chute; o caminho principal já
-    // cobriu os meses anteriores).
-    function chaveDoDia(d) {
-      return (
-        d.getFullYear() +
-        '-' +
-        ('0' + (d.getMonth() + 1)).slice(-2) +
-        '-' +
-        ('0' + d.getDate()).slice(-2)
-      )
+      return dueDay < chaveDoDia(now)
     }
 
     // Última mensalidade em atraso do aluno — se houver vários meses, o mais recente.
@@ -201,7 +203,9 @@ routerAdd(
 
     // Agrupa por aluno (um único e-mail por aluno, mesmo com vários meses em atraso).
     var byStudent = {}
+    var pendentes = 0
     for (var i = 0; i < fees.length; i++) {
+      pendentes++
       if (!estaAtrasada(fees[i])) continue
       var sid = fees[i].getString('student')
       if (!byStudent[sid]) byStudent[sid] = []
@@ -212,6 +216,10 @@ routerAdd(
     var skippedNoEmail = 0
     var skippedRecent = 0
     var failed = 0
+    var sentNames = []
+    var skippedNoEmailNames = []
+    var skippedRecentNames = []
+    var failedNames = []
     var mailClient = $app.newMailClient()
     var resendMs = RESEND_DAYS * 24 * 60 * 60 * 1000
 
@@ -239,11 +247,13 @@ routerAdd(
         student = $app.findRecordById('students', studentId)
       } catch (_) {
         failed++
+        failedNames.push(studentId)
         continue
       }
       var email = (student.getString('email') || '').trim()
       if (!email) {
         skippedNoEmail++
+        skippedNoEmailNames.push(student.getString('name') || studentId)
         continue
       }
 
@@ -270,9 +280,11 @@ routerAdd(
       try {
         mailClient.send(message)
         sent++
+        sentNames.push(student.getString('name') || studentId)
       } catch (err) {
         console.log('Falha ao enviar aviso de atraso para ' + email + ': ' + err)
         failed++
+        failedNames.push(student.getString('name') || studentId)
         continue
       }
 
@@ -304,11 +316,30 @@ routerAdd(
         ' falhas=' +
         failed,
     )
+    // Se o painel mostrava atrasados mas a rota não viu nenhum, este log
+    // mostra exatamente o que o backend julgou — facilita a próxima caça.
+    if (sent + skippedNoEmail + skippedRecent + failed === 0) {
+      console.log(
+        '[notify-overdue manual] nenhum atrasado no backend: hoje(UTC)=' +
+          now.toISOString() +
+          ' mes_brasilia=' +
+          chaveDoMes(now) +
+          ' dia_brasilia=' +
+          chaveDoDia(now) +
+          ' pendentes=' +
+          pendentes,
+      )
+      s
+    }
     return e.json(200, {
       sent: sent,
       skippedNoEmail: skippedNoEmail,
       skippedRecent: skippedRecent,
       failed: failed,
+      sentNames: sentNames,
+      skippedNoEmailNames: skippedNoEmailNames,
+      skippedRecentNames: skippedRecentNames,
+      failedNames: failedNames,
     })
   },
   $apis.requireAuth(),
@@ -330,10 +361,28 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     'dar baixa.\n\n' +
     'Atenciosamente: Equipe Tatsu'
 
-  // Saudação conforme o horário de Brasília (America/Sao_Paulo, UTC-3 o ano
-  // todo — o Brasil não observa horário de verão desde 2019). Calculado à mão
-  // em vez de toLocaleString({timeZone}): a JSVM (goja) não tem suporte a Intl
-  // por fuso e ignora a opção, o que cairia no horário UTC do servidor.
+  // Relógio de Brasília: desloca 3h para trás e lê os componentes UTC.
+  function brasilia(d) {
+    return new Date(d.getTime() - 3 * 60 * 60 * 1000)
+  }
+  // "2026-11" (Brasília).
+  function chaveDoMes(d) {
+    var b = brasilia(d)
+    return b.getUTCFullYear() + '-' + ('0' + (b.getUTCMonth() + 1)).slice(-2)
+  }
+  // "2026-11-21" (Brasília) — comparada com a parte de DATA do due_date.
+  function chaveDoDia(d) {
+    var b = brasilia(d)
+    return (
+      b.getUTCFullYear() +
+      '-' +
+      ('0' + (b.getUTCMonth() + 1)).slice(-2) +
+      '-' +
+      ('0' + b.getUTCDate()).slice(-2)
+    )
+  }
+
+  // Saudação conforme o horário de Brasília. Mesma base do chaveDoDia.
   function saudacao() {
     var h = (now.getUTCHours() + 21) % 24 // UTC-3 → (hora + 24 - 3) % 24
     if (h >= 5 && h < 12) return 'Bom dia'
@@ -364,29 +413,16 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
 
   // Mensalidade atrasada = pendente com mês de referência anterior ao mês atual
   // OU mês corrente cujo vencimento (due_date) já passou — a MESMA regra do
-  // feeStanding/isOverdue do painel (src/services/monthlyFees.ts).
+  // feeStanding/isOverdue do painel (src/services/monthlyFees.ts), em Brasília.
   function estaAtrasada(fee) {
     if (fee.getString('status') !== 'pendente') return false
     if (fee.getString('reference_month') < chaveDoMes(now)) return true
-    // Mês corrente: só conta se o vencimento já passou (compara por DIA local
-    // do servidor — data "2026-11-20" vence antes de qualquer hora do dia 21).
+    // Mês corrente: só conta se o vencimento já passou (compara por DIA —
+    // data "2026-11-20" vence antes de qualquer hora do dia 21).
     var due = fee.getDateTime('due_date')
     if (!due || !due.string()) return false
     var dueDay = due.string().split(' ')[0]
-    var hoje = chaveDoDia(now)
-    return dueDay < hoje
-  }
-
-  // "2026-11-21" (data local do SERVIDOR — as datas do PocketBase são gravadas
-  // em UTC; comparação por dia é suficiente aqui e independe da hora).
-  function chaveDoDia(d) {
-    return (
-      d.getFullYear() +
-      '-' +
-      ('0' + (d.getMonth() + 1)).slice(-2) +
-      '-' +
-      ('0' + d.getDate()).slice(-2)
-    )
+    return dueDay < chaveDoDia(now)
   }
 
   // Última mensalidade em atraso do aluno — se houver vários meses, o mais recente.
@@ -465,7 +501,9 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
 
   // Agrupa por aluno (um único e-mail por aluno, mesmo com vários meses em atraso).
   var byStudent = {}
+  var pendentes = 0
   for (var i = 0; i < fees.length; i++) {
+    pendentes++
     if (!estaAtrasada(fees[i])) continue
     var sid = fees[i].getString('student')
     if (!byStudent[sid]) byStudent[sid] = []
@@ -476,6 +514,10 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
   var skippedNoEmail = 0
   var skippedRecent = 0
   var failed = 0
+  var sentNames = []
+  var skippedNoEmailNames = []
+  var skippedRecentNames = []
+  var failedNames = []
   var mailClient = $app.newMailClient()
   var resendMs = RESEND_DAYS * 24 * 60 * 60 * 1000
 
@@ -493,6 +535,11 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     }
     if (recentlyNotified) {
       skippedRecent++
+      try {
+        skippedRecentNames.push($app.findRecordById('students', studentId).getString('name'))
+      } catch (_) {
+        skippedRecentNames.push(studentId)
+      }
       continue
     }
 
@@ -501,11 +548,13 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
       student = $app.findRecordById('students', studentId)
     } catch (_) {
       failed++
+      failedNames.push(studentId)
       continue
     }
     var email = (student.getString('email') || '').trim()
     if (!email) {
       skippedNoEmail++
+      skippedNoEmailNames.push(student.getString('name') || studentId)
       continue
     }
 
@@ -531,9 +580,11 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     try {
       mailClient.send(message)
       sent++
+      sentNames.push(student.getString('name') || studentId)
     } catch (err) {
       console.log('Falha ao enviar aviso de atraso para ' + email + ': ' + err)
       failed++
+      failedNames.push(student.getString('name') || studentId)
       continue
     }
 

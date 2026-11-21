@@ -21,6 +21,20 @@ export function monthKeyOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** Mês de referência de hoje em Brasília (UTC-3 o ano todo, sem horário de verão). */
+export function brasiliaMonthKey(): string {
+  const d = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  return monthKeyOf(d)
+}
+
+/** Dia de hoje em Brasília ("YYYY-MM-DD"), para comparar com a data de vencimento. */
+export function brasiliaDayKey(): string {
+  const d = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
+    d.getUTCDate(),
+  ).padStart(2, '0')}`
+}
+
 /** Situação do aluno em relação às mensalidades. */
 export type FeeStanding = 'sem_lancamentos' | 'em_dia' | 'inadimplente'
 
@@ -37,7 +51,9 @@ export type FeeStanding = 'sem_lancamentos' | 'em_dia' | 'inadimplente'
  */
 export function feeStanding(fees: MonthlyFee[], now: Date = new Date()): FeeStanding {
   if (fees.length === 0) return 'sem_lancamentos'
-  const hasOverdue = fees.some((f) => isOverdue(f, now) || f.reference_month < monthKeyOf(now))
+  const hasOverdue = fees.some(
+    (f) => f.status === 'pendente' && (isOverdue(f, now) || f.reference_month < monthKeyOf(now)),
+  )
   return hasOverdue ? 'inadimplente' : 'em_dia'
 }
 
@@ -57,13 +73,19 @@ export const paymentMethodLabel: Record<PaymentMethod, string> = {
   cartao: 'Cartão',
 }
 
-/** A mensalidade venceu (vencimento no passado) e continua pendente? */
+/**
+ * A mensalidade venceu (vencimento no passado) e continua pendente?
+ *
+ * due_date chega como "YYYY-MM-DD HH:mm:ss.SSSZ" (hora UTC meia-noite + 12h) e
+ * é comparada por DIA com o dia de hoje em Brasília — nunca com `new Date(...)`
+ * de hora local do dispositivo (que, em fuso negativo, empurra a data de
+ * vencimento um dia para frente e esconde atrasos).
+ */
 export function isOverdue(fee: MonthlyFee, now: Date = new Date()): boolean {
   if (fee.status !== 'pendente' || !fee.due_date) return false
-  const due = new Date(fee.due_date)
-  if (Number.isNaN(due.getTime())) return false
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return due.getTime() < today.getTime()
+  const dueDay = String(fee.due_date).split(' ')[0].split('T')[0]
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDay)) return false
+  return dueDay < brasiliaDayKey()
 }
 
 /** Total pago no ano (YYYY) — soma das mensalidades com status "pago". */
@@ -79,6 +101,11 @@ export type OverdueNoticeResult = {
   /** Alunos pulados pela trava de 7 dias (só o cron usa; o manual nunca pula). */
   skippedRecent?: number
   failed: number
+  /** Nomes dos alunos por desfecho — o painel usa para explicar o resultado. */
+  sentNames?: string[]
+  skippedNoEmailNames?: string[]
+  skippedRecentNames?: string[]
+  failedNames?: string[]
 }
 
 export const monthlyFeesService = {

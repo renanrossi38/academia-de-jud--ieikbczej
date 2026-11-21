@@ -11,7 +11,7 @@ import {
 } from '@/components/admin/StudentDialogs'
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { studentsService } from '@/services/students'
-import { feeStanding, monthlyFeesService } from '@/services/monthlyFees'
+import { feeStanding, monthlyFeesService, type OverdueNoticeResult } from '@/services/monthlyFees'
 import { Mail, Send } from 'lucide-react'
 import { MonthlyFee, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -261,30 +261,80 @@ export default function AdminStudents() {
   const [notifyOpen, setNotifyOpen] = useState(false)
   const [notifying, setNotifying] = useState(false)
 
+  // Monta a frase final do toast: o painel explica o que realmente aconteceu —
+  // quantos saíram, quantos foram pulados (e por quê, com o nome de cada aluno)
+  // — em vez de um genérico "não foi possível enviar".
+  const describeNoticeResult = (
+    result: OverdueNoticeResult,
+  ): { tone: 'ok' | 'neutral' | 'warn'; text: string } => {
+    const nameList = (names?: string[]) =>
+      names && names.length > 0 ? ` (${names.join(', ')})` : ''
+
+    // Nada saiu: explica o motivo real em vez de um "não disparou" genérico.
+    if (result.sent === 0) {
+      if (result.skippedRecent > 0) {
+        return {
+          tone: 'neutral',
+          text:
+            `Nenhum aviso enviado: ${result.skippedRecent} ${result.skippedRecent === 1 ? 'aluno já recebeu aviso' : 'alunos já receberam aviso'}` +
+            `${nameList(result.skippedRecentNames)} nos últimos 7 dias (a trava anti-reenvio está ativa).`,
+        }
+      }
+      if (result.skippedNoEmail > 0) {
+        return {
+          tone: 'warn',
+          text:
+            `Nenhum aviso enviado: ${result.skippedNoEmail} ${result.skippedNoEmail === 1 ? 'aluno está' : 'alunos estão'} com a mensalidade em atraso, mas ${result.skippedNoEmail === 1 ? 'não tem e-mail cadastrado' : 'não têm e-mail cadastrado'}` +
+            `${nameList(result.skippedNoEmailNames)}. Cadastre um e-mail na ficha do aluno para poder avisá-lo.`,
+        }
+      }
+      if (result.failed > 0) {
+        return {
+          tone: 'warn',
+          text: `Falha no envio para ${result.failed} ${result.failed === 1 ? 'aluno' : 'alunos'}${nameList(result.failedNames)} — verifique o e-mail cadastrado e tente novamente.`,
+        }
+      }
+      return {
+        tone: 'neutral',
+        text: 'Nenhum aviso enviado — na hora do envio não havia mensalidade pendente em atraso no servidor. O badge pode estar defasado; aguarde alguns segundos ou recarregue a página.',
+      }
+    }
+
+    // Algo saiu — agora a frase completa, com os pulados/falhas junto.
+    const parts: string[] = [
+      `${result.sent} ${result.sent === 1 ? 'aviso enviado' : 'avisos enviados'}` +
+        nameList(result.sentNames),
+    ]
+    if (result.skippedNoEmail > 0) {
+      parts.push(
+        `${result.skippedNoEmail} ${result.skippedNoEmail === 1 ? 'aluno pulado sem e-mail cadastrado' : 'alunos pulados sem e-mail cadastrado'}` +
+          nameList(result.skippedNoEmailNames),
+      )
+    }
+    if (result.skippedRecent > 0) {
+      parts.push(
+        `${result.skippedRecent} ${result.skippedRecent === 1 ? 'aluno já avisado nos últimos 7 dias' : 'alunos já avisados nos últimos 7 dias'}` +
+          nameList(result.skippedRecentNames),
+      )
+    }
+    if (result.failed > 0) {
+      parts.push(
+        `${result.failed} ${result.failed === 1 ? 'falha no envio' : 'falhas no envio'}` +
+          nameList(result.failedNames),
+      )
+    }
+    return { tone: result.failed > 0 ? 'warn' : 'ok', text: parts.join('; ') + '.' }
+  }
+
   const handleNotifyOverdue = async () => {
     setNotifying(true)
     try {
       const result = await monthlyFeesService.notifyOverdue()
-      const parts: string[] = []
-      if (result.sent > 0) {
-        parts.push(`${result.sent} ${result.sent === 1 ? 'aviso enviado' : 'avisos enviados'}`)
-      }
-      if (result.skippedNoEmail > 0) {
-        parts.push(
-          `${result.skippedNoEmail} ${result.skippedNoEmail === 1 ? 'aluno foi pulado' : 'alunos foram pulados'} sem e-mail cadastrado`,
-        )
-      }
-      if (result.failed > 0) {
-        parts.push(`${result.failed} ${result.failed === 1 ? 'falha' : 'falhas'} no envio`)
-      }
-      if (parts.length === 0) {
-        parts.push(
-          'Nenhum aviso enviado — não há mensalidade pendente em atraso agora (o badge pode estar defasado; aguarde alguns segundos ou recarregue a página).',
-        )
-      }
+      const { tone, text } = describeNoticeResult(result)
       toast({
         title: 'Avisos de mensalidade em atraso',
-        description: parts.join(', ') + '.',
+        description: text,
+        ...(tone === 'warn' && { variant: 'destructive' }),
       })
       setNotifyOpen(false)
     } catch (err: any) {
