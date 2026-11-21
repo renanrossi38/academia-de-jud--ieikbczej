@@ -2,9 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
-import { ProductFormDialog, categoryLabel } from '@/components/admin/ProductDialogs'
+import {
+  ProductFormDialog,
+  ProductStockDialog,
+  categoryLabel,
+} from '@/components/admin/ProductDialogs'
 import { useProductsPage } from '@/hooks/useProductsPage'
-import { Product } from '@/types'
+import { Product, ProductVariation } from '@/types'
 import { productsService } from '@/services/products'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,22 +33,49 @@ import {
   ToggleRight,
   Trash2,
   Plus,
+  Boxes,
 } from 'lucide-react'
 
 const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+/** Soma o estoque de todas as variações de um produto (0 quando não há variações). */
+const totalPieces = (vars: ProductVariation[]) =>
+  vars.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
 
 export default function AdminProducts() {
   const { user, isAdmin, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { products, setProducts, isLoading, loadProducts, upsert } = useProductsPage()
+  const {
+    products,
+    setProducts,
+    variations,
+    isLoading,
+    loadProducts,
+    upsert,
+    upsertVariation,
+    removeVariation,
+  } = useProductsPage()
 
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [stockOpen, setStockOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
+  const [stockOf, setStockOf] = useState<Product | null>(null)
   const [deleting, setDeleting] = useState<Product | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  // Variações agrupadas por produto, uma única vez para a página inteira.
+  const varsByProduct = useMemo(() => {
+    const map = new Map<string, ProductVariation[]>()
+    for (const v of variations) {
+      const list = map.get(v.product) || []
+      list.push(v)
+      map.set(v.product, list)
+    }
+    return map
+  }, [variations])
 
   useEffect(() => {
     if (authLoading) return
@@ -138,10 +169,12 @@ export default function AdminProducts() {
                 Administração do Judô Tatsu
               </span>
             </div>
-            <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">Loja</h1>
+            <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
+              Loja — Gerenciar Produtos
+            </h1>
             <p className="text-sm text-[#6B6560] mt-2 max-w-xl">
-              Gerencie os itens vendidos pela academia: kimonos, faixas, camisetas, equipamentos e
-              planos. Produtos ativos aparecem na aba “Kimonos e Acessórios” da página inicial.
+              Adicione e remova produtos, ative/desative itens e controle o estoque de cada tamanho
+              (variação). Produtos ativos aparecem na aba “Kimonos e Acessórios” da página inicial.
             </p>
           </div>
           <Button
@@ -176,93 +209,148 @@ export default function AdminProducts() {
             <p className="text-sm text-[#6B6560]">
               {search
                 ? 'Nenhum produto encontrado para a busca.'
-                : 'Nenhum produto cadastrado ainda.'}
+                : 'Nenhum produto cadastrado ainda. Use “Novo produto” para começar.'}
             </p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                className="bg-white rounded-2xl border border-[#E8E0D5] overflow-hidden flex flex-col"
-              >
-                {p.image ? (
-                  <img
-                    src={productsService.getImageUrl(p)}
-                    alt={p.name}
-                    className="h-36 w-full object-cover border-b border-[#E8E0D5]"
-                  />
-                ) : (
-                  <div className="h-36 w-full bg-[#FAF6F0] border-b border-[#E8E0D5] flex items-center justify-center">
-                    <Package className="w-8 h-8 text-[#C8BFAF]" />
-                  </div>
-                )}
-                <div className="p-4 flex-1 flex flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-serif text-sm font-bold text-[#1C1B1A] leading-snug">
-                      {p.name}
-                    </h3>
-                    <Badge
-                      className={
-                        p.active !== false
-                          ? 'bg-[#EAF4EC] text-[#2E7D4F] border-[#2E7D4F]/40 shrink-0'
-                          : 'bg-[#F3EFE8] text-[#9A948C] border-[#D9D2C7] shrink-0'
-                      }
-                    >
-                      {p.active !== false ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/30">
-                      {categoryLabel(p.category)}
-                    </Badge>
-                    <span className="text-sm font-bold text-[#C1272D]">{brl(p.price)}</span>
-                  </div>
-                  {p.description && (
-                    <p className="text-xs text-[#6B6560] line-clamp-2">{p.description}</p>
+            {filtered.map((p) => {
+              const vars = varsByProduct.get(p.id) || []
+              const pieces = totalPieces(vars)
+
+              return (
+                <div
+                  key={p.id}
+                  className="bg-white rounded-2xl border border-[#E8E0D5] overflow-hidden flex flex-col"
+                >
+                  {p.image ? (
+                    <img
+                      src={productsService.getImageUrl(p) || undefined}
+                      alt={p.name}
+                      className="h-36 w-full object-cover border-b border-[#E8E0D5]"
+                    />
+                  ) : (
+                    <div className="h-36 w-full bg-[#FAF6F0] border-b border-[#E8E0D5] flex items-center justify-center">
+                      <Package className="w-8 h-8 text-[#C8BFAF]" />
+                    </div>
                   )}
-                  <p className="text-[10px] text-[#9A948C] font-mono">/{p.slug}</p>
-                  <div className="flex gap-2 mt-auto pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditing(p)
-                        setFormOpen(true)
-                      }}
-                      className="flex-1 text-xs border-[#E8E0D5] text-[#1C1B1A]"
-                    >
-                      <Pencil className="w-3.5 h-3.5 mr-1" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleActive(p)}
-                      disabled={togglingId === p.id}
-                      className="text-xs border-[#E8E0D5] text-[#1C1B1A]"
-                    >
-                      {togglingId === p.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : p.active !== false ? (
-                        <ToggleRight className="w-3.5 h-3.5" />
+                  <div className="p-4 flex-1 flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-serif text-sm font-bold text-[#1C1B1A] leading-snug">
+                        {p.name}
+                      </h3>
+                      <Badge
+                        className={
+                          p.active !== false
+                            ? 'bg-[#EAF4EC] text-[#2E7D4F] border-[#2E7D4F]/40 shrink-0'
+                            : 'bg-[#F3EFE8] text-[#9A948C] border-[#D9D2C7] shrink-0'
+                        }
+                      >
+                        {p.active !== false ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/30">
+                        {categoryLabel(p.category)}
+                      </Badge>
+                      <span className="text-sm font-bold text-[#C1272D]">{brl(p.price)}</span>
+                    </div>
+
+                    {/* Estoque por tamanho/variação — sempre visível no card */}
+                    <div className="rounded-lg border border-[#E8E0D5] bg-[#FAF6F0] p-2">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B6560] flex items-center gap-1">
+                          <Boxes className="w-3 h-3 text-[#C1272D]" />
+                          Estoque por tamanho
+                        </span>
+                        <span className="text-[10px] font-bold text-[#1C1B1A]">
+                          Total:{' '}
+                          <span className={pieces === 0 ? 'text-[#B3261E]' : 'text-[#2E7D4F]'}>
+                            {pieces} {pieces === 1 ? 'peça' : 'peças'}
+                          </span>
+                        </span>
+                      </div>
+                      {vars.length === 0 ? (
+                        <p className="text-[10px] text-[#9A948C]">
+                          Sem variações — use “Estoque” para adicionar tamanhos.
+                        </p>
                       ) : (
-                        <ToggleLeft className="w-3.5 h-3.5" />
+                        <div className="flex flex-wrap gap-1">
+                          {vars.map((v) => (
+                            <span
+                              key={v.id}
+                              title={`${v.label} — ${v.stock} em estoque`}
+                              className={`px-1.5 py-0.5 rounded-md border text-[10px] font-semibold ${
+                                (Number(v.stock) || 0) === 0
+                                  ? 'bg-[#F7E4E2] text-[#B3261E] border-[#B3261E]/30'
+                                  : 'bg-white text-[#1C1B1A] border-[#D9D2C7]'
+                              }`}
+                            >
+                              {v.label}: {v.stock}
+                            </span>
+                          ))}
+                        </div>
                       )}
-                      {p.active !== false ? 'Desativar' : 'Ativar'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleting(p)}
-                      className="text-xs border-[#E8E0D5] text-[#B3261E] hover:bg-[#F7E4E2]"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    </div>
+
+                    {p.description && (
+                      <p className="text-xs text-[#6B6560] line-clamp-2">{p.description}</p>
+                    )}
+                    <p className="text-[10px] text-[#9A948C] font-mono">/{p.slug}</p>
+                    <div className="flex flex-wrap gap-2 mt-auto pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditing(p)
+                          setFormOpen(true)
+                        }}
+                        className="flex-1 text-xs border-[#E8E0D5] text-[#1C1B1A]"
+                      >
+                        <Pencil className="w-3.5 h-3.5 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setStockOf(p)
+                          setStockOpen(true)
+                        }}
+                        className="flex-1 text-xs border-[#E8E0D5] text-[#C1272D] hover:bg-[#F7E4E2]"
+                      >
+                        <Boxes className="w-3.5 h-3.5 mr-1" />
+                        Estoque
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleActive(p)}
+                        disabled={togglingId === p.id}
+                        className="text-xs border-[#E8E0D5] text-[#1C1B1A]"
+                      >
+                        {togglingId === p.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : p.active !== false ? (
+                          <ToggleRight className="w-3.5 h-3.5" />
+                        ) : (
+                          <ToggleLeft className="w-3.5 h-3.5" />
+                        )}
+                        {p.active !== false ? 'Desativar' : 'Ativar'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleting(p)}
+                        className="text-xs border-[#E8E0D5] text-[#B3261E] hover:bg-[#F7E4E2]"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -272,6 +360,20 @@ export default function AdminProducts() {
         editing={editing}
         onOpenChange={setFormOpen}
         onSaved={upsert}
+        onVariationSaved={upsertVariation}
+        onVariationRemoved={removeVariation}
+      />
+
+      <ProductStockDialog
+        open={stockOpen}
+        product={stockOf}
+        variations={stockOf ? varsByProduct.get(stockOf.id) || [] : []}
+        onOpenChange={(open) => {
+          setStockOpen(open)
+          if (!open) setStockOf(null)
+        }}
+        onVariationSaved={upsertVariation}
+        onVariationRemoved={removeVariation}
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>

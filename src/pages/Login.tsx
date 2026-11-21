@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/context/AuthContext'
-import { HankoStamp } from '@/components/HankoStamp'
+import { HankoStamp, OfficialLogo } from '@/components/HankoStamp'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
@@ -57,16 +57,12 @@ export default function Login() {
     <div className="min-h-[75vh] flex items-center justify-center px-4 py-12 animate-fade-rise">
       <div className="w-full max-w-md bg-white rounded-3xl border border-[#E8E0D5] p-8 shadow-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-3">
-            <HankoStamp size="lg" />
-            <div className="text-left">
-              <span className="block font-serif font-bold text-2xl text-[#1C1B1A] leading-none">
-                Judô Tatsu
-              </span>
-              <span className="block text-[10px] font-bold text-[#C1272D] uppercase tracking-[0.25em] font-serif mt-1">
-                Academia de Judô
-              </span>
-            </div>
+          <div className="inline-flex flex-col items-center mb-3">
+            {/* Logo oficial (dragão) em tamanho grande, sem cortes no texto */}
+            <OfficialLogo className="w-44 h-auto" />
+            <span className="text-[10px] font-bold text-[#C1272D] uppercase tracking-[0.25em] font-serif mt-1">
+              Academia de Judô
+            </span>
           </div>
           <h1 className="font-serif font-bold text-2xl text-[#1C1B1A] mt-1">Entrar na Conta</h1>
           <p className="text-xs text-[#6B6560] mt-1">

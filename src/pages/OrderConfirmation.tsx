@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ordersService } from '@/services/orders'
 import { Order, OrderItem } from '@/types'
-import { HankoStamp } from '@/components/HankoStamp'
+import { HankoStamp, OfficialLogo } from '@/components/HankoStamp'
 import { Button } from '@/components/ui/button'
 import {
   ArrowLeft,
@@ -79,10 +79,10 @@ export default function OrderConfirmation() {
         <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#C1272D]" />
         <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#C1272D]" />
 
-        {/* Hanko Stamp celebration with seal-spin animation */}
+        {/* Celebração com o LOGO OFICIAL (dragão) em tamanho grande, sem cortes */}
         <div className="flex flex-col items-center text-center">
-          <div className="p-2 rounded-lg border-2 border-[#C1272D]/30 mb-3 bg-[#FAF6F0]">
-            <HankoStamp size="xl" kanji="柔" className="animate-seal-spin" />
+          <div className="p-3 rounded-xl border-2 border-[#C1272D]/30 mb-3 bg-[#FAF6F0]">
+            <OfficialLogo className="w-52 h-auto animate-seal-spin" />
           </div>
 
           <span className="text-xs font-bold text-[#C1272D] tracking-widest uppercase font-serif">

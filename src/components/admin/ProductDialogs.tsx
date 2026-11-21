@@ -18,7 +18,7 @@ import {
   CreateProductInput,
   UpdateProductInput,
 } from '@/services/products'
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check } from 'lucide-react'
 
 const CATEGORY_OPTIONS: { label: string; value: ProductCategory }[] = [
   { label: 'Uniformes (Gi)', value: 'uniformes' },
@@ -79,10 +79,18 @@ interface VariationSectionProps {
   productId: string | null // null = produto novo (ainda sem id)
   variations: VariationDraft[]
   onChange: (next: VariationDraft[]) => void
+  onVariationSaved?: (saved: ProductVariation) => void
+  onVariationRemoved?: (id: string) => void
 }
 
 /** Seção de variações dentro do diálogo do produto (só edita produto salvo). */
-const VariationSection: React.FC<VariationSectionProps> = ({ productId, variations, onChange }) => {
+const VariationSection: React.FC<VariationSectionProps> = ({
+  productId,
+  variations,
+  onChange,
+  onVariationSaved,
+  onVariationRemoved,
+}) => {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
@@ -121,6 +129,7 @@ const VariationSection: React.FC<VariationSectionProps> = ({ productId, variatio
     if (row.id) {
       try {
         await productsService.deleteVariation(row.id)
+        onVariationRemoved?.(row.id)
       } catch (err: any) {
         console.error('Erro ao excluir variação:', err)
         toast({
@@ -158,6 +167,7 @@ const VariationSection: React.FC<VariationSectionProps> = ({ productId, variatio
         stock: String(saved.stock ?? 0),
       }
       onChange(next)
+      onVariationSaved?.(saved)
       toast({ title: 'Variação salva!' })
     } catch (err: any) {
       console.error('Erro ao salvar variação:', err)
@@ -267,6 +277,9 @@ interface ProductFormDialogProps {
   editing: Product | null
   onOpenChange: (open: boolean) => void
   onSaved: (saved: Product) => void
+  /** Opcional: mantém o estoque por tamanho em dia na listagem da Loja. */
+  onVariationSaved?: (saved: ProductVariation) => void
+  onVariationRemoved?: (id: string) => void
 }
 
 export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
@@ -274,6 +287,8 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   editing,
   onOpenChange,
   onSaved,
+  onVariationSaved,
+  onVariationRemoved,
 }) => {
   const { toast } = useToast()
   const [form, setForm] = useState<ProductFormState>(emptyForm)
@@ -486,6 +501,8 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             productId={editing?.id || null}
             variations={variations}
             onChange={setVariations}
+            onVariationSaved={onVariationSaved}
+            onVariationRemoved={onVariationRemoved}
           />
 
           <DialogFooter className="gap-2">
@@ -520,4 +537,186 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   )
 }
 
-export default ProductFormDialog
+interface ProductStockDialogProps {
+  open: boolean
+  product: Product | null
+  variations: ProductVariation[]
+  onOpenChange: (open: boolean) => void
+  /** Mantém a listagem da Loja em dia ao salvar/remover uma variação aqui. */
+  onVariationSaved?: (saved: ProductVariation) => void
+  onVariationRemoved?: (id: string) => void
+}
+
+/**
+ * Diálogo dedicado de ESTOQUE por tamanho (variação) — aberto pelo botão
+ * "Estoque" do card na Loja. Cada linha salva direto no servidor.
+ */
+export const ProductStockDialog: React.FC<ProductStockDialogProps> = ({
+  open,
+  product,
+  variations,
+  onOpenChange,
+  onVariationSaved,
+  onVariationRemoved,
+}) => {
+  const { toast } = useToast()
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+
+  const totalPieces = variations.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+
+  const handleSave = async (variation: ProductVariation, value: string) => {
+    const stock = Math.max(0, Math.round(Number(value) || 0))
+    setSavingId(variation.id)
+    try {
+      const saved = await productsService.updateVariation(variation.id, { stock })
+      onVariationSaved?.(saved)
+      toast({
+        title: 'Estoque atualizado!',
+        description: `${saved.label}: ${saved.stock} peça(s) disponível(is).`,
+      })
+    } catch (err: any) {
+      console.error('Erro ao salvar estoque:', err)
+      toast({
+        title: 'Erro ao salvar estoque',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const handleRemove = async (variation: ProductVariation) => {
+    setRemovingId(variation.id)
+    try {
+      await productsService.deleteVariation(variation.id)
+      onVariationRemoved?.(variation.id)
+      toast({ title: 'Tamanho removido', description: `"${variation.label}" saiu do produto.` })
+    } catch (err: any) {
+      console.error('Erro ao remover tamanho:', err)
+      toast({
+        title: 'Erro ao remover tamanho',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setRemovingId(null)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-[#1C1B1A]">
+            Estoque — {product?.name || ''}
+          </DialogTitle>
+          <DialogDescription className="text-[#6B6560] text-xs">
+            Informe quantas peças estão disponíveis para compra em cada tamanho. O total aparece na
+            listagem da Loja.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex items-center justify-between rounded-lg border border-[#E8E0D5] bg-[#FAF6F0] px-3 py-2">
+          <span className="text-xs font-bold text-[#1C1B1A]">Total de peças</span>
+          <span
+            className={`text-sm font-bold ${totalPieces === 0 ? 'text-[#B3261E]' : 'text-[#2E7D4F]'}`}
+          >
+            {totalPieces} {totalPieces === 1 ? 'peça' : 'peças'}
+          </span>
+        </div>
+
+        {variations.length === 0 ? (
+          <p className="text-xs text-[#6B6560]">
+            Nenhum tamanho cadastrado. Use “Editar” → Variações para adicionar tamanhos (ex.: A1,
+            A2, A3...).
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {variations.map((v) => (
+              <StockRow
+                key={v.id}
+                variation={v}
+                saving={savingId === v.id}
+                removing={removingId === v.id}
+                onSave={handleSave}
+                onRemove={handleRemove}
+              />
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="border-[#E8E0D5] text-[#1C1B1A] text-xs font-semibold"
+          >
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Uma linha de estoque: label + campo de quantidade + salvar/remover. */
+const StockRow: React.FC<{
+  variation: ProductVariation
+  saving: boolean
+  removing: boolean
+  onSave: (v: ProductVariation, value: string) => void
+  onRemove: (v: ProductVariation) => void
+}> = ({ variation, saving, removing, onSave, onRemove }) => {
+  const [value, setValue] = useState(String(variation.stock ?? 0))
+
+  // Quando o registro muda no servidor (realtime), reflete o valor gravado.
+  useEffect(() => {
+    setValue(String(variation.stock ?? 0))
+  }, [variation.stock])
+
+  return (
+    <div className="flex items-center gap-2 p-2 bg-[#FAF6F0] rounded-lg border border-[#E8E0D5]">
+      <span className="flex-1 text-xs font-bold text-[#1C1B1A]">{variation.label}</span>
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        inputMode="numeric"
+        className="w-16 h-8 text-xs bg-white border-[#E8E0D5] text-center"
+        aria-label={`Estoque de ${variation.label}`}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onSave(variation, value)}
+        disabled={saving || removing}
+        className="h-8 px-2 text-[#2E7D4F] border-[#E8E0D5]"
+        title="Salvar estoque"
+      >
+        {saving ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Check className="w-3.5 h-3.5" />
+        )}
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onRemove(variation)}
+        disabled={saving || removing}
+        className="h-8 px-2 text-[#B3261E] border-[#E8E0D5]"
+        title="Remover tamanho"
+      >
+        {removing ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Trash2 className="w-3.5 h-3.5" />
+        )}
+      </Button>
+    </div>
+  )
+}

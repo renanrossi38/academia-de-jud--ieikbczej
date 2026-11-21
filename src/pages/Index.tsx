@@ -4,7 +4,7 @@ import pb from '@/lib/pocketbase/client'
 import { productsService } from '@/services/products'
 import { classLevelLabel, classLevelBadgeClass } from '@/services/classes'
 import { Product, ProductCategory, Class } from '@/types'
-import { HankoStamp, ProductPlaceholder } from '@/components/HankoStamp'
+import { HankoStamp, ProductPlaceholder, OfficialLogo } from '@/components/HankoStamp'
 import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero/HeroDecor'
 import { BrushDivider } from '@/components/hero/HeroDecor'
 import { Badge } from '@/components/ui/badge'
@@ -174,11 +174,13 @@ export default function Index() {
           </div>
 
           <div className="shrink-0 hidden md:flex items-center justify-center relative z-10">
-            <div className="relative">
+            <div className="relative flex flex-col items-center">
               <HeroSun className="absolute -inset-10 w-[calc(100%+80px)] h-[calc(100%+80px)] opacity-20" />
-              <div className="relative rounded-xl bg-white/70 backdrop-blur-xs border border-[#C1272D]/20 p-4 shadow-sm">
-                <HankoStamp size="xl" />
-              </div>
+              {/* Logo oficial (dragão) em tamanho grande, sem cortes no texto */}
+              <OfficialLogo className="relative w-72 lg:w-80 h-auto drop-shadow-sm" />
+              <span className="relative mt-3 text-[11px] font-bold text-[#C1272D] uppercase tracking-[0.25em] font-serif">
+                Academia de Judô
+              </span>
             </div>
           </div>
         </div>

@@ -110,6 +110,13 @@ export const productsService = {
     await pb.collection('products').delete(id)
   },
 
+  /** Todas as variações do catálogo (agrupadas por product na UI) — painel admin. */
+  async listAllVariations(): Promise<ProductVariation[]> {
+    return pb.collection('product_variations').getFullList<ProductVariation>({
+      sort: 'product,price_delta,label',
+    })
+  },
+
   async listVariations(productId: string): Promise<ProductVariation[]> {
     const records = await pb.collection('product_variations').getFullList<ProductVariation>({
       filter: `product = "${productId}"`,

@@ -124,7 +124,7 @@ export const Header: React.FC = () => {
               }`}
             >
               <ShoppingBag className="w-4 h-4" />
-              Loja
+              Loja (Produtos)
             </Link>
           )}
 
@@ -255,7 +255,7 @@ export const Header: React.FC = () => {
               onClick={() => setMobileMenuOpen(false)}
               className="block py-2 text-base font-semibold text-[#C1272D]"
             >
-              Loja (Admin)
+              Loja — Produtos (Admin)
             </Link>
           )}
 
