@@ -143,8 +143,10 @@ export default function CreateFeeDialog({
         <DialogHeader>
           <DialogTitle className="font-serif text-[#1C1B1A]">Lançar mensalidade</DialogTitle>
           <DialogDescription className="text-[#6B6560] text-xs leading-relaxed">
-            Registro do mês de referência para {studentName}. O pagamento é confirmado
-            presencialmente — depois use "Marcar como paga" na lista.
+            Registro do mês de referência para {studentName}. Escolher a forma de pagamento registra
+            a mensalidade como <strong className="text-[#1C1B1A]">PAGA</strong> na hora — sem
+            confirmação extra depois. Sem forma de pagamento, ela fica pendente até você marcar como
+            paga na lista.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -195,7 +197,7 @@ export default function CreateFeeDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-[#1C1B1A]">
-              Método de pagamento (opcional)
+              Forma de pagamento {paymentMethod ? '(registra como PAGA)' : '(opcional)'}
             </Label>
             <div className="flex flex-wrap gap-1.5">
               {(Object.keys(paymentMethodLabel) as PaymentMethod[]).map((m) => (
@@ -214,7 +216,9 @@ export default function CreateFeeDialog({
               ))}
             </div>
             <p className="text-[10px] text-[#6B6560]">
-              Como o aluno combinou pagar — pix, dinheiro ou cartão. Pode ficar vazio.
+              {paymentMethod
+                ? `Lançando como PAGA via ${paymentMethodLabel[paymentMethod].toLowerCase()} — pagamento de hoje registrado automaticamente.`
+                : 'Sem forma de pagamento, a mensalidade entra como pendente — como o aluno combinou pagar, escolha pix, dinheiro ou cartão.'}
             </p>
           </div>
 

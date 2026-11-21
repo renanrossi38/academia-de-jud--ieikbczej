@@ -106,6 +106,11 @@ export const monthlyFeesService = {
   /**
    * Lança uma mensalidade. Bloqueia mês duplicado para o mesmo aluno
    * (índice único no banco + verificação amigável aqui).
+   *
+   * Regra definida pelo admin: lançar COM forma de pagamento é registrar o
+   * pagamento — a mensalidade nasce PAGA (status "pago" + paid_at de agora),
+   * sem segunda confirmação no painel. Sem forma de pagamento, nasce pendente
+   * e pode ser marcada como paga depois.
    */
   async create(input: {
     studentId: string
@@ -127,11 +132,16 @@ export const monthlyFeesService = {
     }
     // Vencimento: data escolhida ou, por padrão, dia 15 do mês seguinte ao de referência.
     const dueDate = input.dueDate?.trim() || defaultDueDate(month)
+    const isPaid = !!input.paymentMethod
     return pb.collection('monthly_fees').create<MonthlyFee>({
       student: input.studentId,
       reference_month: month,
       amount: Math.max(0, Number(input.amount) || 0),
-      status: 'pendente',
+      status: isPaid ? 'pago' : 'pendente',
+      ...(isPaid && {
+        // PocketBase date: "YYYY-MM-DD HH:mm:ss.SSSZ"
+        paid_at: new Date().toISOString().replace('T', ' ').slice(0, 19) + '.000Z',
+      }),
       notes: input.notes?.trim() || '',
       payment_method: input.paymentMethod || '',
       // PocketBase date: "YYYY-MM-DD HH:mm:ss.SSSZ"

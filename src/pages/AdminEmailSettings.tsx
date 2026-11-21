@@ -19,6 +19,24 @@ import { DEFAULT_FEE_OVERDUE_TEMPLATE, appSettingsService } from '@/services/app
  *  {aluno}    — nome do aluno;
  *  {mes}      — mês de referência em atraso, em português.
  */
+
+/**
+ * Saudação pelo horário de Brasília (America/Sao_Paulo, UTC-3 o ano todo),
+ * igual ao cálculo do hook fee_overdue_notice.js — assim a pré-visualização
+ * mostra o mesmo {saudacao} que o aluno receberá.
+ */
+function brasiliaSaudacao(): string {
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date())
+  const h = Number(parts.find((p) => p.type === 'hour')?.value ?? 0)
+  if (h >= 5 && h < 12) return 'Bom dia'
+  if (h >= 12 && h < 18) return 'Boa tarde'
+  return 'Boa noite'
+}
+
 export default function AdminEmailSettings() {
   const { user, isAdmin, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
@@ -195,7 +213,7 @@ export default function AdminEmailSettings() {
           <div className="rounded-xl border border-[#E8E0D5] border-t-4 border-t-[#C1272D] p-4 bg-white text-sm text-[#1C1B1A] leading-relaxed whitespace-pre-line">
             {template
               .split('{saudacao}')
-              .join('Boa tarde')
+              .join(brasiliaSaudacao())
               .split('{aluno}')
               .join('Pedro da Silva')
               .split('{mes}')

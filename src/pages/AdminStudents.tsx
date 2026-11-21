@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { Loader2 } from 'lucide-react'
 import {
@@ -52,6 +51,7 @@ import {
   Trash2,
   Users,
   Wallet,
+  Settings,
 } from 'lucide-react'
 
 /** Insere ou substitui um aluno pelo id (evita duplicar com o realtime). */
@@ -358,6 +358,17 @@ export default function AdminStudents() {
         description="Cadastre, edite e acompanhe os alunos matriculados na academia."
         action={
           <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              className="h-10 border-[#E8E0D5] text-[#1C1B1A] hover:bg-[#FAF6F0] text-sm font-semibold"
+              title="Editar assunto e mensagem do e-mail de cobrança"
+            >
+              <Link to="/painel/configuracoes">
+                <Settings className="w-4 h-4 mr-2" />
+                Editar mensagem de cobrança
+              </Link>
+            </Button>
             <Button
               onClick={() => setNotifyOpen(true)}
               disabled={overdueWithEmailCount === 0}

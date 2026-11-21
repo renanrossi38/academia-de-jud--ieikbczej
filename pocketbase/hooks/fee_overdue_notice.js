@@ -57,15 +57,12 @@ routerAdd(
       'dar baixa.\n\n' +
       'Atenciosamente: Equipe Tatsu'
 
-    // Saudação conforme o horário de envio (fuso de São Paulo).
+    // Saudação conforme o horário de Brasília (America/Sao_Paulo, UTC-3 o ano
+    // todo — o Brasil não observa horário de verão desde 2019). Calculado à mão
+    // em vez de toLocaleString({timeZone}): a JSVM (goja) não tem suporte a Intl
+    // por fuso e ignora a opção, o que cairia no horário UTC do servidor.
     function saudacao() {
-      var h = Number(
-        now.toLocaleString('en-US', {
-          hour: 'numeric',
-          hour12: false,
-          timeZone: 'America/Sao_Paulo',
-        }),
-      )
+      var h = (now.getUTCHours() + 21) % 24 // UTC-3 → (hora + 24 - 3) % 24
       if (h >= 5 && h < 12) return 'Bom dia'
       if (h >= 12 && h < 18) return 'Boa tarde'
       return 'Boa noite'
@@ -295,15 +292,12 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     'dar baixa.\n\n' +
     'Atenciosamente: Equipe Tatsu'
 
-  // Saudação conforme o horário de envio (fuso de São Paulo).
+  // Saudação conforme o horário de Brasília (America/Sao_Paulo, UTC-3 o ano
+  // todo — o Brasil não observa horário de verão desde 2019). Calculado à mão
+  // em vez de toLocaleString({timeZone}): a JSVM (goja) não tem suporte a Intl
+  // por fuso e ignora a opção, o que cairia no horário UTC do servidor.
   function saudacao() {
-    var h = Number(
-      now.toLocaleString('en-US', {
-        hour: 'numeric',
-        hour12: false,
-        timeZone: 'America/Sao_Paulo',
-      }),
-    )
+    var h = (now.getUTCHours() + 21) % 24 // UTC-3 → (hora + 24 - 3) % 24
     if (h >= 5 && h < 12) return 'Bom dia'
     if (h >= 12 && h < 18) return 'Boa tarde'
     return 'Boa noite'
@@ -330,11 +324,8 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     return meses[m - 1]
   }
 
-  function chaveDoMes(d) {
-    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2)
-  }
-
-  // Mensalidade atrasada = pendente com mês de referência anterior ao mês atual.
+  // Mensalidade atrasada = pendente com mês de referência anterior ao mês atual
+  // (o mês corrente com vencimento futuro não conta — mesma regra de feeStanding).
   function estaAtrasada(fee) {
     if (fee.getString('status') !== 'pendente') return false
     return fee.getString('reference_month') < chaveDoMes(now)
