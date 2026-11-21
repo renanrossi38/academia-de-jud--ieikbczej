@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-21T15:47:04.265Z",
+  "generatedAt": "2026-11-21T16:05:25.870Z",
   "collections": [
     {
       "name": "users",
@@ -849,6 +849,46 @@
       "indexes": [
         "CREATE UNIQUE INDEX idx_monthly_fees_student_month ON monthly_fees (student, reference_month)"
       ]
+    },
+    {
+      "name": "app_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\"",
+        "view": "@request.auth.role = \"admin\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_app_settings_key ON app_settings (key)"]
     }
   ]
 }

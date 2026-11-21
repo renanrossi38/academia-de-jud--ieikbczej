@@ -22,6 +22,7 @@ const PANEL_LINKS = [
   { to: '/painel/ranking', label: 'Ranking' },
   { to: '/painel/produtos', label: 'Loja' },
   { to: '/painel/pedidos', label: 'Pedidos' },
+  { to: '/painel/configuracoes', label: 'Configurações' },
 ]
 
 /** Trilha de navegação entre as páginas do painel (links + página atual). */

@@ -5,9 +5,18 @@
 //  1. Rota manual chamada pelo painel (botão "Notificar atrasados" em
 //     /painel/alunos): POST /backend/v1/judo/fees/notify-overdue — envia sempre,
 //     sem trava anti-spam, e atualiza `last_notice_at` de cada mensalidade.
-//  2. Cron diário (09:00, America/Sao_Paulo): mesmo aviso, automático. Para não
-//     virar spam, só reenvia para uma mensalidade nunca notificada ou com a
-//     última notificação há mais de 7 dias.
+//  2. Cron MENSAL (dia 16, 09:00, America/Sao_Paulo — o vencimento padrão é dia
+//     15): mesmo aviso, automático. Mantém a trava anti-duplicidade
+//     (`last_notice_at` + 7 dias) para não reenviar a quem já recebeu.
+//
+// O texto do e-mail NÃO é mais fixo: vem da collection `app_settings`
+// (chaves "fee_overdue_template" e "fee_overdue_subject"), editável no painel
+// em /painel/configuracoes. Placeholders substituídos no envio:
+//   {saudacao} — "Bom dia" / "Boa tarde" / "Boa noite" (fuso São Paulo);
+//   {aluno}    — nome do aluno;
+//   {mes}      — mês de referência da mensalidade em atraso, em português.
+// Se o registro de configuração não existir, usa o FALLBACK abaixo (o texto
+// original da v0.0.33).
 //
 // Regra de "atrasado": status "pendente" com mês de referência já vencido
 // (reference_month < mês atual — o mês corrente com vencimento futuro não conta),
@@ -18,6 +27,10 @@
 // NÃO enxergam declarações de nível superior deste arquivo — por isso a rotina
 // de envio está colada inline dentro de cada callback (rota manual e cron).
 //
+
+// Texto de fallback (mesmo semeado pela migration 0019, usado só se o registro
+// de configuração não existir mais) fica DENTRO de cada callback — os callbacks
+// da JSVM não enxergam declarações de nível superior.
 
 // Rota manual usada pelo botão "Notificar atrasados" do painel de alunos.
 // Exige login ($apis.requireAuth); o handler confere role = "admin" (admins são
@@ -33,8 +46,16 @@ routerAdd(
 
     var force = true
     var now = new Date()
-    var SUBJECT = 'Aviso de mensalidade em atraso - Judô Tatsu'
     var RESEND_DAYS = 7
+    // Fallback (texto original da v0.0.33), usado só se a configuração sumir.
+    var FALLBACK_SUBJECT = 'Aviso de mensalidade em atraso - Judô Tatsu'
+    var FALLBACK_TEMPLATE =
+      '{saudacao}, {aluno},\n\n' +
+      'verificamos que o pagamento e a mensalidade do mês de {mes} não foi ' +
+      'localizada em nosso sistema. Caso o mesmo tenha sido realizado, favor ' +
+      'entrar em contato, enviando o comprovante de pagamento para que possamos ' +
+      'dar baixa.\n\n' +
+      'Atenciosamente: Equipe Tatsu'
 
     // Saudação conforme o horário de envio (fuso de São Paulo).
     function saudacao() {
@@ -90,19 +111,34 @@ routerAdd(
       return latest
     }
 
-    function corpoDoEmail(alunoNome, mesReferencia) {
-      return (
-        saudacao() +
-        ', ' +
-        (alunoNome || 'aluno(a)') +
-        ',\n\n' +
-        'verificamos que o pagamento e a mensalidade do mês de ' +
-        nomeDoMes(mesReferencia) +
-        ' não foi localizada em nosso sistema. ' +
-        'Caso o mesmo tenha sido realizado, favor entrar em contato, enviando o ' +
-        'comprovante de pagamento para que possamos dar baixa.\n\n' +
-        'Atenciosamente: Equipe Tatsu'
-      )
+    // Lê o template e o assunto da collection app_settings (fallback se faltarem).
+    function readTemplate() {
+      var tpl = FALLBACK_TEMPLATE
+      var subject = FALLBACK_SUBJECT
+      try {
+        var settings = $app.findRecordsByFilter('app_settings', "key ~ 'fee_overdue_'", '', 0, 0)
+        for (var i = 0; i < settings.length; i++) {
+          var key = settings[i].getString('key')
+          var value = settings[i].getString('value')
+          if (key === 'fee_overdue_template' && value.trim()) tpl = value
+          if (key === 'fee_overdue_subject' && value.trim()) subject = value
+        }
+      } catch (err) {
+        console.log('Falha ao ler app_settings, usando template padrão: ' + err)
+      }
+      return { tpl: tpl, subject: subject }
+    }
+
+    // Substitui os placeholders do template editável. Não usa .replaceAll
+    // (não existe na JSVM): .split().join() substitui TODAS as ocorrências.
+    function aplicarPlaceholders(tpl, alunoNome, mesReferencia) {
+      return tpl
+        .split('{saudacao}')
+        .join(saudacao())
+        .split('{aluno}')
+        .join(alunoNome || 'aluno(a)')
+        .split('{mes}')
+        .join(nomeDoMes(mesReferencia))
     }
 
     function emailHtml(msgText) {
@@ -131,6 +167,8 @@ routerAdd(
       if (!dt || !dt.string()) return NaN
       return Date.parse(dt.string().replace(' ', 'T'))
     }
+
+    var cfg = readTemplate()
 
     var fees = $app.findRecordsByFilter(
       'monthly_fees',
@@ -189,8 +227,9 @@ routerAdd(
       }
 
       var latestFee = mesMaisRecenteEmAtraso(studentFees)
-      var msgText = corpoDoEmail(
-        student.getString('name') || 'aluno(a)',
+      var msgText = aplicarPlaceholders(
+        cfg.tpl,
+        student.getString('name'),
         latestFee.getString('reference_month'),
       )
 
@@ -200,7 +239,7 @@ routerAdd(
           name: 'Judô Tatsu',
         },
         to: [{ address: email }],
-        subject: SUBJECT,
+        subject: cfg.subject,
         html: emailHtml(msgText),
       })
 
@@ -240,11 +279,21 @@ routerAdd(
   $apis.requireAuth(),
 )
 
-// Cron diário (09:00, horário de São Paulo): mesmo aviso, com trava de 7 dias.
-cronAdd('avisos_mensalidade_atrasada', '0 9 * * *', () => {
+// Cron MENSAL (dia 16 às 09:00, horário de São Paulo): o vencimento padrão é
+// dia 15, então o aviso sai uma única vez por mês — não mais diariamente.
+// Mantém a trava de 7 dias (`last_notice_at`) contra reenvio duplicado.
+cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
   var now = new Date()
-  var SUBJECT = 'Aviso de mensalidade em atraso - Judô Tatsu'
   var RESEND_DAYS = 7
+  // Fallback (texto original da v0.0.33), usado só se a configuração sumir.
+  var FALLBACK_SUBJECT = 'Aviso de mensalidade em atraso - Judô Tatsu'
+  var FALLBACK_TEMPLATE =
+    '{saudacao}, {aluno},\n\n' +
+    'verificamos que o pagamento e a mensalidade do mês de {mes} não foi ' +
+    'localizada em nosso sistema. Caso o mesmo tenha sido realizado, favor ' +
+    'entrar em contato, enviando o comprovante de pagamento para que possamos ' +
+    'dar baixa.\n\n' +
+    'Atenciosamente: Equipe Tatsu'
 
   // Saudação conforme o horário de envio (fuso de São Paulo).
   function saudacao() {
@@ -300,19 +349,34 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 * * *', () => {
     return latest
   }
 
-  function corpoDoEmail(alunoNome, mesReferencia) {
-    return (
-      saudacao() +
-      ', ' +
-      (alunoNome || 'aluno(a)') +
-      ',\n\n' +
-      'verificamos que o pagamento e a mensalidade do mês de ' +
-      nomeDoMes(mesReferencia) +
-      ' não foi localizada em nosso sistema. ' +
-      'Caso o mesmo tenha sido realizado, favor entrar em contato, enviando o ' +
-      'comprovante de pagamento para que possamos dar baixa.\n\n' +
-      'Atenciosamente: Equipe Tatsu'
-    )
+  // Lê o template e o assunto da collection app_settings (fallback se faltarem).
+  function readTemplate() {
+    var tpl = FALLBACK_TEMPLATE
+    var subject = FALLBACK_SUBJECT
+    try {
+      var settings = $app.findRecordsByFilter('app_settings', "key ~ 'fee_overdue_'", '', 0, 0)
+      for (var i = 0; i < settings.length; i++) {
+        var key = settings[i].getString('key')
+        var value = settings[i].getString('value')
+        if (key === 'fee_overdue_template' && value.trim()) tpl = value
+        if (key === 'fee_overdue_subject' && value.trim()) subject = value
+      }
+    } catch (err) {
+      console.log('Falha ao ler app_settings, usando template padrão: ' + err)
+    }
+    return { tpl: tpl, subject: subject }
+  }
+
+  // Substitui os placeholders do template editável. Não usa .replaceAll
+  // (não existe na JSVM): .split().join() substitui TODAS as ocorrências.
+  function aplicarPlaceholders(tpl, alunoNome, mesReferencia) {
+    return tpl
+      .split('{saudacao}')
+      .join(saudacao())
+      .split('{aluno}')
+      .join(alunoNome || 'aluno(a)')
+      .split('{mes}')
+      .join(nomeDoMes(mesReferencia))
   }
 
   function emailHtml(msgText) {
@@ -340,6 +404,8 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 * * *', () => {
     return Date.parse(dt.string().replace(' ', 'T'))
   }
 
+  var cfg = readTemplate()
+
   var fees = $app.findRecordsByFilter(
     'monthly_fees',
     'status = "pendente"',
@@ -366,8 +432,8 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 * * *', () => {
 
   for (var studentId in byStudent) {
     var studentFees = byStudent[studentId]
-    // Cron: pula o aluno se qualquer mensalidade em atraso dele já foi
-    // avisada nos últimos 7 dias.
+    // Trava anti-duplicidade: pula o aluno se qualquer mensalidade em atraso
+    // dele já foi avisada nos últimos 7 dias.
     var recentlyNotified = false
     for (var j = 0; j < studentFees.length; j++) {
       var lastMs = epochMs(studentFees[j].getDateTime('last_notice_at'))
@@ -395,8 +461,9 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 * * *', () => {
     }
 
     var latestFee = mesMaisRecenteEmAtraso(studentFees)
-    var msgText = corpoDoEmail(
-      student.getString('name') || 'aluno(a)',
+    var msgText = aplicarPlaceholders(
+      cfg.tpl,
+      student.getString('name'),
       latestFee.getString('reference_month'),
     )
 
@@ -406,7 +473,7 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 * * *', () => {
         name: 'Judô Tatsu',
       },
       to: [{ address: email }],
-      subject: SUBJECT,
+      subject: cfg.subject,
       html: emailHtml(msgText),
     })
 
@@ -420,7 +487,7 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 * * *', () => {
     }
 
     // Grava a data do aviso em TODAS as mensalidades em atraso do aluno
-    // (o cron avalia mensalidade a mensalidade).
+    // (a trava anti-duplicidade avalia mensalidade a mensalidade).
     var noticeAt = now.toISOString().replace('T', ' ').substring(0, 19) + '.000Z'
     for (var k = 0; k < studentFees.length; k++) {
       try {
