@@ -76,6 +76,8 @@ export function paidTotalInYear(fees: MonthlyFee[], year: number): number {
 export type OverdueNoticeResult = {
   sent: number
   skippedNoEmail: number
+  /** Alunos pulados pela trava de 7 dias (só o cron usa; o manual nunca pula). */
+  skippedRecent?: number
   failed: number
 }
 

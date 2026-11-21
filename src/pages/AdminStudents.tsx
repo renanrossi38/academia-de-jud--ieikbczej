@@ -277,7 +277,11 @@ export default function AdminStudents() {
       if (result.failed > 0) {
         parts.push(`${result.failed} ${result.failed === 1 ? 'falha' : 'falhas'} no envio`)
       }
-      if (parts.length === 0) parts.push('Nenhum aviso precisou ser enviado.')
+      if (parts.length === 0) {
+        parts.push(
+          'Nenhum aviso enviado — não há mensalidade pendente em atraso agora (o badge pode estar defasado; aguarde alguns segundos ou recarregue a página).',
+        )
+      }
       toast({
         title: 'Avisos de mensalidade em atraso',
         description: parts.join(', ') + '.',

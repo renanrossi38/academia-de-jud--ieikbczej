@@ -18,9 +18,10 @@
 // Se o registro de configuração não existir, usa o FALLBACK abaixo (o texto
 // original da v0.0.33).
 //
-// Regra de "atrasado": status "pendente" com mês de referência já vencido
-// (reference_month < mês atual — o mês corrente com vencimento futuro não conta),
-// a MESMA lógica dos badges/contadores do painel (feeStanding).
+// Regra de "atrasado": status "pendente" com mês de referência já vencido OU
+// vencimento já passado (reference_month < mês atual, ou mês corrente cujo
+// due_date já venceu) — a MESMA lógica dos badges/contadores do painel
+// (feeStanding/isOverdue em src/services/monthlyFees.ts).
 // Alunos sem e-mail no cadastro são pulados, sem erro, e contados.
 //
 // IMPORTANTE (JSVM do PocketBase): callbacks rodam em um pool de VMs separado e
@@ -93,10 +94,33 @@ routerAdd(
       return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2)
     }
 
-    // Mensalidade atrasada = pendente com mês de referência anterior ao mês atual.
+    // Mensalidade atrasada = pendente com mês de referência anterior ao mês atual
+    // OU mês corrente cujo vencimento (due_date) já passou — MESMA regra do
+    // feeStanding/isOverdue do painel (src/services/monthlyFees.ts).
     function estaAtrasada(fee) {
       if (fee.getString('status') !== 'pendente') return false
-      return fee.getString('reference_month') < chaveDoMes(now)
+      if (fee.getString('reference_month') < chaveDoMes(now)) return true
+      // Mês corrente: só conta se o vencimento já passou (compara por DIA local
+      // do servidor, sem depender da hora — data "2026-11-20" vence antes de
+      // qualquer hora do dia 21).
+      var due = fee.getDateTime('due_date')
+      if (!due || !due.string()) return false
+      var dueDay = due.string().split(' ')[0]
+      var hoje = chaveDoDia(now)
+      return dueDay < hoje
+    }
+
+    // "2026-11-21" (data local do SERVIDOR — as datas do PocketBase são gravadas
+    // em UTC, e esta comparação é só um guard-chute; o caminho principal já
+    // cobriu os meses anteriores).
+    function chaveDoDia(d) {
+      return (
+        d.getFullYear() +
+        '-' +
+        ('0' + (d.getMonth() + 1)).slice(-2) +
+        '-' +
+        ('0' + d.getDate()).slice(-2)
+      )
     }
 
     // Última mensalidade em atraso do aluno — se houver vários meses, o mais recente.
@@ -224,8 +248,11 @@ routerAdd(
       }
 
       var latestFee = mesMaisRecenteEmAtraso(studentFees)
+      // Se o admin apagou o {aluno} do template, a saudação fica solta
+      // ("Boa noite, verificamos...") — garante um nome no texto.
+      var tplParaAluno = cfg.tpl.indexOf('{aluno}') === -1 ? '{aluno}, ' + cfg.tpl : cfg.tpl
       var msgText = aplicarPlaceholders(
-        cfg.tpl,
+        tplParaAluno,
         student.getString('name'),
         latestFee.getString('reference_month'),
       )
@@ -267,9 +294,20 @@ routerAdd(
       }
     }
 
+    console.log(
+      '[notify-overdue manual] enviados=' +
+        sent +
+        ' sem_email=' +
+        skippedNoEmail +
+        ' recentes_pulados=' +
+        skippedRecent +
+        ' falhas=' +
+        failed,
+    )
     return e.json(200, {
       sent: sent,
       skippedNoEmail: skippedNoEmail,
+      skippedRecent: skippedRecent,
       failed: failed,
     })
   },
@@ -325,10 +363,30 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
   }
 
   // Mensalidade atrasada = pendente com mês de referência anterior ao mês atual
-  // (o mês corrente com vencimento futuro não conta — mesma regra de feeStanding).
+  // OU mês corrente cujo vencimento (due_date) já passou — a MESMA regra do
+  // feeStanding/isOverdue do painel (src/services/monthlyFees.ts).
   function estaAtrasada(fee) {
     if (fee.getString('status') !== 'pendente') return false
-    return fee.getString('reference_month') < chaveDoMes(now)
+    if (fee.getString('reference_month') < chaveDoMes(now)) return true
+    // Mês corrente: só conta se o vencimento já passou (compara por DIA local
+    // do servidor — data "2026-11-20" vence antes de qualquer hora do dia 21).
+    var due = fee.getDateTime('due_date')
+    if (!due || !due.string()) return false
+    var dueDay = due.string().split(' ')[0]
+    var hoje = chaveDoDia(now)
+    return dueDay < hoje
+  }
+
+  // "2026-11-21" (data local do SERVIDOR — as datas do PocketBase são gravadas
+  // em UTC; comparação por dia é suficiente aqui e independe da hora).
+  function chaveDoDia(d) {
+    return (
+      d.getFullYear() +
+      '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) +
+      '-' +
+      ('0' + d.getDate()).slice(-2)
+    )
   }
 
   // Última mensalidade em atraso do aluno — se houver vários meses, o mais recente.
@@ -452,8 +510,10 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     }
 
     var latestFee = mesMaisRecenteEmAtraso(studentFees)
+    // Mesma proteção do manual: sem {aluno} no template, prefixa o nome.
+    var tplParaAluno = cfg.tpl.indexOf('{aluno}') === -1 ? '{aluno}, ' + cfg.tpl : cfg.tpl
     var msgText = aplicarPlaceholders(
-      cfg.tpl,
+      tplParaAluno,
       student.getString('name'),
       latestFee.getString('reference_month'),
     )
