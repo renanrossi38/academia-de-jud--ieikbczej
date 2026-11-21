@@ -13,6 +13,7 @@ import {
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { studentsService } from '@/services/students'
 import { feeStanding, monthlyFeesService } from '@/services/monthlyFees'
+import { Mail, Send } from 'lucide-react'
 import { MonthlyFee, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
@@ -216,6 +217,53 @@ export default function AdminStudents() {
   const activeCount = students.filter((s) => s.active).length
   const inactiveCount = students.length - activeCount
 
+  // Atrasados COM e-mail cadastrado: os que o botão "Notificar atrasados" alcança.
+  const overdueWithEmailCount = useMemo(() => {
+    let count = 0
+    for (const s of students) {
+      const fees = feesByStudent[s.id] || []
+      if (feeStanding(fees) === 'inadimplente' && (s.email || '').trim()) count += 1
+    }
+    return count
+  }, [students, feesByStudent])
+
+  const [notifyOpen, setNotifyOpen] = useState(false)
+  const [notifying, setNotifying] = useState(false)
+
+  const handleNotifyOverdue = async () => {
+    setNotifying(true)
+    try {
+      const result = await monthlyFeesService.notifyOverdue()
+      const parts: string[] = []
+      if (result.sent > 0) {
+        parts.push(`${result.sent} ${result.sent === 1 ? 'aviso enviado' : 'avisos enviados'}`)
+      }
+      if (result.skippedNoEmail > 0) {
+        parts.push(
+          `${result.skippedNoEmail} ${result.skippedNoEmail === 1 ? 'aluno foi pulado' : 'alunos foram pulados'} sem e-mail cadastrado`,
+        )
+      }
+      if (result.failed > 0) {
+        parts.push(`${result.failed} ${result.failed === 1 ? 'falha' : 'falhas'} no envio`)
+      }
+      if (parts.length === 0) parts.push('Nenhum aviso precisou ser enviado.')
+      toast({
+        title: 'Avisos de mensalidade em atraso',
+        description: parts.join(', ') + '.',
+      })
+      setNotifyOpen(false)
+    } catch (err: any) {
+      console.error('Erro ao enviar avisos de atraso:', err)
+      toast({
+        title: 'Erro ao enviar avisos',
+        description: err?.message || 'Falha no envio dos avisos. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setNotifying(false)
+    }
+  }
+
   const handleToggleActive = async (student: Student) => {
     setTogglingId(student.id)
     try {
@@ -278,13 +326,29 @@ export default function AdminStudents() {
         breadcrumbTo="/painel/alunos"
         description="Cadastre, edite e acompanhe os alunos matriculados na academia."
         action={
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Cadastrar Aluno
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setNotifyOpen(true)}
+              disabled={overdueWithEmailCount === 0}
+              variant="outline"
+              className="h-10 border-[#E8E0D5] text-[#1C1B1A] hover:bg-[#FAF6F0] text-sm font-semibold"
+              title={
+                overdueWithEmailCount === 0
+                  ? 'Nenhum aluno atrasado com e-mail cadastrado'
+                  : 'Enviar aviso de mensalidade em atraso por e-mail'
+              }
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Notificar atrasados
+            </Button>
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="h-10 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Cadastrar Aluno
+            </Button>
+          </div>
         }
       />
 
@@ -645,6 +709,56 @@ export default function AdminStudents() {
           </p>
         </div>
       )}
+
+      {/* Confirmação do envio dos avisos de mensalidade em atraso */}
+      <AlertDialog open={notifyOpen} onOpenChange={(open) => !open && setNotifyOpen(false)}>
+        <AlertDialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-[#1C1B1A]">
+              Notificar alunos atrasados?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#6B6560] text-xs leading-relaxed">
+              {overdueWithEmailCount === 0 ? (
+                <>Nenhum aluno atrasado com e-mail cadastrado.</>
+              ) : (
+                <>
+                  Será enviado um e-mail de aviso para{' '}
+                  <strong className="text-[#1C1B1A]">
+                    {overdueWithEmailCount} {overdueWithEmailCount === 1 ? 'aluno' : 'alunos'}
+                  </strong>{' '}
+                  com mensalidade em atraso e e-mail cadastrado. Alunos sem e-mail no cadastro serão
+                  pulados, sem erro.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#E8E0D5] text-[#1C1B1A] text-xs font-semibold">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleNotifyOverdue()
+              }}
+              disabled={notifying || overdueWithEmailCount === 0}
+              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+            >
+              {notifying ? (
+                <>
+                  <Send className="w-4 h-4 mr-2 animate-pulse" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Enviar avisos
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirmação de exclusão definitiva */}
       <AlertDialog

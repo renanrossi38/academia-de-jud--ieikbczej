@@ -69,7 +69,21 @@ export function paidTotalInYear(fees: MonthlyFee[], year: number): number {
     .reduce((sum, f) => sum + (f.amount || 0), 0)
 }
 
+export type OverdueNoticeResult = {
+  sent: number
+  skippedNoEmail: number
+  failed: number
+}
+
 export const monthlyFeesService = {
+  /**
+   * Envia o aviso de mensalidade em atraso (Equipe Tatsu) para todos os alunos
+   * com mensalidade atrasada e e-mail cadastrado — rota do backend
+   * (fee_overdue_notice.js), que exige login de admin.
+   */
+  async notifyOverdue(): Promise<OverdueNoticeResult> {
+    return pb.send('/backend/v1/judo/fees/notify-overdue', { method: 'POST' })
+  },
   /** Todas as mensalidades de um aluno (mês mais recente primeiro). */
   async listByStudent(studentId: string): Promise<MonthlyFee[]> {
     return pb.collection('monthly_fees').getFullList<MonthlyFee>({
