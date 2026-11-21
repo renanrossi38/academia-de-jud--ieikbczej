@@ -28,7 +28,7 @@ export const OfficialLogo: React.FC<{ className?: string; alt?: string }> = ({
   return (
     <span
       className={cn(
-        'relative block aspect-square overflow-hidden shrink-0 select-none [&>img]:absolute [&>img]:top-0 [&>img]:left-1/2 [&>img]:w-[181.82%] [&>img]:h-auto [&>img]:max-w-none [&>img]:-translate-x-1/2',
+        'relative block aspect-square overflow-hidden shrink-0 select-none [&>img]:absolute [&>img]:top-0 [&>img]:left-1/2 [&>img]:w-[129.87%] [&>img]:h-auto [&>img]:max-w-none [&>img]:-translate-x-1/2',
         className,
       )}
       aria-label={alt}
