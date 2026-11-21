@@ -15,9 +15,11 @@ import logoUrl from '@/assets/logo-fundo-transp-4b2b2.png'
  * importante se perde. Só o dragão é renderizado.
  *
  * Cálculo: para mostrar 55% da altura, a imagem precisa ter 100/55 ≈
- * 181.82% da largura do quadro; o deslocamento horizontal de -18.2%
- * (metade dos 36.4% excedentes, relativo à própria largura da imagem)
- * mantém a arte centrada sem distorção.
+ * 181.82% da largura do quadro. A centralização horizontal usa o par
+ * determinístico left-1/2 + -translate-x-1/2 (50% do quadro + 50% da
+ * própria imagem se anulam exatamente), em vez de um percentual calculado
+ * à mão: o recorte fica centrado em QUALQUER fator de escala, e a âncora
+ * top-0 mantém a faixa de texto (45% inferiores) fora do quadro.
  */
 export const OfficialLogo: React.FC<{ className?: string; alt?: string }> = ({
   className,
@@ -26,7 +28,7 @@ export const OfficialLogo: React.FC<{ className?: string; alt?: string }> = ({
   return (
     <span
       className={cn(
-        'block aspect-square overflow-hidden shrink-0 select-none [&>img]:w-[181.82%] [&>img]:h-auto [&>img]:max-w-none [&>img]:-translate-x-[18.2%] [&>img]:object-contain',
+        'relative block aspect-square overflow-hidden shrink-0 select-none [&>img]:absolute [&>img]:top-0 [&>img]:left-1/2 [&>img]:w-[181.82%] [&>img]:h-auto [&>img]:max-w-none [&>img]:-translate-x-1/2',
         className,
       )}
       aria-label={alt}
