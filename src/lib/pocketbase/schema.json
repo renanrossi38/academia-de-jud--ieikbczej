@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T19:48:52.961Z",
+  "generatedAt": "2026-11-23T20:06:46.955Z",
   "collections": [
     {
       "name": "users",
@@ -255,7 +255,7 @@
         {
           "name": "user",
           "type": "relation",
-          "required": true,
+          "required": false,
           "system": false,
           "collectionRef": "users"
         },
@@ -1219,6 +1219,62 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "order_status_log",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'pedidos')",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'pedidos')",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "order",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "orders"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "from_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["novo", "confirmado", "em_preparacao", "pronto", "entregue", "cancelado"]
+        },
+        {
+          "name": "to_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["novo", "confirmado", "em_preparacao", "pronto", "entregue", "cancelado"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_order_status_log_order ON order_status_log (order, created)"]
     }
   ]
 }

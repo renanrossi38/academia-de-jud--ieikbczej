@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { ordersService } from '@/services/orders'
-import { Order, OrderItem, OrderStatus } from '@/types'
+import { Order, OrderItem, OrderStatus, OrderStatusLog } from '@/types'
 import { formatCustomAnswers } from '@/lib/customAnswers'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
 import {
@@ -10,10 +10,12 @@ import {
   AdminSummary,
   AdminEmptyState,
   AdminPageLoader,
+  AdminRowActions,
 } from '@/components/admin/AdminPage'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, X, MessageSquare, ShoppingBag, Filter, CheckCircle2 } from 'lucide-react'
-import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
+import { Loader2, X, MessageSquare, ShoppingBag, Filter, CheckCircle2, History } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'todos' }[] = [
   { label: 'Todos', value: 'todos' },
@@ -24,6 +26,31 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'todos' }[] = [
   { label: 'Entregue', value: 'entregue' },
   { label: 'Cancelado', value: 'cancelado' },
 ]
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  novo: 'Novo',
+  confirmado: 'Confirmado',
+  em_preparacao: 'Em preparação',
+  pronto: 'Pronto',
+  entregue: 'Entregue',
+  cancelado: 'Cancelado',
+}
+
+/** Nome do comprador exibido: quando a conta foi excluída, "Aluno removido". */
+function buyerName(order: Order): { name: string; removed: boolean } {
+  if (order.expand?.user?.name) return { name: order.expand.user.name, removed: false }
+  if (order.user) return { name: order.customer_name, removed: false }
+  return { name: 'Aluno removido', removed: true }
+}
+
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso)
+  return (
+    d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) +
+    ' às ' +
+    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  )
+}
 
 export default function AdminOrders() {
   const { user, isAdmin, isLoading: authLoading } = useAuth()
@@ -37,8 +64,22 @@ export default function AdminOrders() {
   // Drawer for order detail
   const [activeOrder, setActiveOrder] = useState<Order | null>(null)
   const [activeOrderItems, setActiveOrderItems] = useState<OrderItem[]>([])
+  const [activeOrderLog, setActiveOrderLog] = useState<OrderStatusLog[]>([])
   const [drawerLoading, setDrawerLoading] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const loadOrders = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const data = await ordersService.listAllOrders()
+      setOrders(data)
+    } catch (err) {
+      console.error('Erro ao carregar lista de pedidos do painel:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!authLoading) {
@@ -57,56 +98,63 @@ export default function AdminOrders() {
       }
 
       loadOrders()
-
-      // Realtime subscription on orders
-      pb.collection('orders').subscribe('*', (e) => {
-        if (e.action === 'create') {
-          setOrders((prev) => [e.record as unknown as Order, ...prev])
-          toast({
-            title: 'Novo pedido recebido!',
-            description: `Cliente: ${(e.record as any).customer_name}`,
-          })
-        } else if (e.action === 'update') {
-          setOrders((prev) =>
-            prev.map((o) => (o.id === e.record.id ? (e.record as unknown as Order) : o)),
-          )
-          if (activeOrder && activeOrder.id === e.record.id) {
-            setActiveOrder(e.record as unknown as Order)
-          }
-        } else if (e.action === 'delete') {
-          setOrders((prev) => prev.filter((o) => o.id !== e.record.id))
-          if (activeOrder && activeOrder.id === e.record.id) {
-            setActiveOrder(null)
-          }
-        }
-      })
     }
+  }, [user, isAdmin, authLoading, loadOrders, toast])
 
-    return () => {
-      pb.collection('orders').unsubscribe('*')
-    }
-  }, [user, isAdmin, authLoading])
+  // Realtime: orders
+  useRealtime<Order>(
+    'orders',
+    (e) => {
+      if (e.action === 'create') {
+        setOrders((prev) => [{ ...e.record } as Order, ...prev])
+        toast({
+          title: 'Novo pedido recebido!',
+          description: `Cliente: ${e.record.customer_name}`,
+        })
+      } else if (e.action === 'update') {
+        // O registro do realtime não vem com expand — preserva o expand=user
+        // (nome/e-mail do comprador) que a listagem já carregou.
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === e.record.id ? ({ ...e.record, expand: o.expand } as Order) : o,
+          ),
+        )
+        setActiveOrder((cur) =>
+          cur && cur.id === e.record.id ? ({ ...e.record, expand: cur.expand } as Order) : cur,
+        )
+      } else if (e.action === 'delete') {
+        setOrders((prev) => prev.filter((o) => o.id !== e.record.id))
+        setActiveOrder((cur) => (cur && cur.id === e.record.id ? null : cur))
+      }
+    },
+    !!user && isAdmin && !authLoading,
+  )
 
-  const loadOrders = async () => {
-    setIsLoading(true)
-    try {
-      const data = await ordersService.listAllOrders()
-      setOrders(data)
-    } catch (err) {
-      console.error('Erro ao carregar lista de pedidos do painel:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Realtime: log de etapas do pedido aberto no drawer
+  useRealtime<OrderStatusLog>(
+    'order_status_log',
+    (e) => {
+      if (!activeOrder || e.record.order !== activeOrder.id) return
+      if (e.action === 'create') {
+        setActiveOrderLog((prev) => [...prev, { ...e.record } as OrderStatusLog])
+      }
+    },
+    !!activeOrder,
+  )
 
   const handleOpenDetail = async (order: Order) => {
     setActiveOrder(order)
     setDrawerLoading(true)
+    setActiveOrderLog([])
     try {
-      const items = await ordersService.getOrderItems(order.id)
+      const [items, log] = await Promise.all([
+        ordersService.getOrderItems(order.id),
+        ordersService.listStatusLog(order.id),
+      ])
       setActiveOrderItems(items)
+      setActiveOrderLog(log)
     } catch (err) {
-      console.error('Erro ao carregar itens do drawer:', err)
+      console.error('Erro ao carregar detalhes do pedido:', err)
     } finally {
       setDrawerLoading(false)
     }
@@ -118,7 +166,7 @@ export default function AdminOrders() {
       await ordersService.updateOrderStatus(orderId, newStatus)
       toast({
         title: 'Status atualizado com sucesso',
-        description: `Status alterado para: ${newStatus}`,
+        description: `Status alterado para: ${STATUS_LABELS[newStatus]}`,
       })
     } catch (err: any) {
       console.error('Erro ao atualizar status:', err)
@@ -129,6 +177,30 @@ export default function AdminOrders() {
       })
     } finally {
       setUpdatingStatus(null)
+    }
+  }
+
+  const handleDeleteOrder = async (order: Order) => {
+    if (
+      !window.confirm(
+        `Excluir o pedido #${order.id.substring(0, 8)} de ${buyerName(order).name}? Essa ação não pode ser desfeita.`,
+      )
+    ) {
+      return
+    }
+    setDeletingId(order.id)
+    try {
+      await ordersService.deleteOrder(order.id)
+      toast({ title: 'Pedido excluído' })
+    } catch (err: any) {
+      console.error('Erro ao excluir pedido:', err)
+      toast({
+        title: 'Erro ao excluir pedido',
+        description: err?.message || 'Falha ao salvar no servidor.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -250,6 +322,7 @@ export default function AdminOrders() {
                     hour: '2-digit',
                     minute: '2-digit',
                   })
+                  const buyer = buyerName(order)
 
                   return (
                     <tr
@@ -261,7 +334,16 @@ export default function AdminOrders() {
                         #{order.id.substring(0, 8)}
                       </td>
                       <td className="py-3.5 px-4">
-                        <strong className="text-[#1C1B1A] block">{order.customer_name}</strong>
+                        {buyer.removed ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <strong className="text-[#8A8580] block italic">Aluno removido</strong>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#F5F5F5] text-[#8A8580] border border-[#8A8580]/20">
+                              conta excluída
+                            </span>
+                          </span>
+                        ) : (
+                          <strong className="text-[#1C1B1A] block">{buyer.name}</strong>
+                        )}
                         <span className="text-[#6B6560] text-[11px]">{order.phone}</span>
                       </td>
                       <td className="py-3.5 px-4">
@@ -285,24 +367,29 @@ export default function AdminOrders() {
                           }
                           className="text-xs font-semibold py-1 px-2 rounded-md border border-[#E8E0D5] bg-white text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]"
                         >
-                          <option value="novo">Novo</option>
-                          <option value="confirmado">Confirmado</option>
-                          <option value="em_preparacao">Em preparação</option>
-                          <option value="pronto">Pronto</option>
-                          <option value="entregue">Entregue</option>
-                          <option value="cancelado">Cancelado</option>
+                          {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
                         </select>
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenDetail(order)
-                          }}
-                          className="text-[#C1272D] hover:underline font-semibold text-xs"
-                        >
-                          Ver Detalhes
-                        </button>
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <AdminRowActions>
+                          <button
+                            onClick={() => handleOpenDetail(order)}
+                            className="text-[11px] font-semibold text-[#1C1B1A] border border-[#E8E0D5] rounded-md px-2 py-1 hover:border-[#C1272D]/40"
+                          >
+                            Detalhes
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOrder(order)}
+                            disabled={deletingId === order.id}
+                            className="text-[11px] font-semibold text-[#C1272D] border border-[#C1272D]/40 rounded-md px-2 py-1 hover:bg-[#C1272D]/5 disabled:opacity-50"
+                          >
+                            {deletingId === order.id ? 'Excluindo…' : 'Excluir'}
+                          </button>
+                        </AdminRowActions>
                       </td>
                     </tr>
                   )
@@ -320,6 +407,7 @@ export default function AdminOrders() {
                 hour: '2-digit',
                 minute: '2-digit',
               })
+              const buyer = buyerName(order)
 
               return (
                 <div
@@ -335,7 +423,14 @@ export default function AdminOrders() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-sm text-[#1C1B1A]">{order.customer_name}</h4>
+                    <h4
+                      className={cn(
+                        'font-semibold text-sm',
+                        buyer.removed ? 'text-[#8A8580] italic' : 'text-[#1C1B1A]',
+                      )}
+                    >
+                      {buyer.name}
+                    </h4>
                     <span className="text-xs text-[#6B6560]">
                       {order.phone} • {order.delivery_type === 'retirada' ? 'Retirada' : 'Entrega'}
                     </span>
@@ -359,13 +454,19 @@ export default function AdminOrders() {
                       onChange={(e) => handleUpdateStatus(order.id, e.target.value as OrderStatus)}
                       className="text-xs font-semibold py-1 px-2 rounded-md border border-[#E8E0D5] bg-white text-[#1C1B1A]"
                     >
-                      <option value="novo">Novo</option>
-                      <option value="confirmado">Confirmado</option>
-                      <option value="em_preparacao">Em preparação</option>
-                      <option value="pronto">Pronto</option>
-                      <option value="entregue">Entregue</option>
-                      <option value="cancelado">Cancelado</option>
+                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
+                    <button
+                      onClick={() => handleDeleteOrder(order)}
+                      disabled={deletingId === order.id}
+                      className="text-[11px] font-semibold text-[#C1272D] disabled:opacity-50"
+                    >
+                      {deletingId === order.id ? 'Excluindo…' : 'Excluir'}
+                    </button>
                   </div>
                 </div>
               )
@@ -414,17 +515,17 @@ export default function AdminOrders() {
                   <span className="text-[11px] text-[#6B6560] block mb-1">Mudar para:</span>
                   <select
                     value={activeOrder.status}
+                    disabled={updatingStatus === activeOrder.id}
                     onChange={(e) =>
                       handleUpdateStatus(activeOrder.id, e.target.value as OrderStatus)
                     }
                     className="text-xs font-semibold py-1 px-2 rounded-md border border-[#E8E0D5] bg-white text-[#1C1B1A]"
                   >
-                    <option value="novo">Novo</option>
-                    <option value="confirmado">Confirmado</option>
-                    <option value="em_preparacao">Em preparação</option>
-                    <option value="pronto">Pronto</option>
-                    <option value="entregue">Entregue</option>
-                    <option value="cancelado">Cancelado</option>
+                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -435,7 +536,12 @@ export default function AdminOrders() {
                   Dados do Aluno
                 </span>
                 <p>
-                  <strong>Nome:</strong> {activeOrder.customer_name}
+                  <strong>Nome:</strong>{' '}
+                  {buyerName(activeOrder).removed ? (
+                    <em className="text-[#8A8580]">Aluno removido</em>
+                  ) : (
+                    buyerName(activeOrder).name
+                  )}
                 </p>
                 <p className="flex items-center gap-2">
                   <strong>Telefone:</strong> {activeOrder.phone}
@@ -467,7 +573,7 @@ export default function AdminOrders() {
                 )}
               </div>
 
-              {/* Items List */}
+              {/* Itens */}
               <div>
                 <h4 className="font-serif font-bold text-sm text-[#1C1B1A] mb-2 uppercase tracking-wider">
                   Itens Comprados
@@ -511,14 +617,74 @@ export default function AdminOrders() {
                   </div>
                 )}
               </div>
+
+              {/* Histórico de etapas do pedido */}
+              <div>
+                <h4 className="font-serif font-bold text-sm text-[#1C1B1A] mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <History className="w-4 h-4 text-[#C1272D]" />
+                  Histórico do Pedido
+                </h4>
+
+                {drawerLoading ? (
+                  <div className="py-4 text-[#6B6560] text-xs flex items-center">
+                    <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                    Carregando histórico...
+                  </div>
+                ) : activeOrderLog.length === 0 ? (
+                  <p className="text-xs text-[#6B6560] italic p-3 border border-dashed border-[#E8E0D5] rounded-xl">
+                    Nenhuma etapa registrada ainda. Toda mudança de status passa a ficar registrada
+                    aqui com quem fez e quando.
+                  </p>
+                ) : (
+                  <ol className="relative border-l-2 border-[#E8E0D5] ml-2 space-y-3">
+                    {activeOrderLog.map((entry) => {
+                      const actor = entry.expand?.user?.name || 'Sistema'
+                      const from = entry.from_status ? STATUS_LABELS[entry.from_status] : null
+                      const to = STATUS_LABELS[entry.to_status] || entry.to_status
+                      return (
+                        <li key={entry.id} className="ml-4">
+                          <span className="absolute -left-[5px] mt-1.5 w-2.5 h-2.5 rounded-full bg-[#C1272D] border-2 border-white" />
+                          <p className="text-xs text-[#1C1B1A]">
+                            {from ? (
+                              <>
+                                <strong>
+                                  {from} → {to}
+                                </strong>{' '}
+                                por <strong>{actor}</strong>
+                              </>
+                            ) : (
+                              <>
+                                <strong>{to}</strong> por <strong>{actor}</strong>
+                              </>
+                            )}
+                          </p>
+                          <p className="text-[11px] text-[#6B6560]">{fmtDateTime(entry.created)}</p>
+                        </li>
+                      )
+                    })}
+                  </ol>
+                )}
+              </div>
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-[#E8E0D5] bg-[#FAF6F0] flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#1C1B1A]">Total do Pedido:</span>
-              <span className="text-xl font-bold text-[#C1272D]">
-                {activeOrder.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </span>
+            <div className="p-4 border-t border-[#E8E0D5] bg-[#FAF6F0] flex items-center justify-between gap-3">
+              <div>
+                <span className="text-sm font-semibold text-[#1C1B1A]">Total do Pedido:</span>
+                <span className="text-xl font-bold text-[#C1272D] ml-2">
+                  {activeOrder.total.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
+                </span>
+              </div>
+              <button
+                onClick={() => handleDeleteOrder(activeOrder)}
+                disabled={deletingId === activeOrder.id}
+                className="text-xs font-semibold text-[#C1272D] border border-[#C1272D]/40 rounded-lg px-3 py-1.5 hover:bg-[#C1272D]/5 disabled:opacity-50"
+              >
+                {deletingId === activeOrder.id ? 'Excluindo…' : 'Excluir pedido'}
+              </button>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import pb from '@/lib/pocketbase/client'
-import { Order, OrderItem, OrderStatus, DeliveryType } from '@/types'
+import { Order, OrderItem, OrderStatusLog, OrderStatus, DeliveryType } from '@/types'
 
 export interface CreateOrderInput {
   customer_name: string
@@ -97,13 +97,35 @@ export const ordersService = {
 
   async listAllOrders(): Promise<Order[]> {
     const orders = await pb.collection('orders').getFullList<Order>({
+      // expand=user: exibe a conta do comprador quando ela ainda existe.
+      // Quando o aluno foi removido, o expand simplesmente não vem —
+      // o painel exibe "Aluno removido" e o pedido continua editável.
+      expand: 'user',
       sort: '-created',
     })
     return orders
   },
 
+  /** Histórico de etapas (order_status_log) de um pedido, do mais antigo ao mais recente. */
+  async listStatusLog(orderId: string): Promise<OrderStatusLog[]> {
+    try {
+      return await pb.collection('order_status_log').getFullList<OrderStatusLog>({
+        filter: `order = "${orderId}"`,
+        expand: 'user',
+        sort: 'created',
+      })
+    } catch (_) {
+      return []
+    }
+  },
+
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
     const updated = await pb.collection('orders').update<Order>(orderId, { status })
     return updated
+  },
+
+  /** Exclui o pedido (com os itens, por cascadeDelete da relation order). */
+  async deleteOrder(orderId: string): Promise<void> {
+    await pb.collection('orders').delete(orderId)
   },
 }

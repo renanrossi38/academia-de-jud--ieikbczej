@@ -132,6 +132,9 @@ export type DeliveryType = 'retirada' | 'entrega'
 
 export interface Order {
   id: string
+  collectionId: string
+  collectionName: string
+  /** Conta do comprador — opcional: pode ter sido excluída (aluno removido). */
   user: string
   status: OrderStatus
   total: number
@@ -142,6 +145,27 @@ export interface Order {
   notes?: string
   created: string
   updated: string
+  /** Expansão da conta do comprador (orders?expand=user) — ausente quando removida. */
+  expand?: {
+    user?: Pick<User, 'id' | 'name' | 'email'>
+  }
+}
+
+/** Etapa do pedido gravada pelo hook server-side (order_status_log). */
+export interface OrderStatusLog {
+  id: string
+  collectionId: string
+  collectionName: string
+  order: string
+  /** Executor da mudança (pode não existir mais — admin removido). */
+  user: string
+  from_status: OrderStatus | ''
+  to_status: OrderStatus
+  created: string
+  updated: string
+  expand?: {
+    user?: Pick<User, 'id' | 'name'>
+  }
 }
 
 export interface OrderItem {
