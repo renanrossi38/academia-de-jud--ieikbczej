@@ -82,10 +82,13 @@ export const classesService = {
   },
 
   async updateClass(id: string, input: UpdateClassInput): Promise<Class> {
-    // Com arquivo de capa (upload/remoção) o PocketBase exige multipart.
-    const needsForm = !!input.cover || !!input.removeCover
+    // O contrato da capa: cover=null e removeCover=undefined significam
+    // "sem mudança" (o payload NÃO menciona o campo). Capa nova é upload
+    // multipart; removeCover=true usa a sintaxe "cover-" do PocketBase.
+    const { cover, removeCover, ...rest } = input
+    const needsForm = !!cover || !!removeCover
     if (!needsForm) {
-      const payload: UpdateClassInput = { ...input }
+      const payload: UpdateClassInput = { ...rest }
       if (typeof payload.name === 'string') payload.name = payload.name.trim()
       if (typeof payload.schedule === 'string') payload.schedule = payload.schedule.trim()
       return pb.collection('classes').update<Class>(id, payload)

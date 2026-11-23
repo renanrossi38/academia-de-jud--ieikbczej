@@ -87,23 +87,23 @@ export default function Index() {
   }, [])
 
   // Realtime: capa nova na turma (ou turma criada/removida no painel) reflete na home na hora.
-  useRealtime('classes', (action, record) => {
-    const cls = record as unknown as Class
-    if (action === 'create') {
+  useRealtime<Class>('classes', (e) => {
+    const cls = e.record
+    if (e.action === 'create') {
       setClasses((prev) => (cls.active === false ? prev : upsertClass(prev, cls)))
-    } else if (action === 'update') {
+    } else if (e.action === 'update') {
       setClasses((prev) =>
         cls.active === false ? prev.filter((c) => c.id !== cls.id) : upsertClass(prev, cls),
       )
-    } else if (action === 'delete') {
+    } else if (e.action === 'delete') {
       setClasses((prev) => prev.filter((c) => c.id !== cls.id))
     }
   })
 
   // Realtime: galeria de fotos do produto salva no painel reflete nos cards da loja.
-  useRealtime('products', (action, record) => {
-    const prod = record as unknown as Product
-    if (action === 'delete') {
+  useRealtime<Product>('products', (e) => {
+    const prod = e.record
+    if (e.action === 'delete') {
       setProducts((prev) => prev.filter((p) => p.id !== prod.id))
     } else {
       setProducts((prev) => prev.map((p) => (p.id === prod.id ? prod : p)))

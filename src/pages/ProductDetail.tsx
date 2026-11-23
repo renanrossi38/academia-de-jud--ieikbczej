@@ -56,6 +56,12 @@ export default function ProductDetail() {
     loadProduct(slug)
   }, [slug])
 
+  // Produto trocado: volta para a foto principal da galeria.
+  // (DEVE ficar antes dos early-returns — hooks nunca são condicionais.)
+  useEffect(() => {
+    setSelectedImage(0)
+  }, [product?.id])
+
   const loadProduct = async (productSlug: string) => {
     setIsLoading(true)
     try {
@@ -127,10 +133,6 @@ export default function ProductDetail() {
 
   const galleryUrls = productsService.getGalleryUrls(product)
   const imageUrl = galleryUrls[0] ?? null
-  // Produto novo carregado: volta para a foto principal.
-  useEffect(() => {
-    setSelectedImage(0)
-  }, [product.id])
   const selectedUrl = galleryUrls[selectedImage] ?? galleryUrls[0] ?? null
 
   const campos = product.custom_options ?? []

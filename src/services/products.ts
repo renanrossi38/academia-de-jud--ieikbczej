@@ -189,9 +189,11 @@ export const productsService = {
     }
   },
 
+  /** Foto principal do produto para cards: 1ª da galeria, com fallback na image legada. */
   getImageUrl(product: Product): string | null {
-    if (!product.image) return null
-    return pb.files.getURL(product, product.image)
+    const main = product.gallery?.[0] ?? product.image
+    if (!main) return null
+    return pb.files.getURL(product, main)
   },
 
   /**
