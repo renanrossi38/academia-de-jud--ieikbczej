@@ -828,7 +828,7 @@ export default function AdminStudents() {
                     >
                       Faixa {beltLabel(beltOf(student))}
                     </Badge>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                       {cobrancaWhatsappPara(student) && (
                         <a
                           href={cobrancaWhatsappPara(student) || '#'}

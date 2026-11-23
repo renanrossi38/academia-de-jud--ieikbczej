@@ -67,8 +67,8 @@ export const CustomFieldsSection: React.FC<CustomFieldsSectionProps> = ({ fields
 
   return (
     <div className="space-y-2 rounded-xl border border-[#E8E0D5] bg-[#FAF6F0]/60 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-xs font-bold text-[#1C1B1A]">Produto sob medida</p>
           <p className="text-[11px] text-[#6B6560]">
             Campos que o comprador preenche ao comprar (ex.: kimono feito sob medida).
@@ -98,7 +98,7 @@ export const CustomFieldsSection: React.FC<CustomFieldsSectionProps> = ({ fields
               key={index}
               className="rounded-lg border border-[#E8E0D5] bg-white p-2.5 space-y-2"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Input
                   value={field.name}
                   onChange={(e) => update(index, { name: e.target.value })}

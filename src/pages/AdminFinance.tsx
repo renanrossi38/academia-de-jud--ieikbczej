@@ -338,14 +338,21 @@ export default function AdminFinance() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#E8E0D5] bg-white shadow-xs p-4 sm:p-5">
+        <div className="rounded-2xl border border-[#E8E0D5] bg-white shadow-xs p-3 sm:p-5">
           <div className="h-72 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D5" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#6B6560' }} stroke="#D9D2C7" />
+                <XAxis
+                  dataKey="mes"
+                  interval={0}
+                  tickMargin={4}
+                  tick={{ fontSize: 10, fill: '#6B6560' }}
+                  stroke="#D9D2C7"
+                />
                 <YAxis
-                  tick={{ fontSize: 11, fill: '#6B6560' }}
+                  width={44}
+                  tick={{ fontSize: 10, fill: '#6B6560' }}
                   stroke="#D9D2C7"
                   tickFormatter={(v: number) =>
                     v >= 1000 ? `${(v / 1000).toLocaleString('pt-BR')}k` : String(v)

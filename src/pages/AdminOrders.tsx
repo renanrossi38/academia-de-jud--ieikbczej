@@ -404,7 +404,7 @@ export default function AdminOrders() {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               {/* Quick Status updater */}
-              <div className="p-3 bg-[#FAF6F0] rounded-xl border border-[#E8E0D5] flex items-center justify-between">
+              <div className="p-3 bg-[#FAF6F0] rounded-xl border border-[#E8E0D5] flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="text-[11px] text-[#6B6560] block">Status Atual:</span>
                   <OrderStatusChip status={activeOrder.status} className="mt-1" />

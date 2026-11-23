@@ -495,7 +495,7 @@ export default function AdminClassDetail() {
 
       {/* Dialog: adicionar aluno */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-lg max-h-[80vh] flex flex-col">
+        <DialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-lg max-h-[85dvh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="font-serif text-[#1C1B1A]">Adicionar aluno</DialogTitle>
             <DialogDescription className="text-[#6B6560] text-xs">

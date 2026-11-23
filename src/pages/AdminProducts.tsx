@@ -341,7 +341,7 @@ export default function AdminProducts() {
                           setEditing(p)
                           setFormOpen(true)
                         }}
-                        className="flex-1 text-xs border-[#E8E0D5] text-[#1C1B1A]"
+                        className="flex-1 min-w-[7rem] sm:min-w-0 text-xs border-[#E8E0D5] text-[#1C1B1A]"
                       >
                         <Pencil className="w-3.5 h-3.5 mr-1" />
                         Editar
@@ -353,7 +353,7 @@ export default function AdminProducts() {
                           setStockOf(p)
                           setStockOpen(true)
                         }}
-                        className="flex-1 text-xs border-[#E8E0D5] text-[#C1272D] hover:bg-[#F7E4E2]"
+                        className="flex-1 min-w-[7rem] sm:min-w-0 text-xs border-[#E8E0D5] text-[#C1272D] hover:bg-[#F7E4E2]"
                       >
                         <Boxes className="w-3.5 h-3.5 mr-1" />
                         Estoque
@@ -365,7 +365,7 @@ export default function AdminProducts() {
                           setShareOf(p)
                           setShareOpen(true)
                         }}
-                        className="flex-1 text-xs border-[#E8E0D5] text-[#128C4B] hover:bg-[#E8F5EE]"
+                        className="flex-1 min-w-[7rem] sm:min-w-0 text-xs border-[#E8E0D5] text-[#128C4B] hover:bg-[#E8F5EE]"
                         title="Compartilhar no WhatsApp"
                       >
                         <MessageCircle className="w-3.5 h-3.5 mr-1" />
@@ -376,7 +376,7 @@ export default function AdminProducts() {
                         size="sm"
                         onClick={() => handleToggleActive(p)}
                         disabled={togglingId === p.id}
-                        className="text-xs border-[#E8E0D5] text-[#1C1B1A]"
+                        className="flex-1 min-w-[7rem] sm:min-w-0 text-xs border-[#E8E0D5] text-[#1C1B1A]"
                       >
                         {togglingId === p.id ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -391,7 +391,7 @@ export default function AdminProducts() {
                         variant="outline"
                         size="sm"
                         onClick={() => setDeleting(p)}
-                        className="text-xs border-[#E8E0D5] text-[#B3261E] hover:bg-[#F7E4E2]"
+                        className="min-w-[2.5rem] flex-1 sm:flex-none text-xs border-[#E8E0D5] text-[#B3261E] hover:bg-[#F7E4E2]"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>

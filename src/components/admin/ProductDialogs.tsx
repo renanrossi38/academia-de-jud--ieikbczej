@@ -278,9 +278,9 @@ const VariationSection: React.FC<VariationSectionProps> = ({
       {variations.map((v, idx) => (
         <div
           key={v.id || `new-${idx}`}
-          className="flex items-end gap-2 p-2 bg-[#FAF6F0] rounded-lg border border-[#E8E0D5]"
+          className="flex flex-wrap items-end gap-2 p-2 bg-[#FAF6F0] rounded-lg border border-[#E8E0D5]"
         >
-          <div className="flex-1 space-y-0.5">
+          <div className="flex-[2] min-w-[8rem] space-y-0.5">
             <Label className="text-[10px] text-[#6B6560]">Rótulo</Label>
             <Input
               value={v.label}
@@ -289,7 +289,7 @@ const VariationSection: React.FC<VariationSectionProps> = ({
               className="h-8 text-xs bg-white border-[#E8E0D5]"
             />
           </div>
-          <div className="w-24 space-y-0.5">
+          <div className="w-20 sm:w-24 space-y-0.5">
             <Label className="text-[10px] text-[#6B6560]">Δ preço (R$)</Label>
             <Input
               value={v.price_delta}
@@ -298,7 +298,7 @@ const VariationSection: React.FC<VariationSectionProps> = ({
               className="h-8 text-xs bg-white border-[#E8E0D5]"
             />
           </div>
-          <div className="w-16 space-y-0.5">
+          <div className="w-14 sm:w-16 space-y-0.5">
             <Label className="text-[10px] text-[#6B6560]">Estoque</Label>
             <Input
               value={v.stock}
@@ -449,7 +449,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-white border border-[#E8E0D5] rounded-2xl sm:max-w-lg max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-[#1C1B1A]">
             {editing ? 'Editar produto' : 'Novo produto'}
@@ -698,7 +698,7 @@ export const ProductStockDialog: React.FC<ProductStockDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-white border border-[#E8E0D5] rounded-2xl sm:max-w-md max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif text-[#1C1B1A]">
             Estoque — {product?.name || ''}

@@ -367,7 +367,7 @@ export const MonthlyFeesPanel: React.FC<{
                   <div className="flex items-center justify-end text-[11px] text-[#6B6560]">
                     {fee.status === 'pago' ? `Pago em ${fmtDateTime(fee.paid_at)}` : '—'}
                   </div>
-                  <div className="flex items-center justify-end gap-3 pt-1">
+                  <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 pt-1">
                     {fee.status === 'pendente' && (
                       <button
                         type="button"
