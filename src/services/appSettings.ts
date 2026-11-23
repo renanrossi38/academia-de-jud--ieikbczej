@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { nomeMes } from './whatsapp'
 
 /** Registro da collection app_settings (chave/valor de configuração do negócio). */
 export type AppSetting = {
@@ -42,14 +43,17 @@ export type FeeTemplates = {
 }
 
 /**
- * Preenche as variáveis do template de cobrança com o nome do aluno, o mês
- * ({mes} JÁ por extenso — "novembro de 2026") e a saudação de Brasília
- * (UTC-3 o ano todo, MESMA regra do hook fee_overdue_notice.js).
+ * Preenche as variáveis do template de cobrança com o nome do aluno, o mês e a
+ * saudação de Brasília (UTC-3 o ano todo, MESMA regra do hook
+ * fee_overdue_notice.js). O mês pode vir como chave crua ("2026-11") — é
+ * convertido para "novembro de 2026" aqui, de modo que {mes} NUNCA saia como
+ * "2026-11" (nem na pré-visualização do painel, nem na mensagem do WhatsApp).
+ * Texto já por extenso passa inalterado.
  */
 export function renderFeeMessage(
   template: string,
   nomeAluno: string,
-  mesPorExtenso: string,
+  mes: string,
   now: Date = new Date(),
 ): string {
   const h = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCHours()
@@ -60,7 +64,7 @@ export function renderFeeMessage(
     .split('{aluno}')
     .join(nomeAluno?.trim() || 'aluno(a)')
     .split('{mes}')
-    .join(mesPorExtenso)
+    .join(nomeMes(mes))
 }
 
 export const appSettingsService = {
@@ -130,15 +134,16 @@ export const appSettingsService = {
 
   /**
    * Preenche as variáveis de um template de cobrança ({saudacao} por horário
-   * de Brasília, {aluno}, {mes} já por extenso) — a MESMA renderização do
-   * e-mail e da mensagem de WhatsApp, usada no painel e nas pré-visualizações.
+   * de Brasília, {aluno}, {mes} por extenso — aceita a chave crua "2026-11" e
+   * a converte para "novembro de 2026") — a MESMA renderização do e-mail e da
+   * mensagem de WhatsApp, usada no painel e nas pré-visualizações.
    */
   renderFeeMessage(
     template: string,
     nomeAluno: string,
-    mesPorExtenso: string,
+    mes: string,
     now: Date = new Date(),
   ): string {
-    return renderFeeMessage(template, nomeAluno, mesPorExtenso, now)
+    return renderFeeMessage(template, nomeAluno, mes, now)
   },
 }

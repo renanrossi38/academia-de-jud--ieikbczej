@@ -22,8 +22,9 @@ export function saudacaoBrasilia(now: Date = new Date()): string {
 
 /** "2026-11" → "novembro de 2026" (o rótulo de {mes} nas mensagens). */
 export function nomeMes(mesChave: string): string {
-  const [y, m] = (mesChave || '').split('-').map(Number)
-  if (!y || !m) return mesChave || ''
+  const chave = (mesChave || '').trim()
+  const [y, m] = chave.split('-').map(Number)
+  if (!y || !m) return chave
   const nomes = [
     'janeiro',
     'fevereiro',
