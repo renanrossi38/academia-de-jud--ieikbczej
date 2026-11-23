@@ -121,6 +121,7 @@ export default function CartCheckout() {
           variationLabel: item.variationLabel,
           unitPrice: item.unitPrice,
           quantity: item.quantity,
+          customAnswers: item.customAnswers,
         })),
       })
 
@@ -217,6 +218,13 @@ export default function CartCheckout() {
                     {item.variationLabel && (
                       <p className="text-xs text-[#6B6560] mt-0.5">{item.variationLabel}</p>
                     )}
+                    {item.customAnswers && Object.keys(item.customAnswers).length > 0 && (
+                      <p className="text-xs text-[#6B6560] mt-0.5">
+                        {Object.entries(item.customAnswers)
+                          .map(([k, v]) => `${k}: ${v}`)
+                          .join(', ')}
+                      </p>
+                    )}
                     <p className="text-xs font-bold text-[#C1272D] mt-1">
                       {item.unitPrice.toLocaleString('pt-BR', {
                         style: 'currency',
@@ -228,7 +236,12 @@ export default function CartCheckout() {
                       <div className="flex items-center border border-[#E8E0D5] rounded-md bg-white">
                         <button
                           onClick={() =>
-                            updateQuantity(item.productId, item.variationId, item.quantity - 1)
+                            updateQuantity(
+                              item.productId,
+                              item.variationId,
+                              item.quantity - 1,
+                              item.customAnswers,
+                            )
                           }
                           className="p-1 hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-l-md transition-colors"
                           aria-label="Diminuir"
@@ -240,7 +253,12 @@ export default function CartCheckout() {
                         </span>
                         <button
                           onClick={() =>
-                            updateQuantity(item.productId, item.variationId, item.quantity + 1)
+                            updateQuantity(
+                              item.productId,
+                              item.variationId,
+                              item.quantity + 1,
+                              item.customAnswers,
+                            )
                           }
                           className="p-1 hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-r-md transition-colors"
                           aria-label="Aumentar"
@@ -260,7 +278,7 @@ export default function CartCheckout() {
                   </div>
 
                   <button
-                    onClick={() => removeItem(item.productId, item.variationId)}
+                    onClick={() => removeItem(item.productId, item.variationId, item.customAnswers)}
                     className="p-2 text-[#6B6560] hover:text-[#B3261E] rounded-md hover:bg-[#F7E4E2] transition-colors"
                     title="Remover"
                   >

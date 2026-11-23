@@ -14,6 +14,8 @@ export interface CreateOrderInput {
     variationLabel?: string
     unitPrice: number
     quantity: number
+    /** Respostas dos campos personalizados (produto sob medida). */
+    customAnswers?: Record<string, string>
   }>
 }
 
@@ -49,6 +51,9 @@ export const ordersService = {
         unit_price: item.unitPrice,
         quantity: item.quantity,
         subtotal,
+        ...(item.customAnswers && Object.keys(item.customAnswers).length > 0
+          ? { custom_answers: item.customAnswers }
+          : {}),
       })
     }
 

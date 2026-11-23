@@ -30,6 +30,8 @@ export default function ProductDetail() {
   const [related, setRelated] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({})
+  const [customError, setCustomError] = useState('')
 
   useEffect(() => {
     if (!slug) return
@@ -50,8 +52,11 @@ export default function ProductDetail() {
       // Load variations
       const vars = await productsService.listVariations(data.id)
       setVariations(vars)
+      setCustomAnswers({})
+      setCustomError('')
       if (vars.length > 0) {
-        setSelectedVariation(vars[0])
+        // Só pré-seleciona variação com estoque disponível
+        setSelectedVariation(vars.find((v) => (v.stock ?? 0) > 0) || null)
       } else {
         setSelectedVariation(null)
       }
@@ -103,7 +108,25 @@ export default function ProductDetail() {
 
   const imageUrl = productsService.getImageUrl(product)
 
+  const campos = product.custom_options ?? []
+  const temCampos = campos.length > 0
+
+  const handleCustomChange = (fieldName: string, value: string) => {
+    setCustomAnswers((prev) => ({ ...prev, [fieldName]: value }))
+    setCustomError('')
+  }
+
   const handleAddToCart = () => {
+    // Validação dos campos sob medida obrigatórios
+    if (temCampos) {
+      const faltando = campos
+        .filter((c) => c.required !== false && !(customAnswers[c.name] || '').trim())
+        .map((c) => c.name)
+      if (faltando.length > 0) {
+        setCustomError(`Preencha os campos obrigatórios: ${faltando.join(', ')}.`)
+        return
+      }
+    }
     setIsAdding(true)
     addItem({
       productId: product.id,
@@ -115,6 +138,7 @@ export default function ProductDetail() {
       variationLabel: selectedVariation?.label,
       unitPrice: currentUnitPrice,
       quantity,
+      customAnswers: temCampos ? customAnswers : undefined,
     })
 
     setTimeout(() => {
@@ -192,7 +216,23 @@ export default function ProductDetail() {
               <div className="flex flex-wrap gap-2">
                 {variations.map((v) => {
                   const isSelected = selectedVariation?.id === v.id
+                  const semEstoque = (v.stock ?? 0) <= 0
                   const finalVarPrice = Math.max(0, basePrice + v.price_delta)
+
+                  if (semEstoque) {
+                    return (
+                      <span
+                        key={v.id}
+                        title="Sem estoque"
+                        className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-[#E8E0D5] bg-[#FAF6F0] text-[#6B6560]/60 line-through cursor-not-allowed select-none flex items-center gap-2"
+                      >
+                        <span>{v.label}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#E8E0D5]/50 text-[#6B6560]">
+                          Esgotado
+                        </span>
+                      </span>
+                    )
+                  }
 
                   return (
                     <button
@@ -220,6 +260,64 @@ export default function ProductDetail() {
                     </button>
                   )
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Campos personalizados (produto sob medida) */}
+          {temCampos && (
+            <div className="border-t border-[#E8E0D5] pt-4 space-y-2.5">
+              <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider font-serif">
+                Produto Sob Medida — Preencha os campos:
+              </label>
+              <div className="space-y-3 bg-[#FAF6F0]/60 border border-[#E8E0D5] rounded-xl p-4">
+                {campos.map((campo) => {
+                  const obr = campo.required !== false
+                  return (
+                    <div key={campo.name}>
+                      <label
+                        htmlFor={`custom-${campo.name}`}
+                        className="block text-xs font-semibold text-[#1C1B1A] mb-1"
+                      >
+                        {campo.name}
+                        {obr && <span className="text-[#C1272D]"> *</span>}
+                        {campo.type === 'escolha' && campo.options?.length ? (
+                          <span className="text-[#6B6560] font-normal normal-case">
+                            {' '}
+                            (escolha uma opção)
+                          </span>
+                        ) : null}
+                      </label>
+                      {campo.type === 'escolha' && campo.options?.length ? (
+                        <select
+                          id={`custom-${campo.name}`}
+                          value={customAnswers[campo.name] || ''}
+                          onChange={(e) => handleCustomChange(campo.name, e.target.value)}
+                          className="w-full h-10 px-3 rounded-lg border border-[#E8E0D5] bg-white text-sm text-[#1C1B1A] focus:outline-none focus:ring-2 focus:ring-[#C1272D]/30 focus:border-[#C1272D] transition-all"
+                        >
+                          <option value="">Selecione…</option>
+                          {campo.options!.map((op) => (
+                            <option key={op} value={op}>
+                              {op}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          id={`custom-${campo.name}`}
+                          type={campo.type === 'numero' ? 'number' : 'text'}
+                          value={customAnswers[campo.name] || ''}
+                          onChange={(e) => handleCustomChange(campo.name, e.target.value)}
+                          placeholder={campo.type === 'numero' ? 'Ex.: 78' : 'Digite aqui…'}
+                          className="w-full h-10 rounded-lg border-[#E8E0D5] bg-white text-sm focus-visible:ring-[#C1272D]/30"
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+                {customError && (
+                  <p className="text-xs font-semibold text-[#B3261E]">{customError}</p>
+                )}
               </div>
             </div>
           )}

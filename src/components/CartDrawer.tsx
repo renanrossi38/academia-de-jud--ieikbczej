@@ -74,6 +74,7 @@ export const CartDrawer: React.FC = () => {
               <div
                 key={`${item.productId}-${item.variationId || 'base'}`}
                 className="p-3 border border-[#E8E0D5] rounded-xl flex items-start gap-3 bg-[#FAF6F0]/40 transition-all"
+                data-testid={`cart-item-${item.productId}-${item.variationId || 'base'}`}
               >
                 {/* Visual miniature */}
                 <div className="w-14 h-14 rounded-lg bg-[#F7E4E2] border border-[#E8E0D5] flex items-center justify-center font-serif text-[#C1272D] font-bold text-lg shrink-0 overflow-hidden">
@@ -95,6 +96,13 @@ export const CartDrawer: React.FC = () => {
                   {item.variationLabel && (
                     <p className="text-xs text-[#6B6560] mt-0.5 truncate">{item.variationLabel}</p>
                   )}
+                  {item.customAnswers && Object.keys(item.customAnswers).length > 0 && (
+                    <p className="text-xs text-[#6B6560] mt-0.5">
+                      {Object.entries(item.customAnswers)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(', ')}
+                    </p>
+                  )}
                   <p className="text-xs font-semibold text-[#C1272D] mt-1">
                     {item.unitPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </p>
@@ -104,7 +112,12 @@ export const CartDrawer: React.FC = () => {
                     <div className="flex items-center border border-[#E8E0D5] rounded-md bg-white">
                       <button
                         onClick={() =>
-                          updateQuantity(item.productId, item.variationId, item.quantity - 1)
+                          updateQuantity(
+                            item.productId,
+                            item.variationId,
+                            item.quantity - 1,
+                            item.customAnswers,
+                          )
                         }
                         className="p-1 hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-l-md transition-colors"
                         aria-label="Diminuir"
@@ -116,7 +129,12 @@ export const CartDrawer: React.FC = () => {
                       </span>
                       <button
                         onClick={() =>
-                          updateQuantity(item.productId, item.variationId, item.quantity + 1)
+                          updateQuantity(
+                            item.productId,
+                            item.variationId,
+                            item.quantity + 1,
+                            item.customAnswers,
+                          )
                         }
                         className="p-1 hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-r-md transition-colors"
                         aria-label="Aumentar"
@@ -136,7 +154,7 @@ export const CartDrawer: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={() => removeItem(item.productId, item.variationId)}
+                  onClick={() => removeItem(item.productId, item.variationId, item.customAnswers)}
                   className="p-1 text-[#6B6560] hover:text-[#B3261E] rounded transition-colors"
                   title="Remover item"
                 >

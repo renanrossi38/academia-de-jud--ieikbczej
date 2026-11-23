@@ -48,6 +48,21 @@ export interface Student {
 
 export type ProductCategory = 'uniformes' | 'faixas' | 'camisetas' | 'equipamentos' | 'planos'
 
+/**
+ * Campo personalizado de um produto "sob medida" (ex.: kimono feito sob medida).
+ * Configurado pelo admin no produto; o comprador preenche na página do produto.
+ */
+export interface CustomField {
+  /** Rótulo exibido ao comprador (ex.: "Peso", "Estatura", "Cor", "Modelo"). */
+  name: string
+  /** "texto" → input livre; "numero" → input numérico; "escolha" → select com options. */
+  type: 'texto' | 'numero' | 'escolha'
+  /** Opções permitidas quando type = "escolha" (ex.: ["Branco", "Azul"]). */
+  options?: string[]
+  /** Quando true, o comprador precisa preencher antes de adicionar ao carrinho. */
+  required?: boolean
+}
+
 export interface Product {
   collectionId: string
   collectionName: string
@@ -59,6 +74,8 @@ export interface Product {
   image?: string
   category: ProductCategory
   active: boolean
+  /** Campos personalizados (sob medida). Produto "sob medida" = lista não vazia. */
+  custom_options?: CustomField[] | null
   created: string
   updated: string
 }
@@ -106,6 +123,8 @@ export interface OrderItem {
   unit_price: number
   quantity: number
   subtotal: number
+  /** Respostas do comprador nos campos personalizados (produto sob medida). */
+  custom_answers?: Record<string, string> | null
   created: string
   updated: string
 }
@@ -120,6 +139,8 @@ export interface CartItem {
   variationLabel?: string
   unitPrice: number
   quantity: number
+  /** Respostas dos campos personalizados (produto sob medida). */
+  customAnswers?: Record<string, string>
 }
 
 export type AttendanceStatus = 'presente' | 'ausente' | 'justificado'

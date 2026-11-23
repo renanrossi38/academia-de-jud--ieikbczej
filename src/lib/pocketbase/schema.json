@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T03:19:07.617Z",
+  "generatedAt": "2026-11-23T03:43:17.671Z",
   "collections": [
     {
       "name": "users",
@@ -147,6 +147,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "custom_options",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -366,6 +372,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "custom_answers",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_order_items_order ON order_items (order)"]

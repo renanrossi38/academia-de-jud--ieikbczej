@@ -1,5 +1,5 @@
 import pb from '@/lib/pocketbase/client'
-import { Product, ProductCategory, ProductVariation } from '@/types'
+import { CustomField, Product, ProductCategory, ProductVariation } from '@/types'
 
 /** Gera um slug URL-safe a partir do nome (ex.: "Kimono Branco A2" → "kimono-branco-a2"). */
 export const slugify = (name: string): string =>
@@ -19,6 +19,8 @@ export interface CreateProductInput {
   category: ProductCategory
   active?: boolean
   image?: File | null
+  /** Campos personalizados (produto sob medida). Vazio/null = produto comum. */
+  custom_options?: CustomField[] | null
 }
 
 export interface UpdateProductInput {
@@ -31,6 +33,8 @@ export interface UpdateProductInput {
   image?: File | null
   /** Sinaliza remoção da imagem atual (PocketBase: campo "image-"). */
   removeImage?: boolean
+  /** Campos personalizados (produto sob medida). Vazio/null = produto comum. */
+  custom_options?: CustomField[] | null
 }
 
 export interface CreateVariationInput {
@@ -88,6 +92,10 @@ export const productsService = {
     payload.append('price', String(input.price))
     payload.append('category', input.category)
     payload.append('active', String(input.active ?? true))
+    payload.append(
+      'custom_options',
+      JSON.stringify(input.custom_options?.length ? input.custom_options : null),
+    )
     if (input.image) payload.append('image', input.image)
     return pb.collection('products').create<Product>(payload)
   },
@@ -101,6 +109,11 @@ export const productsService = {
     if (input.price !== undefined) payload.append('price', String(input.price))
     if (input.category !== undefined) payload.append('category', input.category)
     if (input.active !== undefined) payload.append('active', String(input.active))
+    if (input.custom_options !== undefined)
+      payload.append(
+        'custom_options',
+        JSON.stringify(input.custom_options?.length ? input.custom_options : null),
+      )
     if (input.image) payload.append('image', input.image)
     if (input.removeImage) payload.append('image-', '')
     return pb.collection('products').update<Product>(id, payload)

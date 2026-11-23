@@ -5,8 +5,17 @@ import { useToast } from '@/hooks/use-toast'
 interface CartContextType {
   items: CartItem[]
   addItem: (item: CartItem) => void
-  removeItem: (productId: string, variationId?: string) => void
-  updateQuantity: (productId: string, variationId: string | undefined, quantity: number) => void
+  removeItem: (
+    productId: string,
+    variationId?: string,
+    customAnswers?: Record<string, string>,
+  ) => void
+  updateQuantity: (
+    productId: string,
+    variationId: string | undefined,
+    quantity: number,
+    customAnswers?: Record<string, string>,
+  ) => void
   clearCart: () => void
   itemCount: number
   total: number
@@ -18,6 +27,26 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 const CART_STORAGE_KEY = 'judo_tatsu_cart_v1'
+
+/** Chave de identidade do item: produto + variação + respostas sob medida. */
+const itemKey = (item: Pick<CartItem, 'productId' | 'variationId' | 'customAnswers'>): string => {
+  const answers = item.customAnswers
+    ? Object.keys(item.customAnswers)
+        .sort()
+        .map((k) => `${k}=${item.customAnswers![k]}`)
+        .join('&')
+    : ''
+  return `${item.productId}|${item.variationId || ''}|${answers}`
+}
+
+/** Resumo curto das respostas sob medida para exibir em toasts. */
+const answersSummary = (item: CartItem): string =>
+  item.customAnswers && Object.keys(item.customAnswers).length > 0
+    ? ' — ' +
+      Object.entries(item.customAnswers)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ')
+    : ''
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -48,9 +77,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addItem = (item: CartItem) => {
     setItems((prev) => {
-      const existingIdx = prev.findIndex(
-        (i) => i.productId === item.productId && (i.variationId || '') === (item.variationId || ''),
-      )
+      const existingIdx = prev.findIndex((i) => itemKey(i) === itemKey(item))
 
       if (existingIdx >= 0) {
         const updated = [...prev]
@@ -64,27 +91,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsDrawerOpen(true)
     toast({
       title: 'Item adicionado ao carrinho',
-      description: `${item.productName}${item.variationLabel ? ` (${item.variationLabel})` : ''}`,
+      description: `${item.productName}${item.variationLabel ? ` (${item.variationLabel})` : ''}${answersSummary(item)}`,
     })
   }
 
-  const removeItem = (productId: string, variationId?: string) => {
+  const removeItem = (
+    productId: string,
+    variationId?: string,
+    customAnswers?: Record<string, string>,
+  ) => {
     setItems((prev) =>
-      prev.filter(
-        (i) => !(i.productId === productId && (i.variationId || '') === (variationId || '')),
-      ),
+      prev.filter((i) => itemKey(i) !== itemKey({ productId, variationId, customAnswers })),
     )
     triggerBadgePop()
   }
 
-  const updateQuantity = (productId: string, variationId: string | undefined, quantity: number) => {
+  const updateQuantity = (
+    productId: string,
+    variationId: string | undefined,
+    quantity: number,
+    customAnswers?: Record<string, string>,
+  ) => {
     if (quantity <= 0) {
-      removeItem(productId, variationId)
+      removeItem(productId, variationId, customAnswers)
       return
     }
     setItems((prev) =>
       prev.map((i) => {
-        if (i.productId === productId && (i.variationId || '') === (variationId || '')) {
+        if (itemKey(i) === itemKey({ productId, variationId, customAnswers })) {
           return { ...i, quantity }
         }
         return i
