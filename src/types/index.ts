@@ -52,6 +52,13 @@ export interface Student {
   user?: string
   created: string
   updated: string
+  /**
+   * Expansão da conta de acesso (students?expand=user) — o painel usa
+   * role/is_owner para exibir o selo de cargo de administrador ao lado do nome.
+   */
+  expand?: {
+    user?: Pick<User, 'id' | 'role' | 'is_owner'>
+  }
 }
 
 export type ProductCategory = 'uniformes' | 'faixas' | 'camisetas' | 'equipamentos' | 'planos'

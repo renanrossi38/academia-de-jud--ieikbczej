@@ -49,6 +49,7 @@ import {
 } from '@/lib/adminAreas'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { AdminRoleBadge } from '@/components/admin/AdminRoleBadge'
 
 /**
  * Painel "Administradores" — visível SOMENTE para o admin principal (dono).
@@ -65,6 +66,7 @@ interface Candidate {
   name: string
   email: string
   role: string
+  is_owner?: boolean
 }
 
 const pageLoader = <AdminPageLoader label="Carregando administradores..." />
@@ -126,8 +128,9 @@ export const AdminRoles: React.FC = () => {
         filter,
         sort: 'name',
       })
-      // Só quem ainda NÃO é admin (o cargo do secundário é 'admin' sem is_owner).
-      setCandidates(res.items.filter((u) => u.role !== 'admin'))
+      // Todos os usuários: quem já é admin aparece com o selo do cargo e o
+      // botão "Conceder" desabilitado (em vez de sumir da busca).
+      setCandidates(res.items)
     } catch {
       setCandidates([])
     } finally {
@@ -275,11 +278,9 @@ export const AdminRoles: React.FC = () => {
             <div className="rounded-2xl border border-[#C1272D]/30 bg-[#F7E4E2]/60 p-5 mb-5 flex items-start gap-4">
               <Crown className="w-6 h-6 text-[#C1272D] shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
-                <p className="font-serif font-bold text-base text-[#1C1B1A] truncate">
-                  {owner.name}
-                  <Badge className="ml-2 bg-[#C1272D] text-white border-[#C1272D]">
-                    Administrador principal
-                  </Badge>
+                <p className="font-serif font-bold text-base text-[#1C1B1A] truncate flex flex-wrap items-center gap-1.5">
+                  <span className="truncate">{owner.name}</span>
+                  <AdminRoleBadge isOwner />
                 </p>
                 <p className="text-xs text-[#6B6560] mt-1 truncate">{owner.email}</p>
                 <p className="text-[11px] text-[#8E1519] mt-2 leading-relaxed">
@@ -314,6 +315,7 @@ export const AdminRoles: React.FC = () => {
                     <th className="text-left px-4 py-3 font-bold">Nome</th>
                     <th className="text-left px-4 py-3 font-bold hidden sm:table-cell">E-mail</th>
                     <th className="text-left px-4 py-3 font-bold">Cargo</th>
+                    <th className="text-left px-4 py-3 font-bold hidden lg:table-cell">Resumo</th>
                     <th className="text-left px-4 py-3 font-bold hidden md:table-cell">
                       Áreas liberadas
                     </th>
@@ -323,9 +325,12 @@ export const AdminRoles: React.FC = () => {
                 <tbody>
                   {secundarios.map((a) => (
                     <tr key={a.id} className="border-b border-[#E8E0D5]/60 last:border-0">
-                      <td className="px-4 py-3 font-medium text-[#1C1B1A] truncate max-w-[180px]">
-                        {a.name}
-                        <span className="block sm:hidden text-[11px] text-[#6B6560] font-normal">
+                      <td className="px-4 py-3 font-medium text-[#1C1B1A] max-w-[180px]">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate">{a.name}</span>
+                          <AdminRoleBadge isOwner={a.is_owner} />
+                        </span>
+                        <span className="block sm:hidden text-[11px] text-[#6B6560] font-normal truncate">
                           {a.email}
                         </span>
                       </td>
@@ -339,6 +344,11 @@ export const AdminRoles: React.FC = () => {
                         >
                           {roleLabel(a.role, a.is_owner)}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-[#6B6560] text-[11px]">
+                        {normalizePermissions(a.admin_permissions).length === 0
+                          ? 'Todas'
+                          : `${normalizePermissions(a.admin_permissions).length} área(s)`}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         {normalizePermissions(a.admin_permissions).length === 0 ? (
@@ -429,7 +439,7 @@ export const AdminRoles: React.FC = () => {
               <p className="p-6 text-xs text-[#6B6560] text-center leading-relaxed">
                 {query
                   ? 'Nenhum usuário encontrado com esse nome ou e-mail.'
-                  : 'Digite para buscar usuários que ainda não são administradores.'}
+                  : 'Digite para buscar usuários — quem já é administrador aparece com o selo do cargo.'}
               </p>
             ) : (
               candidates.map((c) => (
@@ -437,17 +447,22 @@ export const AdminRoles: React.FC = () => {
                   key={c.id}
                   className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[#FAF6F0] transition-colors"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#1C1B1A] truncate">{c.name}</p>
                     <p className="text-[11px] text-[#6B6560] truncate">{c.email}</p>
                   </div>
+                  {c.role === 'admin' && (
+                    <AdminRoleBadge isOwner={!!c.is_owner} className="shrink-0" />
+                  )}
                   <Button
                     size="sm"
-                    disabled={busyId === c.id}
+                    disabled={busyId === c.id || c.role === 'admin'}
                     onClick={() => handleGrant(c)}
                     className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs shrink-0"
                   >
-                    {busyId === c.id ? (
+                    {c.role === 'admin' ? (
+                      'Já é admin'
+                    ) : busyId === c.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       'Conceder'

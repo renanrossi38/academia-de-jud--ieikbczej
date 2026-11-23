@@ -39,6 +39,7 @@ import {
   AdminEmptyState,
   AdminPageLoader,
 } from '@/components/admin/AdminPage'
+import { AdminRoleBadge } from '@/components/admin/AdminRoleBadge'
 import {
   Search,
   X,
@@ -640,6 +641,12 @@ export default function AdminStudents() {
                         >
                           {student.name || '—'}
                         </Link>
+                        {student.expand?.user?.role === 'admin' && (
+                          <AdminRoleBadge
+                            isOwner={!!student.expand.user.is_owner}
+                            className="ml-1.5 align-middle"
+                          />
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560]">{student.phone || '—'}</td>
                       <td className="py-3.5 px-4">
@@ -770,6 +777,12 @@ export default function AdminStudents() {
                       >
                         {student.name || '—'}
                       </Link>
+                      {student.expand?.user?.role === 'admin' && (
+                        <AdminRoleBadge
+                          isOwner={!!student.expand.user.is_owner}
+                          className="ml-1.5 align-middle"
+                        />
+                      )}
                     </h4>
                     <Badge
                       className={`text-[10px] font-bold border ${

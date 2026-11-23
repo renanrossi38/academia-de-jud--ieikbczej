@@ -138,9 +138,13 @@ export async function createAccess(
 }
 
 export const studentsService = {
-  /** Todos os alunos cadastrados (com ou sem conta de acesso). */
+  /** Todos os alunos cadastrados (com ou sem conta de acesso), com a conta
+   * expandida para o painel saber o cargo (role/is_owner) do usuário. */
   async listStudents(): Promise<Student[]> {
-    return pb.collection('students').getFullList<Student>({ sort: '-created' })
+    return pb.collection('students').getFullList<Student>({
+      sort: '-created',
+      expand: 'user',
+    })
   },
 
   /** Alunos ativos (para matrícula em turmas e chamada). */
