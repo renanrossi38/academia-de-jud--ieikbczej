@@ -91,8 +91,9 @@ export function SavedReportsSection({
           <div className="rounded-xl border border-dashed border-[#D9D2C7] bg-[#FAF6F0]/50 px-4 py-6 mx-5 mb-5 text-center">
             <p className="text-xs text-[#6B6560] flex items-center justify-center gap-2">
               <Info className="w-3.5 h-3.5 shrink-0" />
-              Nenhum relatório arquivado ainda — ao fechar um ano, clique em "Arquivar relatório de{' '}
-              {year}" para guardar o fechamento daquele ano.
+              Nenhum relatório arquivado ainda — ao fechar o ano corrente, clique em "Arquivar
+              relatório" para guardar o fechamento daquele ano. Anos anteriores ao corrente não
+              podem ser arquivados.
             </p>
           </div>
         ) : (

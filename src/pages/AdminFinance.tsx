@@ -240,6 +240,17 @@ export default function AdminFinance() {
   /** Arquiva o fechamento do ano navegado: snapshot calculado pelo motor de finance.ts. */
   const handleArchive = async () => {
     if (!data) return
+    // Blindagem da página (além do serviço e do hook do servidor): ano != corrente
+    // (Brasília) nunca arquiva — nem por bug de UI, nem por relógio de dispositivo errado.
+    if (year !== currentYearBrasilia()) {
+      setArchiveOpen(false)
+      toast({
+        title: 'Ano fechado',
+        description: 'Só é possível arquivar o relatório do ano corrente.',
+        variant: 'destructive',
+      })
+      return
+    }
     setIsArchiving(true)
     try {
       await annualReportsService.archive(data, user?.name)
@@ -492,7 +503,11 @@ export default function AdminFinance() {
         onArchived={() => undefined}
         canArchive={year === currentYearBrasilia()}
         isArchiving={isArchiving}
-        onArchiveClick={() => setArchiveOpen(true)}
+        onArchiveClick={() => {
+          // Só abre o diálogo no ano corrente — o botão nem renderiza fora dele,
+          // mas a blindagem aqui impede qualquer caminho alternativo.
+          if (year === currentYearBrasilia()) setArchiveOpen(true)
+        }}
       />
 
       <ArchiveReportDialog
