@@ -8,6 +8,7 @@ import { Product, ProductCategory, Class } from '@/types'
 import { HankoStamp, ProductPlaceholder, OfficialLogo } from '@/components/HankoStamp'
 import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero/HeroDecor'
 import { BrushDivider } from '@/components/hero/HeroDecor'
+import InstagramSection from '@/components/InstagramSection'
 import { Badge } from '@/components/ui/badge'
 import {
   ArrowRight,
@@ -398,6 +399,9 @@ export default function Index() {
           )}
         </section>
       )}
+
+      {/* Instagram: post mais recente em destaque + grade (some sozinho se falhar) */}
+      <InstagramSection />
 
       {/* Como funciona */}
       <section className="bg-white border-y border-[#E8E0D5] py-14">
