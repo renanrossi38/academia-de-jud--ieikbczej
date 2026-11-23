@@ -54,7 +54,7 @@ export async function saveBeltOrder(order: Belt[]): Promise<void> {
   const value = JSON.stringify(order)
   const existing = await pb
     .collection('app_settings')
-    .getList<{ key: string; value: string }>(1, 1, { filter: `key = "${KEY_BELT_ORDER}"` })
+    .getList(1, 1, { filter: `key = "${KEY_BELT_ORDER}"` })
   if (existing.items.length > 0) {
     await pb.collection('app_settings').update(existing.items[0].id, { value })
   } else {
@@ -64,9 +64,9 @@ export async function saveBeltOrder(order: Belt[]): Promise<void> {
 
 /** Restaura a ordem padrão do judô (remove a customização salva). */
 export async function resetBeltOrder(): Promise<void> {
-  const existing = await pb
-    .collection('app_settings')
-    .getList<{ key: string; value: string }>(1, 1, { filter: `key = "${KEY_BELT_ORDER}"` })
+  const existing = await pb.collection('app_settings').getList(1, 1, {
+    filter: `key = "${KEY_BELT_ORDER}"`,
+  })
   if (existing.items.length > 0) {
     await pb.collection('app_settings').delete(existing.items[0].id)
   }

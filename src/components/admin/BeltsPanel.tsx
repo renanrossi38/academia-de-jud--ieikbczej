@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useRealtime } from '@/hooks/use-realtime'
-import { beltBadgeClass, beltLabel } from '@/components/admin/StudentDialogs'
+import { beltBadgeClass, beltLabel, useBeltOptions } from '@/components/admin/StudentDialogs'
 import { fmtDate } from '@/pages/admin/StudentDetailPanels'
 import {
   CreateBeltPromotionInput,
@@ -358,7 +358,10 @@ function PromoteBeltDialog({
             >
               <option value="">Selecione…</option>
               {(suggested
-                ? [suggested, ...beltOptions.filter((b) => b.value !== suggested)]
+                ? [
+                    { label: beltLabel(suggested), value: suggested },
+                    ...beltOptions.filter((b) => b.value !== suggested),
+                  ]
                 : beltOptions
               ).map((b) => (
                 <option key={b.value} value={b.value}>

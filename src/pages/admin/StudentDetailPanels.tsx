@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
 import { beltBadgeClass, beltLabel, birthDateLabel } from '@/components/admin/StudentDialogs'
 import { classLevelBadgeClass, classLevelLabel } from '@/services/classes'
+import { toLocalDateKey } from '@/services/attendance'
 import {
   Attendance,
   AttendanceStatus,
@@ -230,6 +231,63 @@ export const PersonalDataPanel: React.FC<{
 
 /* ---------------- Aba 2: Frequência & Competições ---------------- */
 
+/** Rótulo do mês ("2026-11" → "Novembro de 2026") em português. */
+const monthGroupLabel = (monthKey: string): string => {
+  const [y, m] = (monthKey || '').split('-').map(Number)
+  if (!y || !m) return monthKey || '—'
+  const d = new Date(y, m - 1, 1)
+  if (Number.isNaN(d.getTime())) return monthKey
+  const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+interface AttendanceMonthGroup {
+  /** "YYYY-MM" no fuso de Brasília (as marcações são gravadas às 12:00 UTC). */
+  monthKey: string
+  label: string
+  records: Attendance[]
+  /** Total de dias com chamada (presente + ausente + justificado). */
+  dias: number
+  presentes: number
+  ausentes: number
+  justificados: number
+  /** Presentes ÷ dias com chamada (justificado fica fora do numerador). */
+  pct: number
+}
+
+/** Agrupa as marcações por mês/ano (mais recentes primeiro), com os totais de cada mês. */
+export function groupAttendanceByMonth(records: Attendance[]): AttendanceMonthGroup[] {
+  const byMonth = new Map<string, Attendance[]>()
+  for (const r of records) {
+    const key = toLocalDateKey(new Date(r.date)).slice(0, 7)
+    const list = byMonth.get(key)
+    if (list) list.push(r)
+    else byMonth.set(key, [r])
+  }
+  return [...byMonth.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([monthKey, monthRecords]) => {
+      const counts = monthRecords.reduce(
+        (acc, r) => {
+          acc[r.status] = (acc[r.status] || 0) + 1
+          return acc
+        },
+        { presente: 0, ausente: 0, justificado: 0 } as Record<AttendanceStatus, number>,
+      )
+      const dias = monthRecords.length
+      return {
+        monthKey,
+        label: monthGroupLabel(monthKey),
+        records: monthRecords,
+        dias,
+        presentes: counts.presente || 0,
+        ausentes: counts.ausente || 0,
+        justificados: counts.justificado || 0,
+        pct: dias > 0 ? Math.round(((counts.presente || 0) / dias) * 100) : 0,
+      }
+    })
+}
+
 export const AttendancePanel: React.FC<{ records: Attendance[]; classes: Class[] }> = ({
   records,
   classes,
@@ -244,6 +302,7 @@ export const AttendancePanel: React.FC<{ records: Attendance[]; classes: Class[]
   )
   const presente = counts.presente || 0
   const pct = total > 0 ? Math.round((presente / total) * 100) : 0
+  const groups = React.useMemo(() => groupAttendanceByMonth(records), [records])
 
   return (
     <div className="space-y-4">
@@ -281,10 +340,15 @@ export const AttendancePanel: React.FC<{ records: Attendance[]; classes: Class[]
 
       <div className={`${cardCls} p-5`}>
         <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-3">
-          Histórico de presença
+          Histórico de presença por mês
         </h3>
-        <p className="text-[11px] text-[#6B6560] mb-4">
-          Percentual de frequência = presenças ÷ registros do período ({presente}/{total}).
+        <p className="text-[11px] text-[#6B6560] mb-4 flex items-start gap-1.5">
+          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>
+            Percentual do mês = presenças ÷ dias com chamada ({presente}/{total} no total).
+            Marcações "Justificado" contam como dia com chamada, mas ficam FORA do numerador — o dia
+            existe na chamada, porém não soma como presença.
+          </span>
         </p>
         {total === 0 ? (
           <p className="text-xs text-[#6B6560] flex items-center gap-2">
@@ -292,27 +356,69 @@ export const AttendancePanel: React.FC<{ records: Attendance[]; classes: Class[]
             Nenhuma marcação de presença ainda — elas aparecem aqui depois da chamada nas turmas.
           </p>
         ) : (
-          <ul className="divide-y divide-[#E8E0D5]">
-            {records.map((r) => (
-              <li key={r.id} className="py-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <Badge
-                  className={`text-[10px] font-bold border gap-1 ${ATT_META[r.status]?.badge ?? ''}`}
-                >
-                  {ATT_META[r.status]?.icon}
-                  {ATT_META[r.status]?.label ?? r.status}
-                </Badge>
-                <span className="text-sm font-semibold text-[#1C1B1A]">
-                  {fmtDateTime(r.date).split(',')[0] || fmtDateTime(r.date)}
-                </span>
-                <span className="text-[11px] text-[#6B6560] capitalize">{weekdayOf(r.date)}</span>
-                {classes.length > 0 && (
-                  <span className="text-[11px] text-[#6B6560] sm:ml-auto truncate max-w-full">
-                    {classes.map((c) => c.name).join(' · ')}
-                  </span>
-                )}
-              </li>
+          <div className="space-y-5">
+            {groups.map((g) => (
+              <div key={g.monthKey}>
+                {/* Cabeçalho do mês: rótulo + totais e % de presença do mês */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pb-2 mb-1 border-b border-[#E8E0D5]">
+                  <h4 className="font-serif font-bold text-sm text-[#1C1B1A]">{g.label}</h4>
+                  <Badge className="bg-[#FAF6F0] text-[#6B6560] border-[#E8E0D5] text-[10px] font-bold">
+                    {g.dias} {g.dias === 1 ? 'dia com chamada' : 'dias com chamada'}
+                  </Badge>
+                  <Badge className="bg-[#EAF4EC] text-[#2E7D4F] border-[#2E7D4F]/20 text-[10px] font-bold">
+                    {g.presentes} {g.presentes === 1 ? 'presença' : 'presenças'}
+                  </Badge>
+                  {g.ausentes > 0 && (
+                    <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-[10px] font-bold">
+                      {g.ausentes} {g.ausentes === 1 ? 'ausente' : 'ausentes'}
+                    </Badge>
+                  )}
+                  {g.justificados > 0 && (
+                    <Badge
+                      title="Dias justificados: contam como dia com chamada, mas não entram no percentual de presença."
+                      className="bg-white text-[#6B6560] border-[#E8E0D5] text-[10px] font-bold cursor-help"
+                    >
+                      {g.justificados}{' '}
+                      {g.justificados === 1
+                        ? 'justificado (fora do %)'
+                        : 'justificados (fora do %)'}
+                    </Badge>
+                  )}
+                  <Badge
+                    title="Presenças ÷ dias com chamada do mês; justificados ficam fora do numerador."
+                    className="ml-auto bg-[#F7E4E2] text-[#8E1519] border-[#C1272D]/25 text-xs font-bold cursor-help"
+                  >
+                    {g.pct}% de presença
+                  </Badge>
+                </div>
+                <ul className="divide-y divide-[#E8E0D5]">
+                  {g.records.map((r) => (
+                    <li key={r.id} className="py-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <Badge
+                        className={`text-[10px] font-bold border gap-1 ${
+                          ATT_META[r.status]?.badge ?? ''
+                        }`}
+                      >
+                        {ATT_META[r.status]?.icon}
+                        {ATT_META[r.status]?.label ?? r.status}
+                      </Badge>
+                      <span className="text-sm font-semibold text-[#1C1B1A]">
+                        {fmtDateTime(r.date).split(',')[0] || fmtDateTime(r.date)}
+                      </span>
+                      <span className="text-[11px] text-[#6B6560] capitalize">
+                        {weekdayOf(r.date)}
+                      </span>
+                      {classes.length > 0 && (
+                        <span className="text-[11px] text-[#6B6560] sm:ml-auto truncate max-w-full">
+                          {classes.map((c) => c.name).join(' · ')}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>
