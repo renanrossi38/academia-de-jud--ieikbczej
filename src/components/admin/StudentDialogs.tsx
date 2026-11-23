@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Belt, Student } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { loadBeltOrder } from '@/services/beltOrder'
+import { BELT_ORDER } from '@/services/beltPromotions'
 import {
   Dialog,
   DialogContent,
@@ -15,19 +17,43 @@ import { useToast } from '@/hooks/use-toast'
 import { studentsService } from '@/services/students'
 import { Loader2 } from 'lucide-react'
 
-const BELT_OPTIONS: { label: string; value: Belt }[] = [
-  { label: 'Branca', value: 'branca' },
-  { label: 'Cinza', value: 'cinza' },
-  { label: 'Amarela', value: 'amarela' },
-  { label: 'Laranja', value: 'laranja' },
-  { label: 'Verde', value: 'verde' },
-  { label: 'Azul', value: 'azul' },
-  { label: 'Roxa', value: 'roxa' },
-  { label: 'Marrom', value: 'marrom' },
-  { label: 'Preta', value: 'preta' },
-]
+const BELT_LABELS: Record<Belt, string> = {
+  branca: 'Branca',
+  cinza: 'Cinza',
+  azul: 'Azul',
+  amarela: 'Amarela',
+  laranja: 'Laranja',
+  verde: 'Verde',
+  roxa: 'Roxa',
+  marrom: 'Marrom',
+  preta: 'Preta',
+}
 
-export const beltLabel = (belt?: string) => BELT_OPTIONS.find((b) => b.value === belt)?.label || '—'
+const BELT_OPTIONS: { label: string; value: Belt }[] = BELT_ORDER.map((value) => ({
+  label: BELT_LABELS[value],
+  value,
+}))
+
+export const beltLabel = (belt?: string) => BELT_LABELS[(belt || '') as Belt] || '—'
+
+/**
+ * Opções de faixa na ordem configurada pelo admin (ordem padrão do judô até
+ * que ele reordene). Usada pelos selects de cadastro/edição de aluno.
+ */
+export function useBeltOptions(): { label: string; value: Belt }[] {
+  const [order, setOrder] = useState<{ label: string; value: Belt }[]>(BELT_OPTIONS)
+  useEffect(() => {
+    let cancelled = false
+    loadBeltOrder().then((saved) => {
+      if (cancelled) return
+      setOrder(saved.map((value) => ({ label: BELT_LABELS[value], value })))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  return order
+}
 
 export const beltBadgeClass = (belt?: string) => {
   switch (belt) {
@@ -96,6 +122,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   onCreated,
 }) => {
   const { toast } = useToast()
+  const beltOptions = useBeltOptions()
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [creating, setCreating] = useState(false)
 
@@ -194,7 +221,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
                 className={selectClass}
               >
                 <option value="">Selecione a faixa...</option>
-                {BELT_OPTIONS.map((b) => (
+                {beltOptions.map((b) => (
                   <option key={b.value} value={b.value}>
                     {b.label}
                   </option>
@@ -285,6 +312,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
   onSaved,
 }) => {
   const { toast } = useToast()
+  const beltOptions = useBeltOptions()
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [active, setActive] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -439,7 +467,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
                 className={selectClass}
               >
                 <option value="">Selecione a faixa...</option>
-                {BELT_OPTIONS.map((b) => (
+                {beltOptions.map((b) => (
                   <option key={b.value} value={b.value}>
                     {b.label}
                   </option>

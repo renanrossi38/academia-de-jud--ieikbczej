@@ -23,10 +23,10 @@ export interface CreateBeltPromotionInput {
 export const BELT_ORDER: Belt[] = [
   'branca',
   'cinza',
+  'azul',
   'amarela',
   'laranja',
   'verde',
-  'azul',
   'roxa',
   'marrom',
   'preta',

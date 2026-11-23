@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Loader2, Medal, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Loader2, Medal, RotateCcw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -29,11 +29,13 @@ import { beltBadgeClass, beltLabel } from '@/components/admin/StudentDialogs'
 import { fmtDate } from '@/pages/admin/StudentDetailPanels'
 import {
   CreateBeltPromotionInput,
+  BELT_ORDER,
   beltPromotionsService,
   nextBelt,
   timeInBeltLabel,
   todayKeyBrasilia,
 } from '@/services/beltPromotions'
+import { loadBeltOrder, resetBeltOrder, saveBeltOrder } from '@/services/beltOrder'
 import { Belt, BeltPromotion } from '@/types'
 
 const selectClass =
@@ -207,6 +209,9 @@ export default function BeltsPanel({ studentId }: { studentId: string }) {
         onCreated={(p) => setPromotions((prev) => [p, ...prev])}
       />
 
+      {/* Editor da ordem das faixas (salva em app_settings, vale no sistema todo) */}
+      <BeltOrderEditor />
+
       {/* Confirmação de remoção de lançamento errado */}
       <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent className="bg-white border border-[#E8E0D5] rounded-2xl max-w-md">
@@ -266,6 +271,7 @@ function PromoteBeltDialog({
   onCreated: (promotion: BeltPromotion) => void
 }) {
   const { toast } = useToast()
+  const beltOptions = useBeltOptions()
   const suggested = nextBelt(currentBelt)
 
   const [belt, setBelt] = useState<Belt | ''>('')
@@ -352,12 +358,12 @@ function PromoteBeltDialog({
             >
               <option value="">Selecione…</option>
               {(suggested
-                ? [suggested, ...ALL_BELTS.filter((b) => b !== suggested)]
-                : ALL_BELTS
+                ? [suggested, ...beltOptions.filter((b) => b.value !== suggested)]
+                : beltOptions
               ).map((b) => (
-                <option key={b} value={b}>
-                  Faixa {beltLabel(b)}
-                  {b === suggested ? ' (sugerida)' : ''}
+                <option key={b.value} value={b.value}>
+                  Faixa {b.label}
+                  {b.value === suggested ? ' (sugerida)' : ''}
                 </option>
               ))}
             </select>
@@ -424,14 +430,148 @@ function PromoteBeltDialog({
   )
 }
 
-const ALL_BELTS = [
-  'branca',
-  'cinza',
-  'amarela',
-  'laranja',
-  'verde',
-  'azul',
-  'roxa',
-  'marrom',
-  'preta',
-] as const
+/**
+ * Editor da ordem das faixas: sobe/desce cada faixa e salva em app_settings
+ * ("belt_order"). A ordem vale para os selects e listagens do sistema; a faixa
+ * ATUAL de cada aluno não muda (ela vem da última promoção, currentBeltFrom).
+ */
+function BeltOrderEditor({ onSaved }: { onSaved?: () => void }) {
+  const { toast } = useToast()
+  const [order, setOrder] = useState<Belt[]>(BELT_ORDER)
+  const [isSaving, setIsSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    loadBeltOrder().then((saved) => {
+      if (!cancelled) setOrder(saved)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const move = (index: number, dir: -1 | 1) => {
+    setOrder((prev) => {
+      const next = [...prev]
+      const target = index + dir
+      if (target < 0 || target >= next.length) return prev
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+    setDirty(true)
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await saveBeltOrder(order)
+      setDirty(false)
+      toast({ title: 'Ordem das faixas salva!' })
+      onSaved?.()
+    } catch (err: any) {
+      console.error('Erro ao salvar ordem das faixas:', err)
+      toast({
+        title: 'Erro ao salvar ordem',
+        description: err?.message || 'Tente novamente em instantes.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleReset = async () => {
+    setIsSaving(true)
+    try {
+      await resetBeltOrder()
+      setOrder(BELT_ORDER)
+      setDirty(false)
+      toast({ title: 'Ordem padrão restaurada', description: 'Sequência oficial do judô.' })
+      onSaved?.()
+    } catch (err: any) {
+      console.error('Erro ao restaurar ordem:', err)
+      toast({
+        title: 'Erro ao restaurar',
+        description: err?.message || 'Tente novamente em instantes.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-5">
+      <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-1">Ordem das faixas</h3>
+      <p className="text-[11px] text-[#6B6560] mb-4">
+        Ordem usada nos selects e listagens do sistema. Reordenar NÃO altera a faixa atual de nenhum
+        aluno — ela continua vindo da última promoção registrada.
+      </p>
+      <ul className="divide-y divide-[#E8E0D5] mb-4">
+        {order.map((belt, idx) => (
+          <li key={belt} className="py-2 flex items-center gap-3">
+            <span className="w-6 h-6 rounded-full bg-[#FAF6F0] border border-[#E8E0D5] text-[10px] font-bold text-[#6B6560] flex items-center justify-center shrink-0">
+              {idx + 1}
+            </span>
+            <Badge className={`text-[10px] font-bold border ${beltBadgeClass(belt)}`}>
+              Faixa {beltLabel(belt)}
+            </Badge>
+            <span className="ml-auto inline-flex items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => move(idx, -1)}
+                disabled={idx === 0 || isSaving}
+                className="h-7 w-7 p-0 border-[#E8E0D5] text-[#1C1B1A]"
+                title="Mover para cima"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => move(idx, 1)}
+                disabled={idx === order.length - 1 || isSaving}
+                className="h-7 w-7 p-0 border-[#E8E0D5] text-[#1C1B1A]"
+                title="Mover para baixo"
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+              </Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={isSaving || !dirty}
+          className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-[11px] font-semibold"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            'Salvar ordem'
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleReset}
+          disabled={isSaving}
+          className="border-[#E8E0D5] text-[#1C1B1A] text-[11px] font-semibold hover:bg-[#FAF6F0]"
+        >
+          <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+          Restaurar padrão
+        </Button>
+        {!dirty && (
+          <span className="text-[11px] text-[#6B6560]">Ordem atual salva no sistema.</span>
+        )}
+      </div>
+    </div>
+  )
+}
