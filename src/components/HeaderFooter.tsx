@@ -20,6 +20,7 @@ import {
   Settings,
   Wallet,
   Home,
+  KeyRound,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -67,6 +68,18 @@ export const Header: React.FC = () => {
             >
               <ClipboardList className="w-4 h-4" />
               Meus Pedidos
+            </Link>
+          )}
+
+          {user && !isAdmin && (
+            <Link
+              to="/alterar-senha"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1.5 ${
+                isActive('/alterar-senha') ? 'text-[#C1272D] font-semibold' : 'text-[#1C1B1A]'
+              }`}
+            >
+              <KeyRound className="w-4 h-4" />
+              Alterar senha
             </Link>
           )}
 
@@ -316,6 +329,17 @@ export const Header: React.FC = () => {
               className="block py-2 text-base font-semibold text-[#C1272D]"
             >
               Ranking (Admin)
+            </Link>
+          )}
+
+          {user && !isAdmin && (
+            <Link
+              to="/alterar-senha"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-medium text-[#1C1B1A] hover:text-[#C1272D] flex items-center gap-2"
+            >
+              <KeyRound className="w-4 h-4" />
+              Alterar senha
             </Link>
           )}
 

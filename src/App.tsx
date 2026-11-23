@@ -31,6 +31,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import ConfirmEmailChange from './pages/ConfirmEmailChange'
 import Account from './pages/Account'
+import ChangePassword from './pages/ChangePassword'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="/redefinir-senha" element={<ResetPassword />} />
               <Route path="/confirmar-troca-email" element={<ConfirmEmailChange />} />
               <Route path="/conta" element={<Account />} />
+              <Route path="/alterar-senha" element={<ChangePassword />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

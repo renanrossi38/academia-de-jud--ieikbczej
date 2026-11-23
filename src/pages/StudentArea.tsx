@@ -16,7 +16,8 @@ import { paymentMethodLabel } from '@/services/monthlyFees'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Wallet, ShoppingBag, CalendarCheck, Trophy, Award } from 'lucide-react'
+import { Wallet, ShoppingBag, CalendarCheck, Trophy, Award, KeyRound } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 const fmtBRL = (v: number) =>
   (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -148,6 +149,30 @@ export default function StudentArea() {
             </Badge>
           </div>
         )}
+      </div>
+
+      {/* Atalho para trocar a senha inicial por uma própria */}
+      <div className="mb-6 bg-white rounded-2xl border border-[#C1272D]/25 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#F7E4E2] border border-[#C1272D]/20 flex items-center justify-center shrink-0">
+            <KeyRound className="w-4.5 h-4.5 text-[#C1272D]" />
+          </div>
+          <div>
+            <h2 className="font-serif font-bold text-sm text-[#1C1B1A]">
+              Ainda usando a senha inicial?
+            </h2>
+            <p className="text-xs text-[#6B6560] mt-0.5">
+              Troque por uma senha sua e ganhe mais segurança — sem depender da academia.
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={() => navigate('/alterar-senha')}
+          className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold shrink-0"
+        >
+          <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+          Alterar senha
+        </Button>
       </div>
 
       {!hasAny && (
