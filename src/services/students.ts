@@ -74,6 +74,9 @@ function friendlyCreateAccessError(err: unknown, email: string): string {
   if (raw.includes('validation_invalid_email') || raw.includes('invalid email')) {
     return `O e-mail ${email} não é válido. Corrija o e-mail no cadastro do aluno e tente de novo.`
   }
+  if (raw.includes('values_mismatch') || raw.includes("values don't match")) {
+    return 'O servidor rejeitou um campo reservado da conta. Atualize a página e tente gerar o acesso novamente.'
+  }
   const msg = getErrorMessage(err)
   return msg.startsWith('Failed to create record') || !msg
     ? 'Não foi possível criar a conta de acesso. Verifique o e-mail do aluno e tente novamente.'
@@ -109,7 +112,9 @@ export async function createAccess(
       belt: baseBeltForUser(student.belt),
       role: 'aluno',
       active: true,
-      verified: true,
+      // verified NÃO é enviado: só superusuário pode definir esse campo
+      // (o admin do app é um record com role=admin, sem manage access) e
+      // enviá-lo devolve 400 "Failed to create record."
     })
   } catch (err) {
     throw new Error(friendlyCreateAccessError(err, email))
