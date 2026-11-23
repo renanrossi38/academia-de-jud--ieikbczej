@@ -432,12 +432,11 @@ export const Footer: React.FC = () => {
               <span className="inline-flex items-center justify-center rounded-full bg-[#FAF6F0] p-1">
                 <HankoStamp size="sm" />
               </span>
-              <span className="font-serif font-bold text-lg text-white">Judô Tatsu</span>
+              <span className="font-serif font-bold text-lg text-white">
+                {site.footer_about_title}
+              </span>
             </div>
-            <p className="text-sm leading-relaxed text-[#CFC8BE]">
-              Tradição, disciplina e excelência no ensino do judô. Atendendo judocas de todas as
-              idades desde a faixa branca até a preta.
-            </p>
+            <p className="text-sm leading-relaxed text-[#CFC8BE]">{site.footer_about_text}</p>
           </div>
 
           <div>

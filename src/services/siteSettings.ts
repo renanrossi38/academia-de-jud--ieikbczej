@@ -49,6 +49,9 @@ export interface SiteContent {
   how_steps: SiteHowStep[]
   how_guarantee_label: string
   how_guarantee_text: string
+  /** Rodapé — primeiro bloco (logo + nome + texto sobre a academia) */
+  footer_about_title: string
+  footer_about_text: string
 }
 
 /** Defaults = conteúdo atual da home (seed idêntico na migration 0026). */
@@ -94,6 +97,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   how_guarantee_label: 'Garantia de ajuste:',
   how_guarantee_text:
     'se o kimono ou faixa não vestir confortavelmente no primeiro treino, trocamos o tamanho diretamente no balcão.',
+  footer_about_title: 'Judô Tatsu',
+  footer_about_text:
+    'Tradição, disciplina e excelência no ensino do judô. Atendendo judocas de todas as idades desde a faixa branca até a preta.',
 }
 
 /** Registro bruto da collection site_settings. */

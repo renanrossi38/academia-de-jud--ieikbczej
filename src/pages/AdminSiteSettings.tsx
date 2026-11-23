@@ -19,6 +19,7 @@ import {
   Loader2,
   MapPin,
   MessageCircle,
+  PenLine,
   Plus,
   RotateCcw,
   Save,
@@ -283,6 +284,28 @@ export default function AdminSiteSettings() {
             label="Legenda abaixo do logo (coluna direita)"
             value={content.hero_side_label}
             onChange={(v) => set('hero_side_label', v)}
+          />
+        </section>
+
+        {/* ── Rodapé — primeiro bloco ── */}
+        <section className="space-y-4 pt-2 border-t border-[#E8E0D5]">
+          <SectionTitle
+            icon={<PenLine className="w-4 h-4" />}
+            label="Rodapé — bloco sobre a academia"
+          />
+          <TextField
+            id="footer-about-title"
+            label="Título (ao lado do logo)"
+            value={content.footer_about_title}
+            onChange={(v) => set('footer_about_title', v)}
+          />
+          <TextField
+            id="footer-about-text"
+            label="Texto de apresentação da academia"
+            textarea
+            rows={3}
+            value={content.footer_about_text}
+            onChange={(v) => set('footer_about_text', v)}
           />
         </section>
 
