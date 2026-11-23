@@ -37,6 +37,14 @@ import {
   type FeeStanding,
 } from '@/services/monthlyFees'
 import { Class } from '@/types'
+import { MessageCircle } from 'lucide-react'
+import {
+  normalizarTelefone,
+  mesCobrancaDeAluno,
+  waMeUrl,
+  DEFAULT_FEE_WHATSAPP_TEMPLATE,
+} from '@/services/whatsapp'
+import { appSettingsService } from '@/services/appSettings'
 
 const cardCls = 'bg-white rounded-2xl border border-[#E8E0D5] shadow-xs'
 

@@ -27,8 +27,13 @@ export const DEFAULT_FEE_OVERDUE_TEMPLATE: FeeOverdueTemplate = {
     'Atenciosamente: Equipe Tatsu',
 }
 
+/** Template editável da mensagem de WhatsApp de cobrança (mesmas variáveis). */
+export const DEFAULT_FEE_WHATSAPP_TEMPLATE =
+  '{saudacao}, {aluno}!\n\nPassando para lembrar que a mensalidade de {mes} da academia Judô Tatsu está pendente de pagamento. 🥋\n\nSe você já pagou, desconsidere esta mensagem — pode ter sido só o lançamento que ainda não chegou ao sistema.\n\nQualquer dúvida, é só responder aqui.\n\nAtenciosamente,\nEquipe Tatsu'
+
 const KEY_SUBJECT = 'fee_overdue_subject'
 const KEY_TEMPLATE = 'fee_overdue_template'
+const KEY_WHATSAPP_TEMPLATE = 'fee_whatsapp_template'
 
 export const appSettingsService = {
   /** Lê o template do e-mail de atraso (com fallback para o texto original). */
@@ -59,6 +64,26 @@ export const appSettingsService = {
       } else {
         await pb.collection('app_settings').create({ key: entry.key, value: entry.value })
       }
+    }
+  },
+
+  /** Lê o template da mensagem de WhatsApp de cobrança (fallback = padrão). */
+  async getFeeWhatsappTemplate(): Promise<string> {
+    const records = await pb
+      .collection('app_settings')
+      .getFullList<AppSetting>({ filter: `key = "${KEY_WHATSAPP_TEMPLATE}"` })
+    return records[0]?.value?.trim() || DEFAULT_FEE_WHATSAPP_TEMPLATE
+  },
+
+  /** Salva o template da mensagem de WhatsApp de cobrança (upsert por chave). */
+  async saveFeeWhatsappTemplate(value: string): Promise<void> {
+    const existing = await pb.collection('app_settings').getList<AppSetting>(1, 1, {
+      filter: `key = "${KEY_WHATSAPP_TEMPLATE}"`,
+    })
+    if (existing.items.length > 0) {
+      await pb.collection('app_settings').update(existing.items[0].id, { value })
+    } else {
+      await pb.collection('app_settings').create({ key: KEY_WHATSAPP_TEMPLATE, value })
     }
   },
 }

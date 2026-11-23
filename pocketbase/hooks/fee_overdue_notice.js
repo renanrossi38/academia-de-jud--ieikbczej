@@ -48,6 +48,7 @@
 //
 cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
   var FORCE = false // cron: respeita a trava de 7 dias
+  var ENVIAR_WHATSAPP = true // cron: também cobra via WhatsApp (com conta conectada)
 
   // ---- Helpers locais (precisam estar dentro da callback para o JSVM) ----
 
@@ -129,8 +130,19 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     '<p style="margin-top:24px;">Atenciosamente,<br /><strong>Judô Tatsu</strong></p>'
   var DEFAULT_SUBJECT = 'Judô Tatsu — Mensalidade pendente ({mes})'
 
+  // Texto do WhatsApp (mesmas variáveis): app_settings com fallback inline.
+  var DEFAULT_WHATSAPP_TPL =
+    '{saudacao}, {aluno}!\n\n' +
+    'Passando para lembrar que a mensalidade de {mes} da academia Judô Tatsu ' +
+    'está pendente de pagamento. 🥋\n\n' +
+    'Se você já pagou, desconsidere esta mensagem — pode ter sido só o ' +
+    'lançamento que ainda não chegou ao sistema.\n\n' +
+    'Qualquer dúvida, é só responder aqui.\n\n' +
+    'Atenciosamente,\nEquipe Tatsu'
+
   var template = DEFAULT_TPL
   var subject = DEFAULT_SUBJECT
+  var waTemplate = DEFAULT_WHATSAPP_TPL
   try {
     var settings = $app.findRecordsByFilter(
       'app_settings',
@@ -145,6 +157,16 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     var subjects = $app.findRecordsByFilter('app_settings', 'key = "fee_overdue_subject"', '', 1, 0)
     if (subjects.length > 0 && subjects[0].getString('value')) {
       subject = subjects[0].getString('value')
+    }
+    var waSettings = $app.findRecordsByFilter(
+      'app_settings',
+      'key = "fee_whatsapp_template"',
+      '',
+      1,
+      0,
+    )
+    if (waSettings.length > 0 && waSettings[0].getString('value')) {
+      waTemplate = waSettings[0].getString('value')
     }
   } catch (err) {
     console.log(
@@ -264,6 +286,40 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
   }
 
   // ---- Envio (um e-mail por aluno, mesmo com vários meses em atraso) ----
+  // WhatsApp: quem NÃO recebeu e-mail mas TEM celular cadastrado recebe a
+  // mesma cobrança pela conta de WhatsApp Business da academia, conectada nos
+  // conectores do builder (envio server-side, $connectors.executeAsOwner).
+  // Falha de WhatsApp nunca crasha o cron nem impede os outros alunos.
+  function normalizarTelefone(telefone) {
+    var digitos = String(telefone || '').replace(/\D+/g, '')
+    if (digitos.length < 10 || digitos.length > 13) return ''
+    if (digitos.indexOf('55') !== 0) digitos = '55' + digitos
+    return digitos
+  }
+
+  function enviarWhatsapp(numero, texto) {
+    var numeroId = ($os.getenv('WHATSAPP_PHONE_NUMBER_ID') || '').trim()
+    if (!numeroId) {
+      console.log(
+        '[avisos_mensalidade_atrasada] WhatsApp pulado: WHATSAPP_PHONE_NUMBER_ID não configurada.',
+      )
+      return { ok: false, erro: 'WHATSAPP_PHONE_NUMBER_ID não configurada' }
+    }
+    try {
+      var resp = $connectors.executeAsOwner('WHATSAPP_SEND_MESSAGE', {
+        text: texto,
+        to_number: numero,
+        phone_number_id: numeroId,
+      })
+      if (resp && resp.successful) {
+        return { ok: true }
+      }
+      return { ok: false, erro: (resp && resp.error) || 'falha desconhecida' }
+    } catch (errWa) {
+      return { ok: false, erro: String(errWa) }
+    }
+  }
+
   var mailClient = $app.newMailClient()
   var sent = 0
   var skippedNoEmail = 0
@@ -271,45 +327,79 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
   var sentNames = []
   var failedNames = []
   var skippedNoEmailNames = []
+  var waSent = 0
+  var waSentNames = []
+  var waFailed = 0
+  var waFailedNames = []
+  var waSkippedNoPhone = 0
+  var waSkippedNoPhoneNames = []
 
   for (var i = 0; i < alvo.length; i++) {
     var aluno = alvo[i]
     var student = aluno.student
     var email = (student.getString('email') || '').trim()
-    if (!email) {
-      skippedNoEmail++
-      skippedNoEmailNames.push(student.getString('name') || aluno.studentId)
-      continue
+
+    // --- Canal 1: e-mail ---
+    if (email) {
+      var texto = aplicarPlaceholders(template, student.getString('name'), aluno.mesCobranca)
+      var mensagem = new MailerMessage({
+        from: {
+          address: $app.settings().meta.senderAddress,
+          name: $app.settings().meta.senderName || 'Judô Tatsu',
+        },
+        to: [{ address: email }],
+        subject: subject.split('{mes}').join(nomeMes(aluno.mesCobranca)),
+        html: emailHtml(texto),
+      })
+
+      var enviado = true
+      try {
+        mailClient.send(mensagem)
+        sent++
+        sentNames.push(student.getString('name') || aluno.studentId)
+      } catch (err) {
+        enviado = false
+        failed++
+        failedNames.push(student.getString('name') || aluno.studentId)
+        console.log('[avisos_mensalidade_atrasada] falha ao enviar para ' + email + ': ' + err)
+      }
     }
 
-    var texto = aplicarPlaceholders(template, student.getString('name'), aluno.mesCobranca)
-    var mensagem = new MailerMessage({
-      from: {
-        address: $app.settings().meta.senderAddress,
-        name: $app.settings().meta.senderName || 'Judô Tatsu',
-      },
-      to: [{ address: email }],
-      subject: subject.split('{mes}').join(nomeMes(aluno.mesCobranca)),
-      html: emailHtml(texto),
-    })
-
-    var enviado = true
-    try {
-      mailClient.send(mensagem)
-      sent++
-      sentNames.push(student.getString('name') || aluno.studentId)
-    } catch (err) {
-      enviado = false
-      failed++
-      failedNames.push(student.getString('name') || aluno.studentId)
-      console.log('[avisos_mensalidade_atrasada] falha ao enviar para ' + email + ': ' + err)
+    // --- Canal 2: WhatsApp (só para quem NÃO recebeu e-mail) ---
+    if (!email && ENVIAR_WHATSAPP) {
+      var celular = normalizarTelefone(student.getString('phone'))
+      if (!celular) {
+        waSkippedNoPhone++
+        waSkippedNoPhoneNames.push(student.getString('name') || aluno.studentId)
+      } else {
+        var textoWa = aplicarPlaceholders(waTemplate, student.getString('name'), aluno.mesCobranca)
+        var respWa = enviarWhatsapp(celular, textoWa)
+        if (respWa.ok) {
+          waSent++
+          waSentNames.push(student.getString('name') || aluno.studentId)
+        } else {
+          waFailed++
+          waFailedNames.push(student.getString('name') || aluno.studentId)
+          console.log(
+            '[avisos_mensalidade_atrasada] falha ao enviar WhatsApp para ' +
+              celular +
+              ' (' +
+              (student.getString('name') || aluno.studentId) +
+              '): ' +
+              respWa.erro,
+          )
+        }
+      }
     }
 
-    // Grava last_notice_at (usado pela trava de 7 dias do cron). Quando a
-    // inadimplência vem da regra do dia 15 sem lançamento, grava em TODAS as
-    // mensalidades pendentes do aluno — sem isso a trava do cron nunca
-    // saberia que ele foi avisado.
-    if (enviado) {
+    // Grava last_notice_at (usado pela trava de 7 dias do cron) quando QUALQUER
+    // canal chegou ao aluno. Quando a inadimplência vem da regra do dia 15 sem
+    // lançamento, grava em TODAS as mensalidades pendentes do aluno — sem isso
+    // a trava do cron nunca saberia que ele foi avisado.
+    if (
+      (email && enviado) ||
+      (!email && ENVIAR_WHATSAPP && typeof respWa !== 'undefined' && respWa && respWa.ok)
+    ) {
       var agora = new Date().toISOString().replace('T', ' ').substring(0, 19) + '.000Z'
       if (aluno.feeParaMes) {
         try {
@@ -353,7 +443,13 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
       ' recentes_pulados=' +
       skippedRecent +
       ' falhas=' +
-      failed,
+      failed +
+      ' wa_enviados=' +
+      waSent +
+      ' wa_sem_celular=' +
+      waSkippedNoPhone +
+      ' wa_falhas=' +
+      waFailed,
   )
 })
 
@@ -384,6 +480,7 @@ routerAdd(
 
     function processNotify(e) {
       var FORCE = true // manual: dispara sempre
+      var ENVIAR_WHATSAPP = true // manual: também cobre WhatsApp (sem e-mail)
 
       function brasiliaNow() {
         return new Date(Date.now() - 3 * 60 * 60 * 1000)
@@ -461,8 +558,19 @@ routerAdd(
         '<p style="margin-top:24px;">Atenciosamente,<br /><strong>Judô Tatsu</strong></p>'
       var DEFAULT_SUBJECT = 'Judô Tatsu — Mensalidade pendente ({mes})'
 
+      // Texto do WhatsApp (mesmas variáveis): app_settings com fallback inline.
+      var DEFAULT_WHATSAPP_TPL =
+        '{saudacao}, {aluno}!\n\n' +
+        'Passando para lembrar que a mensalidade de {mes} da academia Judô Tatsu ' +
+        'está pendente de pagamento. 🥋\n\n' +
+        'Se você já pagou, desconsidere esta mensagem — pode ter sido só o ' +
+        'lançamento que ainda não chegou ao sistema.\n\n' +
+        'Qualquer dúvida, é só responder aqui.\n\n' +
+        'Atenciosamente,\nEquipe Tatsu'
+
       var template = DEFAULT_TPL
       var subject = DEFAULT_SUBJECT
+      var waTemplate = DEFAULT_WHATSAPP_TPL
       try {
         var settings = $app.findRecordsByFilter(
           'app_settings',
@@ -483,6 +591,16 @@ routerAdd(
         )
         if (subjects.length > 0 && subjects[0].getString('value')) {
           subject = subjects[0].getString('value')
+        }
+        var waSettings = $app.findRecordsByFilter(
+          'app_settings',
+          'key = "fee_whatsapp_template"',
+          '',
+          1,
+          0,
+        )
+        if (waSettings.length > 0 && waSettings[0].getString('value')) {
+          waTemplate = waSettings[0].getString('value')
         }
       } catch (err) {
         console.log(
@@ -570,6 +688,40 @@ routerAdd(
       }
 
       // ---- Envio (um e-mail por aluno) ----
+      // WhatsApp: quem NÃO tem e-mail mas TEM celular cadastrado recebe a
+      // mesma cobrança pela conta de WhatsApp Business da academia, conectada
+      // nos conectores do builder (envio server-side, $connectors.executeAsOwner).
+      // Falha de WhatsApp nunca crasha a rota nem impede os outros alunos.
+      function normalizarTelefone(telefone) {
+        var digitos = String(telefone || '').replace(/\D+/g, '')
+        if (digitos.length < 10 || digitos.length > 13) return ''
+        if (digitos.indexOf('55') !== 0) digitos = '55' + digitos
+        return digitos
+      }
+
+      function enviarWhatsapp(numero, texto) {
+        var numeroId = ($os.getenv('WHATSAPP_PHONE_NUMBER_ID') || '').trim()
+        if (!numeroId) {
+          console.log(
+            '[notify-overdue manual] WhatsApp pulado: WHATSAPP_PHONE_NUMBER_ID não configurada.',
+          )
+          return { ok: false, erro: 'WHATSAPP_PHONE_NUMBER_ID não configurada' }
+        }
+        try {
+          var resp = $connectors.executeAsOwner('WHATSAPP_SEND_MESSAGE', {
+            text: texto,
+            to_number: numero,
+            phone_number_id: numeroId,
+          })
+          if (resp && resp.successful) {
+            return { ok: true }
+          }
+          return { ok: false, erro: (resp && resp.error) || 'falha desconhecida' }
+        } catch (errWa) {
+          return { ok: false, erro: String(errWa) }
+        }
+      }
+
       var mailClient = $app.newMailClient()
       var sent = 0
       var skippedNoEmail = 0
@@ -577,41 +729,83 @@ routerAdd(
       var sentNames = []
       var failedNames = []
       var skippedNoEmailNames = []
+      var waSent = 0
+      var waSentNames = []
+      var waFailed = 0
+      var waFailedNames = []
+      var waSkippedNoPhone = 0
+      var waSkippedNoPhoneNames = []
 
       for (var i = 0; i < alvo.length; i++) {
         var aluno = alvo[i]
         var student = aluno.student
         var email = (student.getString('email') || '').trim()
-        if (!email) {
-          skippedNoEmail++
-          skippedNoEmailNames.push(student.getString('name') || aluno.studentId)
-          continue
+
+        // --- Canal 1: e-mail ---
+        var enviado = false
+        if (email) {
+          var texto = aplicarPlaceholders(template, student.getString('name'), aluno.mesCobranca)
+          var mensagem = new MailerMessage({
+            from: {
+              address: $app.settings().meta.senderAddress,
+              name: $app.settings().meta.senderName || 'Judô Tatsu',
+            },
+            to: [{ address: email }],
+            subject: subject.split('{mes}').join(nomeMes(aluno.mesCobranca)),
+            html: emailHtml(texto),
+          })
+
+          enviado = true
+          try {
+            mailClient.send(mensagem)
+            sent++
+            sentNames.push(student.getString('name') || aluno.studentId)
+          } catch (err) {
+            enviado = false
+            failed++
+            failedNames.push(student.getString('name') || aluno.studentId)
+            console.log('[notify-overdue manual] falha ao enviar para ' + email + ': ' + err)
+          }
         }
 
-        var texto = aplicarPlaceholders(template, student.getString('name'), aluno.mesCobranca)
-        var mensagem = new MailerMessage({
-          from: {
-            address: $app.settings().meta.senderAddress,
-            name: $app.settings().meta.senderName || 'Judô Tatsu',
-          },
-          to: [{ address: email }],
-          subject: subject.split('{mes}').join(nomeMes(aluno.mesCobranca)),
-          html: emailHtml(texto),
-        })
-
-        var enviado = true
-        try {
-          mailClient.send(mensagem)
-          sent++
-          sentNames.push(student.getString('name') || aluno.studentId)
-        } catch (err) {
-          enviado = false
-          failed++
-          failedNames.push(student.getString('name') || aluno.studentId)
-          console.log('[notify-overdue manual] falha ao enviar para ' + email + ': ' + err)
+        // --- Canal 2: WhatsApp (só para quem NÃO recebeu e-mail) ---
+        var avisouWa = false
+        if (!email && ENVIAR_WHATSAPP) {
+          var celular = normalizarTelefone(student.getString('phone'))
+          if (!celular) {
+            waSkippedNoPhone++
+            waSkippedNoPhoneNames.push(student.getString('name') || aluno.studentId)
+          } else {
+            var textoWa = aplicarPlaceholders(
+              waTemplate,
+              student.getString('name'),
+              aluno.mesCobranca,
+            )
+            var respWa = enviarWhatsapp(celular, textoWa)
+            if (respWa.ok) {
+              waSent++
+              waSentNames.push(student.getString('name') || aluno.studentId)
+              avisouWa = true
+            } else {
+              waFailed++
+              waFailedNames.push(student.getString('name') || aluno.studentId)
+              console.log(
+                '[notify-overdue manual] falha ao enviar WhatsApp para ' +
+                  celular +
+                  ' (' +
+                  (student.getString('name') || aluno.studentId) +
+                  '): ' +
+                  respWa.erro,
+              )
+            }
+          }
         }
 
-        if (enviado) {
+        // Grava last_notice_at quando QUALQUER canal chegou ao aluno (a trava
+        // de 7 dias vale só para o cron; o manual grava do mesmo jeito para
+        // manter o histórico). Quando a inadimplência vem da regra do dia 15
+        // sem lançamento, grava em TODAS as mensalidades pendentes do aluno.
+        if ((email && enviado) || avisouWa) {
           var agoraIso = new Date().toISOString().replace('T', ' ').substring(0, 19) + '.000Z'
           if (aluno.feeParaMes) {
             try {
@@ -656,9 +850,15 @@ routerAdd(
           ' sem_email=' +
           skippedNoEmail +
           ' falhas=' +
-          failed,
+          failed +
+          ' wa_enviados=' +
+          waSent +
+          ' wa_sem_celular=' +
+          waSkippedNoPhone +
+          ' wa_falhas=' +
+          waFailed,
       )
-      if (sent + skippedNoEmail + failed === 0) {
+      if (sent + skippedNoEmail + failed + waSent + waSkippedNoPhone + waFailed === 0) {
         console.log(
           '[notify-overdue manual] nenhum destinatário: mes_brasilia=' +
             mesAtual +
@@ -675,6 +875,12 @@ routerAdd(
         sentNames: sentNames,
         skippedNoEmailNames: skippedNoEmailNames,
         failedNames: failedNames,
+        waSent: waSent,
+        waSentNames: waSentNames,
+        waFailed: waFailed,
+        waFailedNames: waFailedNames,
+        waSkippedNoPhone: waSkippedNoPhone,
+        waSkippedNoPhoneNames: waSkippedNoPhoneNames,
       })
     }
 

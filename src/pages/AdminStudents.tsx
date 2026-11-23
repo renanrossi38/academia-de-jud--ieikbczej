@@ -12,7 +12,10 @@ import {
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { studentsService } from '@/services/students'
 import { feeStanding, monthlyFeesService, type OverdueNoticeResult } from '@/services/monthlyFees'
-import { Mail, Send } from 'lucide-react'
+import { normalizarTelefone, mesCobrancaDeAluno, waMeUrl } from '@/services/whatsapp'
+import { appSettingsService } from '@/services/appSettings'
+import { DEFAULT_FEE_WHATSAPP_TEMPLATE } from '@/services/whatsapp'
+import { Mail, Send, MessageCircle } from 'lucide-react'
 import { MonthlyFee, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
@@ -272,8 +275,37 @@ export default function AdminStudents() {
     return count
   }, [students, feesByStudent])
 
-  const [notifyOpen, setNotifyOpen] = useState(false)
-  const [notifying, setNotifying] = useState(false)
+  // Template de WhatsApp de cobrança — carregado das configurações do painel
+  // (Painel → Configurações) e recarregado junto com a página.
+  const [waTemplate, setWaTemplate] = useState<string>(DEFAULT_FEE_WHATSAPP_TEMPLATE)
+  useEffect(() => {
+    let cancel = false
+    appSettingsService
+      .getFeeTemplates()
+      .then((t) => {
+        if (!cancel && t.whatsappTemplate) setWaTemplate(t.whatsappTemplate)
+      })
+      .catch(() => {})
+    return () => {
+      cancel = true
+    }
+  }, [])
+
+  // Atrasado COM celular cadastrado → wa.me com a mensagem de cobrança pronta
+  // (mesmo template configurável do e-mail; {mes} pela regra do dia 15).
+  const cobrancaWhatsappPara = (student: Student): string | null => {
+    const tel = normalizarTelefone(student.phone || '')
+    if (!tel) return null
+    const fees = feesByStudent[student.id] || []
+    if (feeStanding(fees, new Date(), student.active) !== 'inadimplente') return null
+    const mes = mesCobrancaDeAluno(
+      fees,
+      fees.filter((f) => f.status === 'pago').map((f) => f.reference_month),
+      true,
+    )
+    const msg = appSettingsService.renderFeeMessage(waTemplate, student.name, mes)
+    return waMeUrl(tel, msg)
+  }
 
   // Monta a frase final do toast: o painel explica o que realmente aconteceu —
   // quantos saíram, quantos foram pulados (e por quê, com o nome de cada aluno)
@@ -631,6 +663,18 @@ export default function AdminStudents() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="inline-flex items-center gap-2">
+                          {cobrancaWhatsappPara(student) && (
+                            <a
+                              href={cobrancaWhatsappPara(student) || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#128C4B] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                              title="Abrir conversa no WhatsApp com a mensagem de cobrança pronta"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              WhatsApp
+                            </a>
+                          )}
                           <button
                             onClick={() => setEditingStudent(student)}
                             className="text-[#C1272D] hover:underline font-semibold text-xs"
@@ -759,6 +803,18 @@ export default function AdminStudents() {
                       Faixa {beltLabel(student.belt)}
                     </Badge>
                     <div className="flex items-center gap-2">
+                      {cobrancaWhatsappPara(student) && (
+                        <a
+                          href={cobrancaWhatsappPara(student) || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#128C4B] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                          title="Abrir conversa no WhatsApp com a mensagem de cobrança pronta"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          WhatsApp
+                        </a>
+                      )}
                       <button
                         onClick={() => setEditingStudent(student)}
                         className="text-[#C1272D] hover:underline font-semibold text-xs"

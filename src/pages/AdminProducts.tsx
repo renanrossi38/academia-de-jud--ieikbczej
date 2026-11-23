@@ -12,6 +12,7 @@ import {
   ProductStockDialog,
   categoryLabel,
 } from '@/components/admin/ProductDialogs'
+import { ProductShareDialog } from '@/components/admin/ProductShareDialog'
 import { useProductsPage } from '@/hooks/useProductsPage'
 import { Product, ProductVariation } from '@/types'
 import { productsService } from '@/services/products'
@@ -39,6 +40,7 @@ import {
   Trash2,
   Plus,
   Boxes,
+  MessageCircle,
 } from 'lucide-react'
 
 const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -68,6 +70,8 @@ export default function AdminProducts() {
   const [editing, setEditing] = useState<Product | null>(null)
   const [stockOf, setStockOf] = useState<Product | null>(null)
   const [deleting, setDeleting] = useState<Product | null>(null)
+  const [shareOf, setShareOf] = useState<Product | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
@@ -357,6 +361,19 @@ export default function AdminProducts() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => {
+                          setShareOf(p)
+                          setShareOpen(true)
+                        }}
+                        className="flex-1 text-xs border-[#E8E0D5] text-[#128C4B] hover:bg-[#E8F5EE]"
+                        title="Compartilhar no WhatsApp"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                        WhatsApp
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleToggleActive(p)}
                         disabled={togglingId === p.id}
                         className="text-xs border-[#E8E0D5] text-[#1C1B1A]"
@@ -406,6 +423,15 @@ export default function AdminProducts() {
         }}
         onVariationSaved={upsertVariation}
         onVariationRemoved={removeVariation}
+      />
+
+      <ProductShareDialog
+        open={shareOpen}
+        product={shareOf}
+        onOpenChange={(open) => {
+          setShareOpen(open)
+          if (!open) setShareOf(null)
+        }}
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
