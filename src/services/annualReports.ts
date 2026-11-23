@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { FinanceYearData, yearBalance } from '@/services/finance'
+import { currentYearBrasilia } from '@/services/monthlyFees'
 
 /**
  * Relatórios anuais arquivados (collection `annual_reports`, migration 0022).
@@ -9,7 +10,14 @@ import { FinanceYearData, yearBalance } from '@/services/finance'
  * não cancelados, despesas lançadas; horário de Brasília). Arquivar é só o
  * registro do fechamento: NÃO apaga nem altera mensalidades, pedidos nem
  * despesas — os dados do ano corrente continuam sendo calculados em tempo real.
+ *
+ * Regra anti-adulteração: só o ANO CORRENTE (Brasília) pode ser arquivado —
+ * gerar o financeiro de um ano retroativo permitiria criar um fechamento
+ * "oficial" com dados inventados. A regra vale aqui E no servidor
+ * (pocketbase/hooks/annual_reports_guard.js), para qualquer chamada direta à API.
  */
+
+const ERRO_ANO_RETROATIVO = 'Só é possível arquivar o relatório do ano corrente.'
 
 export interface AnnualReport {
   collectionId: string
@@ -47,9 +55,13 @@ export const annualReportsService = {
   /**
    * Salva (ou substitui) o fechamento do ano. `data` é calculado pelo motor de
    * finance.ts no momento do clique — fica gravado como está, mesmo que as
-   * fontes mudem depois.
+   * fontes mudem depois. Recusa anos retroativos/futuros: só o ano corrente
+   * (Brasília) pode ser arquivado.
    */
   async archive(data: FinanceYearData, archivedBy?: string): Promise<AnnualReport> {
+    if (data.year !== currentYearBrasilia()) {
+      throw new Error(ERRO_ANO_RETROATIVO)
+    }
     const payload = {
       year: data.year,
       fees: data.fees,

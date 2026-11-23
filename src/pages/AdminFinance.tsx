@@ -22,7 +22,7 @@ import {
   yearBalance,
   yearTotal,
 } from '@/services/finance'
-import { monthLabel } from '@/services/monthlyFees'
+import { currentYearBrasilia, monthLabel } from '@/services/monthlyFees'
 import { fmtBRL, fmtDate } from '@/pages/admin/StudentDetailPanels'
 import { Expense } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -487,10 +487,10 @@ export default function AdminFinance() {
         reports={reports}
         year={year}
         openReport={openReport}
-        currentYear={Number(todayKey.slice(0, 4))}
+        currentYear={currentYearBrasilia()}
         onOpenReport={setOpenReport}
         onArchived={() => undefined}
-        canArchive={year === Number(todayKey.slice(0, 4))}
+        canArchive={year === currentYearBrasilia()}
         isArchiving={isArchiving}
         onArchiveClick={() => setArchiveOpen(true)}
       />

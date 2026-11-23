@@ -85,6 +85,11 @@ export function defaultDueDate(referenceMonth: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-15`
 }
 
+/** Ano corrente em horário de Brasília (UTC-3 o ano todo, sem horário de verão). */
+export function currentYearBrasilia(): number {
+  return Number(brasiliaMonthKey().slice(0, 4))
+}
+
 /** Rótulo do método de pagamento. */
 export const paymentMethodLabel: Record<PaymentMethod, string> = {
   pix: 'Pix',

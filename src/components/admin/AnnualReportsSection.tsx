@@ -20,6 +20,8 @@ import { Archive, Info, Loader2, X } from 'lucide-react'
  * Relatórios anuais arquivados — lista dos anos já fechados, clicáveis para ver
  * o snapshot salvo daquele ano (mesmo que os dados de origem mudem depois).
  * Arquivar NÃO apaga nem altera mensalidades, pedidos nem despesas.
+ * Anti-adulteração: o botão de arquivar SÓ existe no ano corrente (Brasília) —
+ * navegar para 2025 ou 2027 não mostra botão, nem o diálogo fica acionável.
  */
 
 export interface SavedReportsSectionProps {
@@ -29,7 +31,7 @@ export interface SavedReportsSectionProps {
   year: number
   /** Ano navegado que corresponde a um relatório salvo (null = nenhum). */
   openReport: AnnualReport | null
-  /** Ano corrente em Brasília — para não oferecer "arquivar" de anos futuros. */
+  /** Ano corrente em Brasília — só ele pode ser arquivado (nada de retroativo). */
   currentYear: number
   onOpenReport: (report: AnnualReport) => void
   onArchived: () => void
@@ -50,6 +52,9 @@ export function SavedReportsSection({
   onArchiveClick,
 }: SavedReportsSectionProps) {
   const archivedYears = useMemo(() => reports.map((r) => r.year), [reports])
+  // Blindagem local (além das da página e do serviço): só renderiza o botão
+  // quando o ano exibido é o corrente — ano retroativo/futuro nunca é arquivável.
+  const canArchiveHere = canArchive && year === currentYear
 
   return (
     <section className="mt-6">
@@ -59,7 +64,7 @@ export function SavedReportsSection({
             <Archive className="w-4 h-4 text-[#C1272D]" />
             Relatórios salvos
           </h2>
-          {canArchive ? (
+          {canArchiveHere ? (
             <Button
               size="sm"
               onClick={onArchiveClick}
@@ -75,7 +80,9 @@ export function SavedReportsSection({
             </Button>
           ) : (
             <span className="text-[11px] text-[#6B6560]">
-              Ano em andamento — o arquivamento fica disponível no fechamento.
+              {year < currentYear
+                ? 'Ano fechado — não é possível gerar o financeiro de um ano retroativo.'
+                : 'Ano em andamento — o arquivamento fica disponível no fechamento.'}
             </span>
           )}
         </div>
