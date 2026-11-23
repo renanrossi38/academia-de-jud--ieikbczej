@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSiteContent } from '@/services/siteSettings'
 import { Link } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
 import { productsService } from '@/services/products'
@@ -58,6 +59,7 @@ const money = (v: number): string =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export default function Index() {
+  const site = useSiteContent()
   const [activeTab, setActiveTab] = useState<HomeTab>('turmas')
 
   const [classes, setClasses] = useState<Class[]>([])
@@ -134,12 +136,14 @@ export default function Index() {
         {/* Ondas sumi-e na base (tinta preta) */}
         <HeroWaves className="absolute bottom-0 left-0 right-0 w-full pointer-events-none" />
 
-        {/* Kanji 柔道 em coluna vertical + hanko, à esquerda como no folder */}
-        <div className="absolute left-4 sm:left-8 top-10 hidden sm:flex flex-col items-center gap-2 pointer-events-none">
+        {/* Kanji em coluna vertical realocado para DENTRO do sol vermelho (desktop):
+            antes ficava absoluto à esquerda e encostava/sobrepunha o título do
+            hero em telas largas. A cor branca vem do seletor do pai ([&>span]),
+            mantendo o caractere original intacto. */}
+        <div className="absolute right-[2%] md:right-[6.5%] top-1/2 -translate-y-1/2 hidden sm:flex flex-col items-center pointer-events-none z-[5] [&>span]:text-white/95 [&>span]:drop-shadow-[0_1px_2px_rgba(28,27,26,0.35)]">
           <span className="text-[#1C1B1A] font-serif font-black leading-[1.05] text-5xl md:text-6xl [writing-mode:vertical-rl] tracking-widest">
             柔道
           </span>
-          <HankoStamp size="sm" />
         </div>
 
         {/* Pétalas de sakura caindo */}
@@ -149,26 +153,25 @@ export default function Index() {
           <div className="max-w-2xl text-center md:text-left">
             <div className="inline-flex items-center gap-2 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] mb-5 border border-[#C1272D]/25 text-[#C1272D] [clip-path:polygon(3%_20%,97%_10%,100%_55%,97%_90%,3%_96%,0_50%)]">
               <Sparkles className="w-3.5 h-3.5" />
-              Bem-vindo ao Judô Tatsu
+              {site.hero_badge}
             </div>
             <h1 className="font-brush text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.08] text-[#1C1B1A]">
-              Vista-se para o{' '}
+              {site.hero_title}{' '}
               <span className="relative inline-block text-[#C1272D]">
-                tatame
+                {site.hero_highlight}
                 <HeroUnderline className="absolute left-0 right-0 -bottom-2 sm:-bottom-3 w-full h-3 sm:h-4" />
               </span>
               .
             </h1>
             <p className="mt-5 text-base sm:text-lg text-[#6B6560] leading-relaxed font-sans max-w-xl">
-              Conheça nossas turmas, escolha um horário para começar e adquira seu kimono, faixa e
-              acessórios oficiais com tradição e honra.
+              {site.hero_subtitle}
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-[#1C1B1A]/80">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> Aulas para todas as idades
+                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> {site.hero_chip1}
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> Matrícula aberta todo mês
+                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> {site.hero_chip2}
               </span>
             </div>
           </div>
@@ -179,7 +182,7 @@ export default function Index() {
               {/* Logo oficial (dragão) em tamanho grande, sem cortes no texto */}
               <OfficialLogo className="relative w-72 lg:w-80 h-auto drop-shadow-sm" />
               <span className="relative mt-3 text-[11px] font-bold text-[#C1272D] uppercase tracking-[0.25em] font-serif">
-                Academia de Judô
+                {site.hero_side_label}
               </span>
             </div>
           </div>
@@ -401,61 +404,32 @@ export default function Index() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-xs font-bold text-[#C1272D] uppercase tracking-widest font-serif">
-              Simples & Transparente
+              {site.how_tag}
             </span>
             <h2 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
-              Como funciona a matrícula e as compras no Judô Tatsu
+              {site.how_title}
             </h2>
-            <p className="text-sm text-[#6B6560] mt-2">
-              Escolha sua turma, crie sua conta e reserve online. O pagamento é combinado
-              diretamente com a academia.
-            </p>
+            <p className="text-sm text-[#6B6560] mt-2">{site.how_subtitle}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center p-4">
-              <div className="w-12 h-12 rounded-full bg-[#C1272D] text-white flex items-center justify-center font-serif font-bold text-lg mb-4 shadow-sm">
-                1
+            {site.how_steps.map((step, i) => (
+              <div key={i} className="flex flex-col items-center text-center p-4">
+                <div className="w-12 h-12 rounded-full bg-[#C1272D] text-white flex items-center justify-center font-serif font-bold text-lg mb-4 shadow-sm">
+                  {i + 1}
+                </div>
+                <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-1">{step.title}</h3>
+                <p className="text-xs text-[#6B6560] leading-relaxed max-w-xs">
+                  {step.description}
+                </p>
               </div>
-              <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-1">
-                Escolha sua turma
-              </h3>
-              <p className="text-xs text-[#6B6560] leading-relaxed max-w-xs">
-                Veja os horários e a mensalidade na aba de turmas e escolha o nível certo para você.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center text-center p-4">
-              <div className="w-12 h-12 rounded-full bg-[#C1272D] text-white flex items-center justify-center font-serif font-bold text-lg mb-4 shadow-sm">
-                2
-              </div>
-              <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-1">
-                Monte seu kit de treino
-              </h3>
-              <p className="text-xs text-[#6B6560] leading-relaxed max-w-xs">
-                Kimonos no seu tamanho, faixas graduadas e camisetas oficiais na aba de produtos.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center text-center p-4">
-              <div className="w-12 h-12 rounded-full bg-[#C1272D] text-white flex items-center justify-center font-serif font-bold text-lg mb-4 shadow-sm">
-                3
-              </div>
-              <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-1">
-                Retire e pague na academia
-              </h3>
-              <p className="text-xs text-[#6B6560] leading-relaxed max-w-xs">
-                O pedido é reservado imediatamente. Pagamento no balcão via Pix, dinheiro ou cartão
-                presencial.
-              </p>
-            </div>
+            ))}
           </div>
 
           <div className="mt-8 p-4 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] max-w-2xl mx-auto flex items-center gap-3 text-xs text-[#6B6560]">
             <Shield className="w-5 h-5 shrink-0" />
             <span>
-              <strong>Garantia de ajuste:</strong> se o kimono ou faixa não vestir confortavelmente
-              no primeiro treino, trocamos o tamanho diretamente no balcão.
+              <strong>{site.how_guarantee_label}</strong> {site.how_guarantee_text}
             </span>
           </div>
         </div>

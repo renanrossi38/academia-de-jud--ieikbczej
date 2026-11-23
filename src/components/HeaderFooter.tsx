@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useSiteContent } from '@/services/siteSettings'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
@@ -18,6 +19,7 @@ import {
   Trophy,
   Settings,
   Wallet,
+  Home,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -151,6 +153,18 @@ export const Header: React.FC = () => {
             >
               <Wallet className="w-4 h-4" />
               Financeiro
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/site"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
+                isActive('/painel/site') ? 'ring-2 ring-[#C1272D]' : ''
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              Página inicial
             </Link>
           )}
 
@@ -337,6 +351,16 @@ export const Header: React.FC = () => {
 
           {isAdmin && (
             <Link
+              to="/painel/site"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-semibold text-[#C1272D]"
+            >
+              Página inicial (Admin)
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
               to="/painel/configuracoes"
               onClick={() => setMobileMenuOpen(false)}
               className="block py-2 text-base font-semibold text-[#C1272D]"
@@ -390,6 +414,7 @@ export const Header: React.FC = () => {
 }
 
 export const Footer: React.FC = () => {
+  const site = useSiteContent()
   return (
     <footer className="mt-auto bg-[#1C1B1A] py-10 text-[#CFC8BE] relative">
       {/* Traço de pincel preto-tinta no topo do rodapé (folder) */}
@@ -420,13 +445,13 @@ export const Footer: React.FC = () => {
               Localização & Contato
             </h4>
             <p className="text-sm leading-relaxed">
-              Rua da Sakura, 123 — Bairro Central
+              {site.contact_address_line1}
               <br />
-              São Paulo - SP — CEP 01234-567
+              {site.contact_address_line2}
               <br />
-              WhatsApp: (11) 98765-4321
+              WhatsApp: {site.contact_whatsapp}
               <br />
-              E-mail: contato@judotatsu.com
+              E-mail: {site.contact_email}
             </p>
           </div>
 
@@ -435,11 +460,12 @@ export const Footer: React.FC = () => {
               Horários de Treino
             </h4>
             <p className="text-sm leading-relaxed">
-              Segunda a Sexta: 07h às 21h30
-              <br />
-              Sábado: 09h às 14h (Treinos Livres & Randori)
-              <br />
-              Domingo: Fechado
+              {site.hours.map((h, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <br />}
+                  {h.days}: {h.time}
+                </React.Fragment>
+              ))}
             </p>
             <div className="mt-3 text-xs bg-[#C1272D] text-white p-2 rounded-md inline-block font-medium">
               * Retirada de pedidos diretamente no balcão da academia

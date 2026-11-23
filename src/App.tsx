@@ -19,6 +19,7 @@ import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminEmailSettings from './pages/AdminEmailSettings'
+import AdminSiteSettings from './pages/AdminSiteSettings'
 import AdminFinance from './pages/AdminFinance'
 import MyAttendance from './pages/MyAttendance'
 import Login from './pages/Login'
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/painel/turmas/:classId" element={<AdminClassDetail />} />
               <Route path="/painel/financeiro" element={<AdminFinance />} />
               <Route path="/painel/configuracoes" element={<AdminEmailSettings />} />
+              <Route path="/painel/site" element={<AdminSiteSettings />} />
               <Route path="/minha-presenca" element={<MyAttendance />} />
               <Route path="/entrar" element={<Login />} />
               <Route path="/criar-conta" element={<Register />} />
