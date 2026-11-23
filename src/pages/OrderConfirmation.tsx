@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ordersService } from '@/services/orders'
 import { Order, OrderItem } from '@/types'
+import { formatCustomAnswers } from '@/lib/customAnswers'
 import { HankoStamp, OfficialLogo } from '@/components/HankoStamp'
 import { Button } from '@/components/ui/button'
 import {
@@ -132,6 +133,11 @@ export default function OrderConfirmation() {
                   <strong className="text-[#1C1B1A] block">{item.product_name}</strong>
                   {item.variation_label && (
                     <span className="text-[#6B6560] text-xs block">{item.variation_label}</span>
+                  )}
+                  {formatCustomAnswers(item.custom_answers) && (
+                    <span className="text-[#1C1B1A] italic text-xs block">
+                      {formatCustomAnswers(item.custom_answers)}
+                    </span>
                   )}
                   <span className="text-[#6B6560] text-xs">
                     {item.quantity}x{' '}

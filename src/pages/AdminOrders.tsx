@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { ordersService } from '@/services/orders'
 import { Order, OrderItem, OrderStatus } from '@/types'
+import { formatCustomAnswers } from '@/lib/customAnswers'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
 import {
   AdminPageHeader,
@@ -485,6 +486,11 @@ export default function AdminOrders() {
                           <strong className="text-[#1C1B1A] block">{item.product_name}</strong>
                           {item.variation_label && (
                             <span className="text-[#6B6560] block">{item.variation_label}</span>
+                          )}
+                          {formatCustomAnswers(item.custom_answers) && (
+                            <span className="text-[#1C1B1A] block italic">
+                              {formatCustomAnswers(item.custom_answers)}
+                            </span>
                           )}
                           <span className="text-[#6B6560]">
                             {item.quantity} un. x{' '}

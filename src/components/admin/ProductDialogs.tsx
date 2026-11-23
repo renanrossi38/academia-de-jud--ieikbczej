@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Product, ProductCategory, ProductVariation } from '@/types'
+import { CustomField, Product, ProductCategory, ProductVariation } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,6 +18,7 @@ import {
   CreateProductInput,
   UpdateProductInput,
 } from '@/services/products'
+import { CustomFieldsSection } from '@/components/admin/CustomFieldsSection'
 import { Loader2, Plus, Trash2, Check } from 'lucide-react'
 
 const CATEGORY_OPTIONS: { label: string; value: ProductCategory }[] = [
@@ -50,6 +51,7 @@ interface ProductFormState {
   active: boolean
   image: File | null
   removeImage: boolean
+  customOptions: CustomField[] | null
 }
 
 const emptyForm: ProductFormState = {
@@ -61,6 +63,7 @@ const emptyForm: ProductFormState = {
   active: true,
   image: null,
   removeImage: false,
+  customOptions: null,
 }
 
 /** Monta o payload do produto (objeto simples — o service cuida do FormData/upload). */
@@ -73,6 +76,7 @@ const buildPayload = (form: ProductFormState): CreateProductInput & UpdateProduc
   active: form.active,
   image: form.image,
   removeImage: form.removeImage,
+  custom_options: form.customOptions?.length ? form.customOptions : null,
 })
 
 interface VariationSectionProps {
@@ -310,6 +314,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
               active: editing.active !== false,
               image: null,
               removeImage: false,
+              customOptions: editing.custom_options ?? null,
             }
           : emptyForm,
       )
@@ -496,6 +501,13 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             />
             Produto ativo (visível na loja)
           </label>
+
+          <CustomFieldsSection
+            fields={form.customOptions}
+            onChange={(fields) =>
+              setForm((f) => ({ ...f, customOptions: fields.length ? fields : null }))
+            }
+          />
 
           <VariationSection
             productId={editing?.id || null}

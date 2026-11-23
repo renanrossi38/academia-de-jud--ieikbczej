@@ -6,6 +6,7 @@ import { useCart } from '@/context/CartContext'
 import { ProductPlaceholder } from '@/components/HankoStamp'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   ArrowLeft,
   Plus,

@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
+import { formatCustomAnswers } from '@/lib/customAnswers'
 import { beltBadgeClass, beltLabel, birthDateLabel } from '@/components/admin/StudentDialogs'
 import { classLevelBadgeClass, classLevelLabel } from '@/services/classes'
 import { toLocalDateKey } from '@/services/attendance'
@@ -538,6 +539,11 @@ export const FinancePanel: React.FC<{
                         {it.quantity}× {it.product_name}
                         {it.variation_label ? ` (${it.variation_label})` : ''} —{' '}
                         {fmtBRL(it.subtotal)}
+                        {formatCustomAnswers(it.custom_answers) && (
+                          <span className="block italic text-[#1C1B1A] pl-2">
+                            {formatCustomAnswers(it.custom_answers)}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>

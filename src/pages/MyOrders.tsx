@@ -8,6 +8,7 @@ import { HankoStamp } from '@/components/HankoStamp'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronUp, ShoppingBag, MapPin, Building, Loader2 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
+import { formatCustomAnswers } from '@/lib/customAnswers'
 
 export default function MyOrders() {
   const { user, isLoading: authLoading } = useAuth()
@@ -196,6 +197,11 @@ export default function MyOrders() {
                                 <strong>{item.quantity}x</strong> {item.product_name}
                                 {item.variation_label && (
                                   <span className="text-[#6B6560]"> ({item.variation_label})</span>
+                                )}
+                                {formatCustomAnswers(item.custom_answers) && (
+                                  <span className="text-[#1C1B1A] italic block pl-2">
+                                    {formatCustomAnswers(item.custom_answers)}
+                                  </span>
                                 )}
                               </span>
                               <span className="font-semibold text-[#1C1B1A]">
