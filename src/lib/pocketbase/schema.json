@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T05:39:40.639Z",
+  "generatedAt": "2026-11-23T05:45:42.417Z",
   "collections": [
     {
       "name": "users",
@@ -151,6 +151,12 @@
         {
           "name": "custom_options",
           "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gallery",
+          "type": "file",
           "required": false,
           "system": false
         }
@@ -586,6 +592,12 @@
         {
           "name": "vagas",
           "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cover",
+          "type": "file",
           "required": false,
           "system": false
         }
