@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { AdminArea } from '@/lib/adminAreas'
 
 /**
  * Gestão de administradores — apenas o admin PRINCIPAL (is_owner) tem acesso.
@@ -9,6 +10,10 @@ import pb from '@/lib/pocketbase/client'
  * is_owner = false: quem separa principal de secundário é o is_owner, pois as
  * regras de API das coleções liberam o painel por role = 'admin'. O admin
  * principal nunca é alterado.
+ *
+ * Permissões por área: admin_permissions em users (select múltiplo). Lista
+ * vazia = acesso total (compatibilidade); lista preenchida = só as áreas
+ * marcadas. O dono ignora o campo.
  */
 
 export interface AdminRoleRecord {
@@ -17,6 +22,8 @@ export interface AdminRoleRecord {
   email: string
   role: 'admin' | 'aluno' | string
   is_owner: boolean
+  /** Áreas liberadas do painel; vazio = acesso total. */
+  admin_permissions?: AdminArea[]
   created?: string
 }
 
@@ -31,11 +38,11 @@ export async function listAdmins(): Promise<AdminListResponse> {
 }
 
 /** Concede o cargo de administrador (secundário) a um usuário existente. */
-export async function grantAdmin(userId: string): Promise<AdminRoleRecord> {
+export async function grantAdmin(userId: string, areas?: AdminArea[]): Promise<AdminRoleRecord> {
   return pb
     .send<{ admin: AdminRoleRecord }>('/backend/v1/admins', {
       method: 'POST',
-      body: { user_id: userId },
+      body: { user_id: userId, areas: areas ?? [] },
     })
     .then((res) => res.admin)
 }
@@ -46,6 +53,16 @@ export async function revokeAdmin(userId: string): Promise<AdminRoleRecord> {
     .send<{ admin: AdminRoleRecord }>('/backend/v1/admins/revoke', {
       method: 'POST',
       body: { user_id: userId },
+    })
+    .then((res) => res.admin)
+}
+
+/** Grava as áreas liberadas de um admin secundário (lista vazia = todas). */
+export async function setPermissions(userId: string, areas: AdminArea[]): Promise<AdminRoleRecord> {
+  return pb
+    .send<{ admin: AdminRoleRecord }>('/backend/v1/admins/permissions', {
+      method: 'POST',
+      body: { user_id: userId, areas },
     })
     .then((res) => res.admin)
 }

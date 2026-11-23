@@ -25,7 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 
 export const Header: React.FC = () => {
-  const { user, isAdmin, isOwner, logout } = useAuth()
+  const { user, isAdmin, isOwner, hasArea, logout } = useAuth()
   const { itemCount, setIsDrawerOpen, badgeAnimate } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
@@ -95,7 +95,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('presencas') && (
             <Link
               to="/painel/turmas"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -109,7 +109,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('presencas') && (
             <Link
               to="/painel/ranking"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -121,7 +121,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('alunos') && (
             <Link
               to="/painel/alunos"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -133,7 +133,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('produtos') && (
             <Link
               to="/painel/produtos"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -145,7 +145,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('pedidos') && (
             <Link
               to="/painel/pedidos"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -157,7 +157,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('financeiro') && (
             <Link
               to="/painel/financeiro"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -169,7 +169,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('site') && (
             <Link
               to="/painel/site"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -181,7 +181,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('site') && (
             <Link
               to="/painel/configuracoes"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
@@ -304,7 +304,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('presencas') && (
             <Link
               to="/painel/turmas"
               onClick={() => setMobileMenuOpen(false)}
@@ -314,7 +314,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('produtos') && (
             <Link
               to="/painel/produtos"
               onClick={() => setMobileMenuOpen(false)}
@@ -324,7 +324,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('alunos') && (
             <Link
               to="/painel/alunos"
               onClick={() => setMobileMenuOpen(false)}
@@ -334,7 +334,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('presencas') && (
             <Link
               to="/painel/ranking"
               onClick={() => setMobileMenuOpen(false)}
@@ -365,7 +365,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('pedidos') && (
             <Link
               to="/painel/pedidos"
               onClick={() => setMobileMenuOpen(false)}
@@ -375,7 +375,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('financeiro') && (
             <Link
               to="/painel/financeiro"
               onClick={() => setMobileMenuOpen(false)}
@@ -385,7 +385,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('site') && (
             <Link
               to="/painel/site"
               onClick={() => setMobileMenuOpen(false)}
@@ -395,7 +395,7 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {isAdmin && (
+          {isAdmin && hasArea('site') && (
             <Link
               to="/painel/configuracoes"
               onClick={() => setMobileMenuOpen(false)}

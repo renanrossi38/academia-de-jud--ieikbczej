@@ -23,6 +23,11 @@ export interface User {
   role: UserRole
   /** Verdadeiro só para o administrador PRINCIPAL (o dono da academia). */
   is_owner?: boolean
+  /**
+   * Áreas do painel liberadas para um administrador SECUNDÁRIO
+   * (select múltiplo; vazio/ausente = acesso total — ver lib/adminAreas.ts).
+   */
+  admin_permissions?: string[]
   phone?: string
   belt?: Belt
   active?: boolean

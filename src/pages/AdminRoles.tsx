@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, ShieldCheck, ShieldOff, Crown, Search, UserPlus } from 'lucide-react'
+import {
+  Loader2,
+  ShieldCheck,
+  ShieldOff,
+  Crown,
+  Search,
+  UserPlus,
+  KeyRound,
+  Settings2,
+} from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import {
   AdminPageHeader,
@@ -29,7 +38,17 @@ import {
   listAdmins,
   revokeAdmin,
   roleLabel,
+  setPermissions,
 } from '@/services/adminRoles'
+import {
+  ADMIN_AREAS,
+  ADMIN_AREA_DESCRIPTIONS,
+  ADMIN_AREA_LABELS,
+  AdminArea,
+  normalizePermissions,
+} from '@/lib/adminAreas'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 
 /**
  * Painel "Administradores" — visível SOMENTE para o admin principal (dono).
@@ -57,6 +76,11 @@ export const AdminRoles: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [revokeTarget, setRevokeTarget] = useState<AdminRoleRecord | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+
+  // Permissões por área: diálogo para editar as áreas liberadas de um secundário.
+  const [permsTarget, setPermsTarget] = useState<AdminRoleRecord | null>(null)
+  const [permsDraft, setPermsDraft] = useState<AdminArea[]>([])
+  const [savingPerms, setSavingPerms] = useState(false)
 
   // Busca de candidatos: usuários que ainda não são admins.
   const [query, setQuery] = useState('')
@@ -164,6 +188,41 @@ export const AdminRoles: React.FC = () => {
     }
   }
 
+  const handleOpenPerms = (a: AdminRoleRecord) => {
+    setPermsTarget(a)
+    setPermsDraft(normalizePermissions(a.admin_permissions))
+  }
+
+  const toggleArea = (area: AdminArea, checked: boolean) => {
+    setPermsDraft((prev) =>
+      checked ? [...new Set([...prev, area])] : prev.filter((x) => x !== area),
+    )
+  }
+
+  const handleSavePerms = async () => {
+    if (!permsTarget) return
+    setSavingPerms(true)
+    try {
+      await setPermissions(permsTarget.id, permsDraft)
+      toast({
+        title: 'Permissões atualizadas',
+        description: permsDraft.length
+          ? `${permsTarget.name} agora acessa apenas as áreas marcadas.`
+          : `${permsTarget.name} agora acessa o painel completo.`,
+      })
+      setPermsTarget(null)
+      await load()
+    } catch (err) {
+      toast({
+        title: 'Não foi possível salvar as permissões',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingPerms(false)
+    }
+  }
+
   const stats: AdminSummaryStat[] = [
     {
       value: admins.length,
@@ -255,6 +314,9 @@ export const AdminRoles: React.FC = () => {
                     <th className="text-left px-4 py-3 font-bold">Nome</th>
                     <th className="text-left px-4 py-3 font-bold hidden sm:table-cell">E-mail</th>
                     <th className="text-left px-4 py-3 font-bold">Cargo</th>
+                    <th className="text-left px-4 py-3 font-bold hidden md:table-cell">
+                      Áreas liberadas
+                    </th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -278,8 +340,38 @@ export const AdminRoles: React.FC = () => {
                           {roleLabel(a.role, a.is_owner)}
                         </Badge>
                       </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {normalizePermissions(a.admin_permissions).length === 0 ? (
+                          <span className="text-[11px] text-[#6B6560]">Todas as áreas</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {normalizePermissions(a.admin_permissions).map((area) => (
+                              <Badge
+                                key={area}
+                                variant="outline"
+                                className="text-[10px] bg-[#FAF6F0] text-[#6B6560] border-[#E8E0D5]"
+                              >
+                                {ADMIN_AREA_LABELS[area]}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <AdminRowActions>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenPerms(a)}
+                            className="text-[#1C1B1A] border-[#E8E0D5] hover:bg-[#FAF6F0] text-xs"
+                          >
+                            {busyId === a.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Settings2 className="w-3.5 h-3.5 mr-1" />
+                            )}
+                            Permissões
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -373,6 +465,83 @@ export const AdminRoles: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo: definir as áreas liberadas de um secundário */}
+      <Dialog
+        open={!!permsTarget}
+        onOpenChange={(open) => {
+          if (!open) setPermsTarget(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-serif flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-[#C1272D]" />
+              Áreas liberadas — {permsTarget?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Marque as áreas do painel que este administrador secundário pode acessar. Sem nenhuma
+              marcação, ele acessa o painel completo (exceto a gestão de administradores).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 rounded-xl border border-[#E8E0D5] p-3">
+            {ADMIN_AREAS.map((area) => {
+              const checked = permsDraft.includes(area)
+              return (
+                <div
+                  key={area}
+                  className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-[#FAF6F0] transition-colors"
+                >
+                  <Checkbox
+                    id={`area-${area}`}
+                    checked={checked}
+                    onCheckedChange={(v) => toggleArea(area, v === true)}
+                    className="mt-0.5 data-[state=checked]:bg-[#C1272D] data-[state=checked]:border-[#C1272D]"
+                  />
+                  <div className="min-w-0">
+                    <Label
+                      htmlFor={`area-${area}`}
+                      className="text-sm font-medium text-[#1C1B1A] cursor-pointer"
+                    >
+                      {ADMIN_AREA_LABELS[area]}
+                    </Label>
+                    <p className="text-[11px] text-[#6B6560] leading-snug">
+                      {ADMIN_AREA_DESCRIPTIONS[area]}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="text-[11px] text-[#6B6560]">
+            {permsDraft.length === 0
+              ? 'Nenhuma área marcada: acesso total ao painel.'
+              : `${permsDraft.length} de ${ADMIN_AREAS.length} áreas liberadas.`}
+          </p>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPermsTarget(null)} disabled={savingPerms}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSavePerms}
+              disabled={savingPerms}
+              className="bg-[#C1272D] hover:bg-[#A01E23] text-white font-semibold"
+            >
+              {savingPerms ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar permissões'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
