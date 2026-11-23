@@ -37,14 +37,8 @@ import {
   type FeeStanding,
 } from '@/services/monthlyFees'
 import { Class } from '@/types'
-import { MessageCircle } from 'lucide-react'
-import {
-  normalizarTelefone,
-  mesCobrancaDeAluno,
-  waMeUrl,
-  DEFAULT_FEE_WHATSAPP_TEMPLATE,
-} from '@/services/whatsapp'
-import { appSettingsService } from '@/services/appSettings'
+import { MessageCircle, PhoneOff } from 'lucide-react'
+import { FeeWhatsappDialog } from '@/components/admin/FeeWhatsappDialog'
 
 const cardCls = 'bg-white rounded-2xl border border-[#E8E0D5] shadow-xs'
 
@@ -89,7 +83,16 @@ export const MonthlyFeesPanel: React.FC<{
   refreshKey?: number
   /** Aluno ativo? A regra do dia 15 (inadimplência sem lançamento) vale só p/ ativos. */
   studentActive?: boolean
-}> = ({ studentId, studentName, classes, refreshKey = 0, studentActive = true }) => {
+  /** Celular do aluno (campo phone do cadastro) — habilita o botão de WhatsApp. */
+  studentPhone?: string
+}> = ({
+  studentId,
+  studentName,
+  classes,
+  refreshKey = 0,
+  studentActive = true,
+  studentPhone = '',
+}) => {
   const { toast } = useToast()
   const [fees, setFees] = useState<MonthlyFee[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -97,6 +100,7 @@ export const MonthlyFeesPanel: React.FC<{
   const [markingId, setMarkingId] = useState<string | null>(null)
   const [deletingFee, setDeletingFee] = useState<MonthlyFee | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [waFee, setWaFee] = useState<MonthlyFee | null>(null)
 
   const loadFees = useCallback(async () => {
     if (!studentId) return
@@ -291,6 +295,26 @@ export const MonthlyFeesPanel: React.FC<{
                               {markingId === fee.id ? 'Registrando...' : 'Marcar como paga'}
                             </button>
                           )}
+                          {fee.status === 'pendente' &&
+                            (studentPhone.trim() ? (
+                              <button
+                                type="button"
+                                onClick={() => setWaFee(fee)}
+                                className="text-[#128C4B] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                                title="Abrir conversa no WhatsApp com a mensagem de cobrança pronta"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                Cobrar no WhatsApp
+                              </button>
+                            ) : (
+                              <span
+                                className="text-[#9A948C] text-xs inline-flex items-center gap-1 cursor-not-allowed"
+                                title="sem celular cadastrado"
+                              >
+                                <PhoneOff className="w-3.5 h-3.5" />
+                                sem celular cadastrado
+                              </span>
+                            ))}
                           <button
                             type="button"
                             onClick={() => setDeletingFee(fee)}
@@ -355,6 +379,26 @@ export const MonthlyFeesPanel: React.FC<{
                         Marcar como paga
                       </button>
                     )}
+                    {fee.status === 'pendente' &&
+                      (studentPhone.trim() ? (
+                        <button
+                          type="button"
+                          onClick={() => setWaFee(fee)}
+                          className="text-[#128C4B] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                          title="Abrir conversa no WhatsApp com a mensagem de cobrança pronta"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          WhatsApp
+                        </button>
+                      ) : (
+                        <span
+                          className="text-[#9A948C] text-xs inline-flex items-center gap-1 cursor-not-allowed"
+                          title="sem celular cadastrado"
+                        >
+                          <PhoneOff className="w-3.5 h-3.5" />
+                          sem celular
+                        </span>
+                      ))}
                     <button
                       type="button"
                       onClick={() => setDeletingFee(fee)}
@@ -396,6 +440,14 @@ export const MonthlyFeesPanel: React.FC<{
         deleting={deleting}
         onOpenChange={(open) => !open && setDeletingFee(null)}
         onConfirm={handleDelete}
+      />
+
+      {/* Cobrança por WhatsApp: mensagem revisável antes de abrir o wa.me */}
+      <FeeWhatsappDialog
+        fee={waFee}
+        studentName={studentName}
+        studentPhone={studentPhone}
+        onOpenChange={(open) => !open && setWaFee(null)}
       />
     </div>
   )

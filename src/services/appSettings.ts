@@ -35,6 +35,34 @@ const KEY_SUBJECT = 'fee_overdue_subject'
 const KEY_TEMPLATE = 'fee_overdue_template'
 const KEY_WHATSAPP_TEMPLATE = 'fee_whatsapp_template'
 
+/** Os dois templates de cobrança numa leitura só (usado pela ficha do aluno). */
+export type FeeTemplates = {
+  email: FeeOverdueTemplate
+  whatsappTemplate: string
+}
+
+/**
+ * Preenche as variáveis do template de cobrança com o nome do aluno, o mês
+ * ({mes} JÁ por extenso — "novembro de 2026") e a saudação de Brasília
+ * (UTC-3 o ano todo, MESMA regra do hook fee_overdue_notice.js).
+ */
+export function renderFeeMessage(
+  template: string,
+  nomeAluno: string,
+  mesPorExtenso: string,
+  now: Date = new Date(),
+): string {
+  const h = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCHours()
+  const saudacao = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
+  return template
+    .split('{saudacao}')
+    .join(saudacao)
+    .split('{aluno}')
+    .join(nomeAluno?.trim() || 'aluno(a)')
+    .split('{mes}')
+    .join(mesPorExtenso)
+}
+
 export const appSettingsService = {
   /** Lê o template do e-mail de atraso (com fallback para o texto original). */
   async getFeeOverdueTemplate(): Promise<FeeOverdueTemplate> {
@@ -85,5 +113,32 @@ export const appSettingsService = {
     } else {
       await pb.collection('app_settings').create({ key: KEY_WHATSAPP_TEMPLATE, value })
     }
+  },
+
+  /**
+   * Lê os DOIS templates de cobrança numa leitura só (e-mail + WhatsApp, com
+   * os respectivos fallbacks) — o painel de Alunos usa para montar a mensagem
+   * pronta do wa.me sem duas idas ao servidor.
+   */
+  async getFeeTemplates(): Promise<FeeTemplates> {
+    const [email, whatsappTemplate] = await Promise.all([
+      this.getFeeOverdueTemplate(),
+      this.getFeeWhatsappTemplate(),
+    ])
+    return { email, whatsappTemplate }
+  },
+
+  /**
+   * Preenche as variáveis de um template de cobrança ({saudacao} por horário
+   * de Brasília, {aluno}, {mes} já por extenso) — a MESMA renderização do
+   * e-mail e da mensagem de WhatsApp, usada no painel e nas pré-visualizações.
+   */
+  renderFeeMessage(
+    template: string,
+    nomeAluno: string,
+    mesPorExtenso: string,
+    now: Date = new Date(),
+  ): string {
+    return renderFeeMessage(template, nomeAluno, mesPorExtenso, now)
   },
 }

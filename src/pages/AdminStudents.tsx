@@ -82,6 +82,8 @@ export default function AdminStudents() {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [notifying, setNotifying] = useState(false)
+  const [notifyOpen, setNotifyOpen] = useState(false)
 
   const loadStudents = useCallback(async () => {
     setIsLoading(true)
