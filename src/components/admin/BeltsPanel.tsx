@@ -28,14 +28,13 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { beltBadgeClass, beltLabel } from '@/components/admin/StudentDialogs'
 import { fmtDate } from '@/pages/admin/StudentDetailPanels'
 import {
-  BeltPromotion,
   CreateBeltPromotionInput,
   beltPromotionsService,
   nextBelt,
   timeInBeltLabel,
   todayKeyBrasilia,
 } from '@/services/beltPromotions'
-import { Belt } from '@/types'
+import { Belt, BeltPromotion } from '@/types'
 
 const selectClass =
   'w-full h-9 text-sm rounded-md border border-[#E8E0D5] bg-white px-3 text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]'

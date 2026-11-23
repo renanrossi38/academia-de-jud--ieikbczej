@@ -288,7 +288,7 @@ export default function AdminStudents() {
 
   // Faixa exibida: a última promovida (histórico de promoções); sem lançamento,
   // cai para o campo manual do cadastro.
-  const beltOf = (s: Student): Belt | undefined => beltMap.get(s.id) ?? s.belt
+  const beltOf = (s: Student): Belt | '' | undefined => beltMap.get(s.id) ?? s.belt
 
   // Atrasados COM e-mail cadastrado: os que o botão "Notificar atrasados" alcança.
   const overdueWithEmailCount = useMemo(() => {
