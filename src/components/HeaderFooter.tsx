@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Users,
-  CalendarCheck,
+  GraduationCap,
   Layers,
   Trophy,
   Settings,
@@ -70,15 +70,15 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {user && (
+          {user && !isAdmin && (
             <Link
-              to="/minha-presenca"
+              to="/area-do-aluno"
               className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1.5 ${
-                isActive('/minha-presenca') ? 'text-[#C1272D] font-semibold' : 'text-[#1C1B1A]'
+                isActive('/area-do-aluno') ? 'text-[#C1272D] font-semibold' : 'text-[#1C1B1A]'
               }`}
             >
-              <CalendarCheck className="w-4 h-4" />
-              Minha Presença
+              <GraduationCap className="w-4 h-4" />
+              Área do aluno
             </Link>
           )}
 
@@ -319,13 +319,13 @@ export const Header: React.FC = () => {
             </Link>
           )}
 
-          {user && (
+          {user && !isAdmin && (
             <Link
-              to="/minha-presenca"
+              to="/area-do-aluno"
               onClick={() => setMobileMenuOpen(false)}
               className="block py-2 text-base font-medium text-[#1C1B1A] hover:text-[#C1272D]"
             >
-              Minha Presença
+              Área do aluno
             </Link>
           )}
 

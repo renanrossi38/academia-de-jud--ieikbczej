@@ -21,6 +21,8 @@ import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminEmailSettings from './pages/AdminEmailSettings'
 import AdminSiteSettings from './pages/AdminSiteSettings'
 import AdminFinance from './pages/AdminFinance'
+import { Navigate } from 'react-router-dom'
+import StudentArea from './pages/StudentArea'
 import MyAttendance from './pages/MyAttendance'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -56,7 +58,8 @@ const App = () => (
               <Route path="/painel/financeiro" element={<AdminFinance />} />
               <Route path="/painel/configuracoes" element={<AdminEmailSettings />} />
               <Route path="/painel/site" element={<AdminSiteSettings />} />
-              <Route path="/minha-presenca" element={<MyAttendance />} />
+              <Route path="/minha-presenca" element={<Navigate to="/area-do-aluno" replace />} />
+              <Route path="/area-do-aluno" element={<StudentArea />} />
               <Route path="/entrar" element={<Login />} />
               <Route path="/criar-conta" element={<Register />} />
               <Route path="/verificar-email" element={<VerifyEmail />} />
