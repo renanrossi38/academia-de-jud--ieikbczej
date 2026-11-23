@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CustomField, Product, ProductCategory, ProductVariation } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,6 +66,13 @@ const emptyForm: ProductFormState = {
   customOptions: null,
 }
 
+/** Converte o texto do campo em inteiro de estoque. 0 é valor válido — só texto vazio/inválido vira 0. */
+const parseStock = (raw: string): number => {
+  const parsed = Number.parseInt(raw.trim(), 10)
+  if (Number.isNaN(parsed) || parsed < 0) return 0
+  return parsed
+}
+
 /** Monta o payload do produto (objeto simples — o service cuida do FormData/upload). */
 const buildPayload = (form: ProductFormState): CreateProductInput & UpdateProductInput => ({
   name: form.name.trim(),
@@ -85,6 +92,8 @@ interface VariationSectionProps {
   onChange: (next: VariationDraft[]) => void
   onVariationSaved?: (saved: ProductVariation) => void
   onVariationRemoved?: (id: string) => void
+  /** Registra a função que salva todas as linhas pendentes (chamada no submit principal). */
+  registerSaveAll?: (saveAll: (() => Promise<boolean>) | null) => void
 }
 
 /** Seção de variações dentro do diálogo do produto (só edita produto salvo). */
@@ -94,10 +103,22 @@ const VariationSection: React.FC<VariationSectionProps> = ({
   onChange,
   onVariationSaved,
   onVariationRemoved,
+  registerSaveAll,
 }) => {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  /** Última state gravado no servidor por linha — base para detectar linhas alteradas. */
+  const baselineRef = useRef<VariationDraft[]>([])
+
+  // O submit principal precisa conseguir salvar as linhas pendentes (o valor
+  // digitado em uma linha era descartado se o admin não apertasse o ✓ dela —
+  // é daí que vinha o "digitei 0 e o estoque continuou 25").
+  useEffect(() => {
+    registerSaveAll?.(saveAllPending)
+    return () => registerSaveAll?.(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  })
 
   // Ao abrir a edição de um produto, carrega as variações gravadas dele.
   useEffect(() => {
@@ -106,16 +127,16 @@ const VariationSection: React.FC<VariationSectionProps> = ({
     setSaving(true)
     productsService
       .listVariations(productId)
-      .then((rows) =>
-        onChange(
-          rows.map((v: ProductVariation) => ({
-            id: v.id,
-            label: v.label || '',
-            price_delta: String(v.price_delta ?? 0),
-            stock: String(v.stock ?? 0),
-          })),
-        ),
-      )
+      .then((rows) => {
+        const drafts = rows.map((v: ProductVariation) => ({
+          id: v.id,
+          label: v.label || '',
+          price_delta: String(v.price_delta ?? 0),
+          stock: String(v.stock ?? 0),
+        }))
+        baselineRef.current = drafts
+        onChange(drafts)
+      })
       .catch(() => toast({ title: 'Erro ao carregar variações', variant: 'destructive' }))
       .finally(() => setSaving(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,6 +149,7 @@ const VariationSection: React.FC<VariationSectionProps> = ({
 
   const removeRow = async (idx: number) => {
     const row = variations[idx]
+    baselineRef.current.splice(idx, 1)
     onChange(variations.filter((_, i) => i !== idx))
     // Variação já gravada no servidor sai imediatamente (não espera "Salvar").
     if (row.id) {
@@ -145,12 +167,12 @@ const VariationSection: React.FC<VariationSectionProps> = ({
     }
   }
 
-  const saveRow = async (idx: number) => {
-    if (!productId) return
+  const saveRow = async (idx: number, silent = false) => {
+    if (!productId) return null
     const row = variations[idx]
     if (!row.label.trim()) {
-      toast({ title: 'Informe o rótulo da variação', variant: 'destructive' })
-      return
+      if (!silent) toast({ title: 'Informe o rótulo da variação', variant: 'destructive' })
+      return null
     }
     setSaving(true)
     try {
@@ -158,21 +180,32 @@ const VariationSection: React.FC<VariationSectionProps> = ({
         product: productId,
         label: row.label.trim(),
         price_delta: Number(row.price_delta.replace(',', '.')) || 0,
-        stock: Number(row.stock) || 0,
+        stock: parseStock(row.stock),
       }
       const saved = row.id
         ? await productsService.updateVariation(row.id, payload)
         : await productsService.createVariation(payload)
-      const next = [...variations]
-      next[idx] = {
+      const savedDraft: VariationDraft = {
         id: saved.id,
         label: saved.label,
         price_delta: String(saved.price_delta ?? 0),
         stock: String(saved.stock ?? 0),
       }
+      const next = [...variations]
+      next[idx] = savedDraft
+      baselineRef.current[idx] = savedDraft
       onChange(next)
       onVariationSaved?.(saved)
-      toast({ title: 'Variação salva!' })
+      if (!silent) {
+        toast({
+          title: (saved.stock ?? 0) === 0 ? 'Variação salva — esgotada' : 'Variação salva!',
+          description:
+            (saved.stock ?? 0) === 0
+              ? `${saved.label}: estoque 0 — o tamanho aparece como “Esgotado” na loja.`
+              : undefined,
+        })
+      }
+      return saved
     } catch (err: any) {
       console.error('Erro ao salvar variação:', err)
       toast({
@@ -180,9 +213,37 @@ const VariationSection: React.FC<VariationSectionProps> = ({
         description: err?.message || 'Tente novamente.',
         variant: 'destructive',
       })
+      return null
     } finally {
       setSaving(false)
     }
+  }
+
+  /** Linha é nova ou difere do último estado gravado no servidor. */
+  const isDirty = (idx: number): boolean => {
+    const v = variations[idx]
+    if (!v?.id) return true
+    const base = baselineRef.current[idx]
+    if (!base) return true
+    return v.label !== base.label || v.price_delta !== base.price_delta || v.stock !== base.stock
+  }
+
+  /**
+   * Salva todas as linhas alteradas/pendentes (chamado pelo submit principal).
+   * Antes o valor digitado era descartado se o admin não apertasse o ✓ de cada
+   * linha — é daí que vinha o "digitei 0 e continuou 25".
+   */
+  const saveAllPending = async (): Promise<boolean> => {
+    if (!productId) return true
+    for (let idx = 0; idx < variations.length; idx++) {
+      const v = variations[idx]
+      // Linha nova nunca preenchida (sem rótulo) não bloqueia o submit.
+      if (!v.id && !v.label.trim()) continue
+      if (!isDirty(idx)) continue
+      const saved = await saveRow(idx, true)
+      if (!saved) return false
+    }
+    return true
   }
 
   return (
@@ -300,6 +361,11 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   const [variations, setVariations] = useState<VariationDraft[]>([])
   const [saving, setSaving] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  /** Salvar-tudo das linhas de variação, registrado pela VariationSection. */
+  const saveVariationsRef = useRef<(() => Promise<boolean>) | null>(null)
+  const registerSaveAll = useCallback((fn: (() => Promise<boolean>) | null) => {
+    saveVariationsRef.current = fn
+  }, [])
 
   useEffect(() => {
     if (open) {
@@ -346,6 +412,18 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       const saved = editing
         ? await productsService.update(editing.id, buildPayload(form))
         : await productsService.create(buildPayload(form))
+      // Salva também as linhas de variação alteradas — antes o estoque digitado
+      // era descartado se o admin não apertasse o ✓ de cada linha.
+      const variationsOk = await saveVariationsRef.current?.()
+      if (variationsOk === false) {
+        toast({
+          title: 'Produto salvo, mas há variações pendentes',
+          description: 'Corrija as linhas destacadas em "Erro ao salvar variação" e salve de novo.',
+          variant: 'destructive',
+        })
+        onSaved(saved)
+        return
+      }
       onSaved(saved)
       onOpenChange(false)
       toast({
@@ -515,6 +593,7 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             onChange={setVariations}
             onVariationSaved={onVariationSaved}
             onVariationRemoved={onVariationRemoved}
+            registerSaveAll={registerSaveAll}
           />
 
           <DialogFooter className="gap-2">
