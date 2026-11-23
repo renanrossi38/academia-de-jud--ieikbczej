@@ -49,6 +49,17 @@ export interface Student {
 export type ProductCategory = 'uniformes' | 'faixas' | 'camisetas' | 'equipamentos' | 'planos'
 
 /**
+ * Opção de um campo personalizado "escolha". O formato legado (string simples)
+ * continua suportado — veja customOptionLabel/customOptionDelta em customOptions.ts.
+ */
+export interface CustomFieldOption {
+  /** Rótulo da opção (ex.: "Branco", "Trançado pesado"). */
+  label: string
+  /** Acréscimo de preço em R$ para esta opção (0 ou ausente = sem ajuste). */
+  price_delta?: number
+}
+
+/**
  * Campo personalizado de um produto "sob medida" (ex.: kimono feito sob medida).
  * Configurado pelo admin no produto; o comprador preenche na página do produto.
  */
@@ -57,8 +68,11 @@ export interface CustomField {
   name: string
   /** "texto" → input livre; "numero" → input numérico; "escolha" → select com options. */
   type: 'texto' | 'numero' | 'escolha'
-  /** Opções permitidas quando type = "escolha" (ex.: ["Branco", "Azul"]). */
-  options?: string[]
+  /**
+   * Opções permitidas quando type = "escolha" (ex.: ["Branco", "Azul"]).
+   * Aceita string legada ou { label, price_delta? } — ver customOptions.ts.
+   */
+  options?: (string | CustomFieldOption)[]
   /** Quando true, o comprador precisa preencher antes de adicionar ao carrinho. */
   required?: boolean
 }

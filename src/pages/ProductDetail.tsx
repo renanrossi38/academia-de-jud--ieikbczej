@@ -4,6 +4,13 @@ import { productsService } from '@/services/products'
 import { Product, ProductVariation } from '@/types'
 import { useCart } from '@/context/CartContext'
 import { ProductPlaceholder } from '@/components/HankoStamp'
+import {
+  computedUnitPrice,
+  customAnswersDelta,
+  customOptionDelta,
+  customOptionLabel,
+  toFieldOptions,
+} from '@/lib/customOptions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +25,14 @@ import {
   HelpCircle,
   Loader2,
 } from 'lucide-react'
+
+/** "+R$ 80" (ou "−R$ 20") para exibir o acréscimo junto à opção, quando != 0. */
+const formatOptionDelta = (delta: number): string =>
+  delta === 0
+    ? ''
+    : ' ' +
+      (delta > 0 ? '+' : '−') +
+      Math.abs(delta).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
@@ -101,10 +116,11 @@ export default function ProductDetail() {
     )
   }
 
-  // Calculate final unit price
+  // Calculate final unit price: base + delta da variação (tamanho) + deltas das opções escolhidas
   const basePrice = product.price
-  const delta = selectedVariation ? selectedVariation.price_delta : 0
-  const currentUnitPrice = Math.max(0, basePrice + delta)
+  const variationDelta = selectedVariation?.price_delta ?? 0
+  const optionsDelta = customAnswersDelta(product.custom_options, customAnswers)
+  const currentUnitPrice = computedUnitPrice(basePrice, variationDelta, optionsDelta)
   const totalPrice = currentUnitPrice * quantity
 
   const imageUrl = productsService.getImageUrl(product)
@@ -193,7 +209,7 @@ export default function ProductDetail() {
               <span className="text-3xl font-bold text-[#C1272D] transition-all">
                 {currentUnitPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </span>
-              {selectedVariation && selectedVariation.price_delta !== 0 && (
+              {(variationDelta !== 0 || optionsDelta !== 0) && (
                 <span className="text-xs text-[#6B6560]">
                   (Preço base:{' '}
                   {basePrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
@@ -297,9 +313,9 @@ export default function ProductDetail() {
                           className="w-full h-10 px-3 rounded-lg border border-[#E8E0D5] bg-white text-sm text-[#1C1B1A] focus:outline-none focus:ring-2 focus:ring-[#C1272D]/30 focus:border-[#C1272D] transition-all"
                         >
                           <option value="">Selecione…</option>
-                          {campo.options!.map((op) => (
-                            <option key={op} value={op}>
-                              {op}
+                          {toFieldOptions(campo.options).map((op) => (
+                            <option key={op.label} value={op.label}>
+                              {customOptionLabel(op) + formatOptionDelta(customOptionDelta(op))}
                             </option>
                           ))}
                         </select>

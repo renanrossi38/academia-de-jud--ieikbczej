@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T04:43:15.412Z",
+  "generatedAt": "2026-11-23T05:05:32.095Z",
   "collections": [
     {
       "name": "users",
@@ -152,7 +152,8 @@
           "name": "custom_options",
           "type": "json",
           "required": false,
-          "system": false
+          "system": false,
+          "note": "Array de CustomField; opções de 'escolha' podem ser string (legada) ou {label, price_delta} — delta em R$ somado ao preço final"
         }
       ],
       "indexes": [

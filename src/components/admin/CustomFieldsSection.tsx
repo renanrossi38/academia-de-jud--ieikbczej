@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowDown, ArrowUp, Plus, Trash2, Wand2 } from 'lucide-react'
+import { customOptionLabel, toFieldOptions } from '@/lib/customOptions'
+import { CustomFieldOption } from '@/types'
 
 type FieldType = CustomField['type']
 
@@ -17,17 +19,43 @@ const TYPE_OPTIONS: { label: string; value: FieldType }[] = [
 const KIMONO_TEMPLATE: CustomField[] = [
   { name: 'Peso', type: 'numero', required: true, options: [] },
   { name: 'Estatura', type: 'numero', required: true, options: [] },
-  { name: 'Cor', type: 'escolha', required: true, options: ['Branco', 'Azul'] },
+  {
+    name: 'Cor',
+    type: 'escolha',
+    required: true,
+    options: [
+      { label: 'Branco', price_delta: 0 },
+      { label: 'Azul', price_delta: 0 },
+    ],
+  },
   {
     name: 'Modelo',
     type: 'escolha',
     required: true,
-    options: ['Trançado leve', 'Trançado pesado', 'Trançado especial'],
+    options: [
+      { label: 'Trançado leve', price_delta: 0 },
+      { label: 'Trançado pesado', price_delta: 0 },
+      { label: 'Trançado especial', price_delta: 0 },
+    ],
   },
 ]
 
 const selectClass =
   'h-9 text-xs rounded-md border border-[#E8E0D5] bg-white px-2 text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]'
+
+/** Lê o delta de uma opção no editor, aceitando string legada ou objeto. */
+const draftDelta = (opt: CustomField['options'][number]): string =>
+  typeof opt === 'string' ? '' : String(opt?.price_delta ?? 0)
+
+/** Atualiza uma opção (por índice) preservando o formato existente. */
+const patchOption = (
+  field: CustomField,
+  optIdx: number,
+  patch: Partial<CustomFieldOption>,
+): CustomField['options'] => {
+  const opts = toFieldOptions(field.options)
+  return opts.map((o, i) => (i === optIdx ? { ...o, ...patch } : o))
+}
 
 interface CustomFieldsSectionProps {
   /** Campos salvos no produto; null/vazio = produto comum (sem sob medida). */
@@ -38,8 +66,9 @@ interface CustomFieldsSectionProps {
 
 /**
  * Seção "Produto sob medida" do editor de produto: permite definir campos
- * personalizados (nome, tipo, opções de escolha, obrigatório, ordem) gravados
- * em products.custom_options e preenchidos pelo comprador no checkout.
+ * personalizados (nome, tipo, opções de escolha, preço de cada opção,
+ * obrigatório, ordem) gravados em products.custom_options e preenchidos pelo
+ * comprador na página do produto.
  */
 export const CustomFieldsSection: React.FC<CustomFieldsSectionProps> = ({ fields, onChange }) => {
   const list = fields ?? []
@@ -128,22 +157,44 @@ export const CustomFieldsSection: React.FC<CustomFieldsSectionProps> = ({ fields
 
               {field.type === 'escolha' && (
                 <div className="space-y-1">
-                  <Input
-                    value={field.options.join(', ')}
-                    onChange={(e) =>
-                      update(index, {
-                        options: e.target.value
-                          .split(',')
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                    placeholder="Opções separadas por vírgula (ex.: Branco, Azul)"
-                    className="h-8 text-xs bg-white border-[#E8E0D5]"
-                    aria-label={`Opções do campo ${index + 1}`}
-                  />
+                  <p className="text-[10px] font-semibold text-[#6B6560]">
+                    Opções e preço de cada uma (R$):
+                  </p>
+                  {toFieldOptions(field.options).map((opt, optIdx) => (
+                    <div key={optIdx} className="flex items-center gap-1.5">
+                      <Input
+                        value={opt.label}
+                        onChange={(e) => {
+                          const options = patchOption(field, optIdx, { label: e.target.value })
+                          update(index, { options })
+                        }}
+                        placeholder="Opção (ex.: Trançado leve)"
+                        className="h-8 flex-1 text-xs bg-white border-[#E8E0D5]"
+                        maxLength={60}
+                        aria-label={`Opção ${optIdx + 1} do campo ${index + 1}`}
+                      />
+                      <Input
+                        value={draftDelta(field.options[optIdx])}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(',', '.').trim()
+                          const num = raw === '' ? 0 : Number(raw)
+                          const options = patchOption(field, optIdx, {
+                            price_delta: Number.isFinite(num) ? num : 0,
+                          })
+                          update(index, { options })
+                        }}
+                        inputMode="decimal"
+                        placeholder="+0,00"
+                        className="h-8 w-24 shrink-0 text-xs bg-white border-[#E8E0D5] text-right"
+                        aria-label={`Preço adicional da opção ${optIdx + 1} do campo ${index + 1}`}
+                        title="Acréscimo de preço desta opção em R$ (0 = sem ajuste; negativo = desconto)"
+                      />
+                    </div>
+                  ))}
                   <p className="text-[10px] text-[#6B6560]">
-                    Separe as opções por vírgula. Aparecem como seleção para o comprador.
+                    O valor digitado soma ao preço do produto quando o comprador escolhe a opção (0
+                    = sem ajuste; negativo dá desconto). Peso/estatura (texto/número) não alteram o
+                    preço.
                   </p>
                 </div>
               )}
