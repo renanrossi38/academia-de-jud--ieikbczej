@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T00:39:36.662Z",
+  "generatedAt": "2026-11-23T00:55:18.093Z",
   "collections": [
     {
       "name": "users",
@@ -958,6 +958,76 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_expenses_date ON expenses (date)"]
+    },
+    {
+      "name": "annual_reports",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\"",
+        "view": "@request.auth.role = \"admin\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "year",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "fees",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "products",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expenses",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "balance",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "months",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "archived_by",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_annual_reports_year ON annual_reports (year)"]
     }
   ]
 }

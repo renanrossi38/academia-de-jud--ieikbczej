@@ -11,8 +11,9 @@ import {
 } from '@/components/admin/AdminPage'
 import ExpenseDialog, { expenseCategoryLabel } from '@/components/admin/ExpenseDialog'
 import { expensesService } from '@/services/expenses'
+import { annualReportsService, type AnnualReport } from '@/services/annualReports'
 import {
-  FinanceMonth,
+  type FinanceMonth,
   FinanceYearData,
   currentMonthKeyBrasilia,
   loadFinanceYear,
@@ -25,6 +26,11 @@ import { monthLabel } from '@/services/monthlyFees'
 import { fmtBRL, fmtDate } from '@/pages/admin/StudentDetailPanels'
 import { Expense } from '@/types'
 import { Button } from '@/components/ui/button'
+import {
+  ArchiveReportDialog,
+  ArchivedReportBanner,
+  SavedReportsSection,
+} from '@/components/admin/AnnualReportsSection'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,15 +112,23 @@ export default function AdminFinance() {
   const [deleting, setDeleting] = useState<Expense | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Relatórios anuais arquivados (migration 0022): lista, o aberto e o diálogo.
+  const [reports, setReports] = useState<AnnualReport[]>([])
+  const [openReport, setOpenReport] = useState<AnnualReport | null>(null)
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [isArchiving, setIsArchiving] = useState(false)
+
   const load = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [yearData, expenseRows] = await Promise.all([
+      const [yearData, expenseRows, reportRows] = await Promise.all([
         loadFinanceYear(year),
         expensesService.listByYear(year),
+        annualReportsService.list(),
       ])
       setData(yearData)
       setExpenses(expenseRows)
+      setReports(reportRows)
     } catch (err) {
       console.error('Erro ao carregar dados financeiros:', err)
       toast({
@@ -147,10 +161,12 @@ export default function AdminFinance() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, authLoading, load])
 
-  // Tempo real: mensalidade paga, pedido novo ou despesa lançada atualiza na hora.
+  // Tempo real: mensalidade paga, pedido novo, despesa lançada ou relatório
+  // arquivado (em outra aba) atualiza na hora.
   useRealtime('monthly_fees', load)
   useRealtime('orders', load)
   useRealtime('expenses', load)
+  useRealtime('annual_reports', load)
 
   const currentMonth = data?.months.find((m) => m.key === todayKey)
   const chartData = useMemo(
@@ -193,28 +209,58 @@ export default function AdminFinance() {
     return <AdminPageLoader label="Carregando painel financeiro..." />
   }
 
+  // Chips seguem o ANO navegado (‹ ano ›): "Ganho de <mês navegado>", não só o corrente.
+  const viewedMonthKey = `${year}-${String(todayKey.slice(5, 7))}`
+  const viewedMonth = data?.months.find((m) => m.key === viewedMonthKey)
+  const monthName = monthLabel(viewedMonthKey)
+
   const summary = [
     summaryStat(
-      'Ganho do mês — Mensalidades',
-      fmtBRL(currentMonth?.fees ?? 0),
+      `Mensalidades — ${monthName}`,
+      fmtBRL(viewedMonth?.fees ?? 0),
       <GraduationCap className="h-4 w-4" />,
     ),
     summaryStat(
-      'Ganho do mês — Produtos',
-      fmtBRL(currentMonth?.products ?? 0),
+      `Produtos — ${monthName}`,
+      fmtBRL(viewedMonth?.products ?? 0),
       <Package className="h-4 w-4" />,
     ),
     summaryStat(
-      'Despesas do mês',
-      fmtBRL(currentMonth?.expenses ?? 0),
+      `Despesas — ${monthName}`,
+      fmtBRL(viewedMonth?.expenses ?? 0),
       <TrendingDown className="h-4 w-4" />,
     ),
     summaryStat(
-      'Saldo do mês',
-      fmtBRL(currentMonth ? monthBalance(currentMonth) : 0),
+      `Saldo — ${monthName}`,
+      fmtBRL(viewedMonth ? monthBalance(viewedMonth) : 0),
       <Scale className="h-4 w-4" />,
     ),
   ]
+
+  /** Arquiva o fechamento do ano navegado: snapshot calculado pelo motor de finance.ts. */
+  const handleArchive = async () => {
+    if (!data) return
+    setIsArchiving(true)
+    try {
+      await annualReportsService.archive(data, user?.name)
+      toast({
+        title: `Relatório de ${year} arquivado`,
+        description:
+          'Fechamento do ano salvo. Mensalidades, pedidos e despesas NÃO foram alterados — o painel continua calculando em tempo real.',
+      })
+      setArchiveOpen(false)
+      await load()
+    } catch (err: any) {
+      console.error('Erro ao arquivar relatório:', err)
+      toast({
+        title: 'Erro ao arquivar',
+        description: err?.message || 'Falha ao salvar o relatório no servidor. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsArchiving(false)
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
@@ -235,8 +281,22 @@ export default function AdminFinance() {
         }
       />
 
-      {/* Resumo do mês corrente (Brasília) */}
+      {/* Resumo do mês — do ano navegado (‹ ano ›), não só do corrente */}
       <AdminSummary stats={summary} />
+
+      {/* Relatório arquivado aberto (visão "fechado" daquele ano) */}
+      {openReport && (
+        <div className="mt-6">
+          <ArchivedReportBanner
+            report={openReport}
+            onClose={() => setOpenReport(null)}
+            onNavigateYear={(y) => {
+              setOpenReport(null)
+              setYear(y)
+            }}
+          />
+        </div>
+      )}
 
       {/* Comparativo do ano — gráfico + tabela */}
       <section className="mt-6 space-y-4">
@@ -421,6 +481,28 @@ export default function AdminFinance() {
           </p>
         </div>
       </section>
+
+      {/* Relatórios anuais arquivados (seção + diálogo de confirmação) */}
+      <SavedReportsSection
+        reports={reports}
+        year={year}
+        openReport={openReport}
+        currentYear={Number(todayKey.slice(0, 4))}
+        onOpenReport={setOpenReport}
+        onArchived={() => undefined}
+        canArchive={year === Number(todayKey.slice(0, 4))}
+        isArchiving={isArchiving}
+        onArchiveClick={() => setArchiveOpen(true)}
+      />
+
+      <ArchiveReportDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        year={year}
+        data={data}
+        onConfirm={handleArchive}
+        isArchiving={isArchiving}
+      />
 
       <ExpenseDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => load()} />
 
