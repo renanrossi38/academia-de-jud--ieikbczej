@@ -189,8 +189,37 @@ export const CustomFieldsSection: React.FC<CustomFieldsSectionProps> = ({ fields
                         aria-label={`Preço adicional da opção ${optIdx + 1} do campo ${index + 1}`}
                         title="Acréscimo de preço desta opção em R$ (0 = sem ajuste; negativo = desconto)"
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          update(index, {
+                            options: toFieldOptions(field.options).filter((_, i) => i !== optIdx),
+                          })
+                        }
+                        className="h-8 w-8 shrink-0 px-0 border-[#E8E0D5] text-[#B3261E]"
+                        title="Remover opção"
+                        aria-label={`Remover opção ${optIdx + 1} do campo ${index + 1}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      update(index, {
+                        options: [...toFieldOptions(field.options), { label: '', price_delta: 0 }],
+                      })
+                    }
+                    className="w-full h-7 border-dashed border-[#E8E0D5] text-[#6B6560] text-[10px] font-semibold"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Adicionar opção
+                  </Button>
                   <p className="text-[10px] text-[#6B6560]">
                     O valor digitado soma ao preço do produto quando o comprador escolhe a opção (0
                     = sem ajuste; negativo dá desconto). Peso/estatura (texto/número) não alteram o
