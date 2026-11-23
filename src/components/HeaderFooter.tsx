@@ -17,6 +17,7 @@ import {
   Layers,
   Trophy,
   Settings,
+  Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -138,6 +139,18 @@ export const Header: React.FC = () => {
             >
               <ShieldCheck className="w-4 h-4" />
               Painel de Pedidos
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/financeiro"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
+                isActive('/painel/financeiro') ? 'ring-2 ring-[#C1272D]' : ''
+              }`}
+            >
+              <Wallet className="w-4 h-4" />
+              Financeiro
             </Link>
           )}
 
@@ -309,6 +322,16 @@ export const Header: React.FC = () => {
               className="block py-2 text-base font-semibold text-[#C1272D]"
             >
               Painel de Pedidos (Admin)
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link
+              to="/painel/financeiro"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-semibold text-[#C1272D]"
+            >
+              Financeiro (Admin)
             </Link>
           )}
 

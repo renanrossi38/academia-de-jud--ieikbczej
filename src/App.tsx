@@ -19,6 +19,7 @@ import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminEmailSettings from './pages/AdminEmailSettings'
+import AdminFinance from './pages/AdminFinance'
 import MyAttendance from './pages/MyAttendance'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/painel/ranking" element={<AdminRanking />} />
               <Route path="/painel/turmas" element={<AdminClasses />} />
               <Route path="/painel/turmas/:classId" element={<AdminClassDetail />} />
+              <Route path="/painel/financeiro" element={<AdminFinance />} />
               <Route path="/painel/configuracoes" element={<AdminEmailSettings />} />
               <Route path="/minha-presenca" element={<MyAttendance />} />
               <Route path="/entrar" element={<Login />} />

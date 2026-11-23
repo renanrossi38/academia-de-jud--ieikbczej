@@ -219,6 +219,33 @@ export interface MonthlyFee {
 /** Método de pagamento registrado em uma mensalidade (opcional). */
 export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao'
 
+export type ExpenseCategory =
+  | 'aluguel'
+  | 'energia'
+  | 'agua'
+  | 'internet'
+  | 'insumos'
+  | 'equipamento'
+  | 'salarios'
+  | 'impostos'
+  | 'outro'
+
+/** Despesa da academia lançada pelo admin (painel financeiro). */
+export interface Expense {
+  collectionId: string
+  collectionName: string
+  id: string
+  description: string
+  /** Valor em R$ (sempre positivo — a direção do lançamento é o próprio tipo). */
+  amount: number
+  /** Data da despesa ("YYYY-MM-DD" — define o mês do gráfico, pode ser retroativa). */
+  date: string
+  category?: ExpenseCategory | ''
+  notes?: string
+  created: string
+  updated: string
+}
+
 /** Lançamento manual de pontos do ranking (competição/evento). */
 export interface PointEntry {
   /** Ano a que o lançamento pertence (pela data da competição/evento). */
