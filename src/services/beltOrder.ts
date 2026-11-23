@@ -49,7 +49,7 @@ export async function loadBeltOrder(): Promise<Belt[]> {
 /** Salva a ordem escolhida pelo admin (upsert por chave, padrão do projeto). */
 export async function saveBeltOrder(order: Belt[]): Promise<void> {
   if (!isValidBeltOrder(order)) {
-    throw new Error('Ordem de faixas inválida (precisa conter as 9 faixas, sem repetição).')
+    throw new Error('Ordem de faixas inválida (precisa conter as 13 faixas, sem repetição).')
   }
   const value = JSON.stringify(order)
   const existing = await pb

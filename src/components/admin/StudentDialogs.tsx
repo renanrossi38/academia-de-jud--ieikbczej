@@ -19,9 +19,13 @@ import { Loader2 } from 'lucide-react'
 
 const BELT_LABELS: Record<Belt, string> = {
   branca: 'Branca',
+  branca_ponta_cinza: 'Branca ponta cinza',
   cinza: 'Cinza',
+  cinza_ponta_azul: 'Cinza ponta azul',
   azul: 'Azul',
+  azul_ponta_amarela: 'Azul ponta amarela',
   amarela: 'Amarela',
+  amarela_ponta_laranja: 'Amarela ponta laranja',
   laranja: 'Laranja',
   verde: 'Verde',
   roxa: 'Roxa',
@@ -73,6 +77,14 @@ export const beltBadgeClass = (belt?: string) => {
       return 'bg-[#E6C229] text-[#1C1B1A] border-[#E6C229]'
     case 'cinza':
       return 'bg-[#9A948C] text-white border-[#9A948C]'
+    case 'branca_ponta_cinza':
+      return 'bg-white text-[#1C1B1A] border-[#9A948C] ring-1 ring-inset ring-[#9A948C]'
+    case 'cinza_ponta_azul':
+      return 'bg-[#9A948C] text-white border-[#2C5F9E] ring-1 ring-inset ring-[#2C5F9E]'
+    case 'azul_ponta_amarela':
+      return 'bg-[#2C5F9E] text-white border-[#E6C229] ring-1 ring-inset ring-[#E6C229]'
+    case 'amarela_ponta_laranja':
+      return 'bg-[#E6C229] text-[#1C1B1A] border-[#E07B39] ring-1 ring-inset ring-[#E07B39]'
     default:
       return 'bg-white text-[#1C1B1A] border-[#E8E0D5]'
   }

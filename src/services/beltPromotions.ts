@@ -19,12 +19,19 @@ export interface CreateBeltPromotionInput {
   notes?: string
 }
 
-/** Ordem oficial das faixas do judô (da menor para a maior). */
+/**
+ * Ordem oficial das faixas do Judô Tatsu (da menor para a maior) — 13
+ * graduações, incluindo as 4 intermediárias de "ponta" (borda da próxima cor).
+ */
 export const BELT_ORDER: Belt[] = [
   'branca',
+  'branca_ponta_cinza',
   'cinza',
+  'cinza_ponta_azul',
   'azul',
+  'azul_ponta_amarela',
   'amarela',
+  'amarela_ponta_laranja',
   'laranja',
   'verde',
   'roxa',
