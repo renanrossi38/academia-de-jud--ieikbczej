@@ -178,6 +178,10 @@ export default function AdminRanking() {
   useRealtime<PointEntry>('points_entries', () => {
     loadRanking()
   })
+  // Tempo real: promoção lançada na ficha atualiza a faixa no ranking na hora
+  useRealtime('belt_promotions', () => {
+    loadRanking()
+  })
 
   // Consulta do snapshot de um ano arquivado
   useEffect(() => {

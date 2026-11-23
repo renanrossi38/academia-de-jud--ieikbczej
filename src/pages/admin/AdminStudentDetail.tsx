@@ -15,7 +15,9 @@ import { rankingService } from '@/services/ranking'
 import { studentsService } from '@/services/students'
 import { studentOrdersService } from '@/services/studentOrders'
 import { ordersService } from '@/services/orders'
-import { Attendance, Class, Order, OrderItem, PointEntry, Student } from '@/types'
+import { beltPromotionsService, currentBeltFrom } from '@/services/beltPromotions'
+import { Attendance, Belt, Class, Order, OrderItem, PointEntry, Student } from '@/types'
+import BeltsPanel from '@/components/admin/BeltsPanel'
 import {
   AttendancePanel,
   CompetitionPanel,
@@ -46,6 +48,7 @@ export default function AdminStudentDetail() {
   const [itemsByOrder, setItemsByOrder] = useState<Record<string, OrderItem[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  const [beltOverride, setBeltOverride] = useState<Belt | undefined>(undefined)
 
   const loadAll = useCallback(async () => {
     if (!id) return
@@ -56,6 +59,10 @@ export default function AdminStudentDetail() {
         return
       }
       setStudent(s)
+
+      // Faixa exibida = última promovida (histórico); campo manual é fallback.
+      const promos = await beltPromotionsService.listByStudent(s.id)
+      setBeltOverride(currentBeltFrom(promos))
 
       const enrolled = await classesService.listClassesOfStudent(s.id)
       setClasses(enrolled)
@@ -123,6 +130,7 @@ export default function AdminStudentDetail() {
   useRealtime('classes', () => void loadAll())
   useRealtime('orders', () => void loadAll())
   useRealtime('students', () => void loadAll())
+  useRealtime('belt_promotions', () => void loadAll())
 
   const totalPoints = points.reduce((sum, e) => sum + (e.points || 0), 0)
   const presences = attendance.filter((a) => a.status === 'presente').length
@@ -194,18 +202,30 @@ export default function AdminStudentDetail() {
           <TabsTrigger value="frequencia" className={TAB_CLASS}>
             Frequência &amp; Competições
           </TabsTrigger>
+          <TabsTrigger value="faixas" className={TAB_CLASS}>
+            Faixas
+          </TabsTrigger>
           <TabsTrigger value="financeiro" className={TAB_CLASS}>
             Financeiro
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dados" className="mt-4">
-          <PersonalDataPanel student={student} classes={classes} onEdit={() => setEditOpen(true)} />
+          <PersonalDataPanel
+            student={student}
+            classes={classes}
+            onEdit={() => setEditOpen(true)}
+            beltOverride={beltOverride}
+          />
         </TabsContent>
 
         <TabsContent value="frequencia" className="mt-4 space-y-4">
           <AttendancePanel records={attendance} classes={classes} />
           <CompetitionPanel entries={points} />
+        </TabsContent>
+
+        <TabsContent value="faixas" className="mt-4">
+          <BeltsPanel studentId={student.id} />
         </TabsContent>
 
         <TabsContent value="financeiro" className="mt-4 space-y-4">

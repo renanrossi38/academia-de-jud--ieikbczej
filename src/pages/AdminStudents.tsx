@@ -12,11 +12,12 @@ import {
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { studentsService } from '@/services/students'
 import { feeStanding, monthlyFeesService, type OverdueNoticeResult } from '@/services/monthlyFees'
+import { latestBeltMap } from '@/services/beltPromotions'
 import { normalizarTelefone, mesCobrancaDeAluno, waMeUrl } from '@/services/whatsapp'
 import { appSettingsService } from '@/services/appSettings'
 import { DEFAULT_FEE_WHATSAPP_TEMPLATE } from '@/services/whatsapp'
 import { Mail, Send, MessageCircle } from 'lucide-react'
-import { MonthlyFee, Student } from '@/types'
+import { Belt, MonthlyFee, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -88,8 +89,10 @@ export default function AdminStudents() {
   const loadStudents = useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await studentsService.listStudents()
-      setStudents(data)
+      const [data, belts] = await Promise.all([studentsService.listStudents(), latestBeltMap()])
+      // A faixa exibida é a última promovida (histórico); o campo manual do
+      // cadastro é só o fallback quando o aluno não tem promoção lançada.
+      setStudents(data.map((s) => (belts.get(s.id) ? { ...s, belt: belts.get(s.id)! } : s)))
     } catch (err) {
       console.error('Erro ao carregar alunos:', err)
       toast({
@@ -129,6 +132,23 @@ export default function AdminStudents() {
       return
     }
     setStudents((prev) => upsert(prev, e.record))
+  })
+
+  // Tempo real: promoção lançada na ficha atualiza a faixa na lista na hora
+  // (recarrega o mapa de últimas promoções e rederiva as faixas exibidas).
+  const [beltMap, setBeltMap] = useState<Map<string, Belt>>(new Map())
+  const refreshBelts = useCallback(async () => {
+    try {
+      setBeltMap(await latestBeltMap())
+    } catch {
+      // silencioso: o fallback é o campo manual do cadastro
+    }
+  }, [])
+  useEffect(() => {
+    void refreshBelts()
+  }, [refreshBelts])
+  useRealtime('belt_promotions', () => {
+    void refreshBelts()
   })
 
   // Mensalidades: carregadas do servidor e mapeadas por aluno (badge de situação).
@@ -265,6 +285,10 @@ export default function AdminStudents() {
 
   const activeCount = students.filter((s) => s.active).length
   const inactiveCount = students.length - activeCount
+
+  // Faixa exibida: a última promovida (histórico de promoções); sem lançamento,
+  // cai para o campo manual do cadastro.
+  const beltOf = (s: Student): Belt | undefined => beltMap.get(s.id) ?? s.belt
 
   // Atrasados COM e-mail cadastrado: os que o botão "Notificar atrasados" alcança.
   const overdueWithEmailCount = useMemo(() => {
@@ -620,9 +644,9 @@ export default function AdminStudents() {
                       <td className="py-3.5 px-4 text-[#6B6560]">{student.phone || '—'}</td>
                       <td className="py-3.5 px-4">
                         <Badge
-                          className={`text-[10px] font-bold border ${beltBadgeClass(student.belt)}`}
+                          className={`text-[10px] font-bold border ${beltBadgeClass(beltOf(student))}`}
                         >
-                          {beltLabel(student.belt)}
+                          {beltLabel(beltOf(student))}
                         </Badge>
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560]">
@@ -800,9 +824,9 @@ export default function AdminStudents() {
 
                   <div className="flex items-center justify-between pt-2 border-t border-[#E8E0D5]">
                     <Badge
-                      className={`text-[10px] font-bold border ${beltBadgeClass(student.belt)}`}
+                      className={`text-[10px] font-bold border ${beltBadgeClass(beltOf(student))}`}
                     >
-                      Faixa {beltLabel(student.belt)}
+                      Faixa {beltLabel(beltOf(student))}
                     </Badge>
                     <div className="flex items-center gap-2">
                       {cobrancaWhatsappPara(student) && (

@@ -23,7 +23,16 @@ import { Button } from '@/components/ui/button'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
 import { beltBadgeClass, beltLabel, birthDateLabel } from '@/components/admin/StudentDialogs'
 import { classLevelBadgeClass, classLevelLabel } from '@/services/classes'
-import { Attendance, AttendanceStatus, Class, Order, OrderItem, PointEntry, Student } from '@/types'
+import {
+  Attendance,
+  AttendanceStatus,
+  Belt,
+  Class,
+  Order,
+  OrderItem,
+  PointEntry,
+  Student,
+} from '@/types'
 
 /* ---------------- formatadores compartilhados ---------------- */
 
@@ -95,7 +104,8 @@ export const PersonalDataPanel: React.FC<{
   student: Student
   classes: Class[]
   onEdit: () => void
-}> = ({ student, classes, onEdit }) => (
+  beltOverride?: Belt
+}> = ({ student, classes, onEdit, beltOverride }) => (
   <div className="space-y-4">
     {/* Dados do cadastro */}
     <div className={`${cardCls} p-5`}>
@@ -147,8 +157,10 @@ export const PersonalDataPanel: React.FC<{
         <div>
           <dt className="text-[10px] font-bold uppercase tracking-wider text-[#9A948C]">Faixa</dt>
           <dd className="mt-0.5">
-            <Badge className={`text-[10px] font-bold border ${beltBadgeClass(student.belt)}`}>
-              {beltLabel(student.belt)}
+            <Badge
+              className={`text-[10px] font-bold border ${beltBadgeClass(beltOverride ?? student.belt)}`}
+            >
+              {beltLabel(beltOverride ?? student.belt)}
             </Badge>
           </dd>
         </div>

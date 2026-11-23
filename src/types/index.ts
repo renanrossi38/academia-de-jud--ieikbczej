@@ -246,6 +246,23 @@ export interface Expense {
   updated: string
 }
 
+/** Promoção de faixa registrada (histórico de graduação do aluno, migration 0023). */
+export interface BeltPromotion {
+  collectionId: string
+  collectionName: string
+  id: string
+  student: string
+  belt: Belt
+  /** Data da promoção (exame) — meio-dia UTC para não deslocar em Brasília. */
+  promoted_at: string
+  notes?: string
+  created: string
+  updated: string
+  expand?: {
+    student?: Student
+  }
+}
+
 /** Lançamento manual de pontos do ranking (competição/evento). */
 export interface PointEntry {
   /** Ano a que o lançamento pertence (pela data da competição/evento). */

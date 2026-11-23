@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T01:12:43.164Z",
+  "generatedAt": "2026-11-23T01:28:39.093Z",
   "collections": [
     {
       "name": "users",
@@ -1028,6 +1028,72 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_annual_reports_year ON annual_reports (year)"]
+    },
+    {
+      "name": "belt_promotions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\"",
+        "view": "@request.auth.role = \"admin\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "student",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "students"
+        },
+        {
+          "name": "belt",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "branca",
+            "cinza",
+            "amarela",
+            "laranja",
+            "verde",
+            "azul",
+            "roxa",
+            "marrom",
+            "preta"
+          ]
+        },
+        {
+          "name": "promoted_at",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_belt_promotions_student_promoted ON belt_promotions (student, promoted_at DESC)"
+      ]
     }
   ]
 }

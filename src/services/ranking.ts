@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { toLocalDateKey } from '@/services/attendance'
+import { latestBeltMap } from '@/services/beltPromotions'
 import { Attendance, ClassStudent, PointEntry, RankingArchiveRow, Student } from '@/types'
 
 /** Ano corrente (fuso local). */
@@ -107,7 +108,7 @@ export const rankingService = {
   async getRanking(year: number = currentYear()): Promise<RankingRow[]> {
     const yearStart = `${year}-01-01 00:00:00.000Z`
     const yearEnd = `${year}-12-31 23:59:59.999Z`
-    const [links, attendance, entries] = await Promise.all([
+    const [links, attendance, entries, belts] = await Promise.all([
       pb.collection('class_students').getFullList<ClassStudent>({
         expand: 'student,class',
       }),
@@ -118,8 +119,16 @@ export const rankingService = {
         filter: `date >= "${yearStart}" && date <= "${yearEnd}" && year = ${year}`,
         sort: '-created',
       }),
+      latestBeltMap(),
     ])
-    return buildRows(links, attendance, entries)
+    const rows = buildRows(links, attendance, entries)
+    // A faixa exibida é a última promovida (histórico de promoções); o campo
+    // manual do cadastro é só o fallback quando não há lançamento.
+    rows.forEach((r) => {
+      const belt = belts.get(r.student.id)
+      if (belt) r.student.belt = belt
+    })
+    return rows
   },
 
   /** Lançamentos manuais (competições/eventos), mais recentes primeiro. */
