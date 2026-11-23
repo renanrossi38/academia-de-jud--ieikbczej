@@ -25,7 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 
 export const Header: React.FC = () => {
-  const { user, isAdmin, logout } = useAuth()
+  const { user, isAdmin, isOwner, logout } = useAuth()
   const { itemCount, setIsDrawerOpen, badgeAnimate } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
@@ -192,6 +192,18 @@ export const Header: React.FC = () => {
               Configurações
             </Link>
           )}
+
+          {isOwner && (
+            <Link
+              to="/painel/admins"
+              className={`text-sm font-medium transition-colors hover:text-[#C1272D] flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#F7E4E2] text-[#C1272D] border border-[#C1272D]/30 ${
+                isActive('/painel/admins') ? 'ring-2 ring-[#C1272D]' : ''
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Administradores
+            </Link>
+          )}
         </nav>
 
         {/* Right side: Cart Button + User Account */}
@@ -230,7 +242,7 @@ export const Header: React.FC = () => {
                     {user.name || user.email}
                   </span>
                   <span className="text-[10px] text-[#6B6560] capitalize">
-                    {user.role === 'admin' ? 'Administrador' : 'Aluno'}
+                    {user.role === 'aluno' ? 'Aluno' : 'Administrador'}
                   </span>
                 </div>
               </Link>
@@ -390,6 +402,16 @@ export const Header: React.FC = () => {
               className="block py-2 text-base font-semibold text-[#C1272D]"
             >
               Configurações (Admin)
+            </Link>
+          )}
+
+          {isOwner && (
+            <Link
+              to="/painel/admins"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block py-2 text-base font-semibold text-[#C1272D]"
+            >
+              Administradores (Principal)
             </Link>
           )}
 

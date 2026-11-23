@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-23T15:22:52.663Z",
+  "generatedAt": "2026-11-23T18:47:49.786Z",
   "collections": [
     {
       "name": "users",
@@ -8,7 +8,7 @@
         "list": "id = @request.auth.id || @request.auth.role = 'admin'",
         "view": "id = @request.auth.id || @request.auth.role = 'admin'",
         "create": "",
-        "update": "(id = @request.auth.id || @request.auth.role = 'admin') && @request.body.role:changed = false",
+        "update": "(id = @request.auth.id || @request.auth.role = 'admin') && @request.body.role:changed = false && @request.body.is_owner:changed = false && @request.body.active:changed = false",
         "delete": "id = @request.auth.id"
       },
       "fields": [
@@ -70,6 +70,12 @@
         },
         {
           "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_owner",
           "type": "bool",
           "required": false,
           "system": false

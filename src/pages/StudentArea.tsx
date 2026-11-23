@@ -288,7 +288,6 @@ export default function StudentArea() {
                   <span className="text-[#2E7D4F] font-semibold">{m.presencas} presença(s)</span>
                   <span className="text-[#C1272D] font-semibold">{m.ausentes} falta(s)</span>
                   <span>{m.justificados} justificada(s)</span>
-                  <span>{m.totalDias} dia(s) com chamada</span>
                 </div>
               </div>
             ))}

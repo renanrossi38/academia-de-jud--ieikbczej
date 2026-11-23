@@ -21,6 +21,8 @@ export interface User {
   name: string
   avatar?: string
   role: UserRole
+  /** Verdadeiro só para o administrador PRINCIPAL (o dono da academia). */
+  is_owner?: boolean
   phone?: string
   belt?: Belt
   active?: boolean

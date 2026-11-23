@@ -5,6 +5,8 @@ import { User } from '@/types'
 interface AuthContextType {
   user: User | null
   isAdmin: boolean
+  /** Verdadeiro só para o administrador PRINCIPAL (dono) — gerencia admins. */
+  isOwner: boolean
   isLoading: boolean
   logout: () => void
   refreshUser: () => Promise<void>
@@ -51,9 +53,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const isAdmin = user?.role === 'admin'
+  const isOwner = isAdmin === true && user?.is_owner === true
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isLoading, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isAdmin, isOwner, isLoading, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

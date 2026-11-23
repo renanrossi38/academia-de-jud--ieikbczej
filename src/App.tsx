@@ -14,6 +14,7 @@ import MyOrders from './pages/MyOrders'
 import AdminOrders from './pages/AdminOrders'
 import AdminProducts from './pages/AdminProducts'
 import AdminStudents from './pages/AdminStudents'
+import { AdminRoles } from './pages/AdminRoles'
 import AdminRanking from './pages/AdminRanking'
 import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
@@ -21,6 +22,7 @@ import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminEmailSettings from './pages/AdminEmailSettings'
 import AdminSiteSettings from './pages/AdminSiteSettings'
 import AdminFinance from './pages/AdminFinance'
+import React from 'react'
 import { Navigate } from 'react-router-dom'
 import StudentArea from './pages/StudentArea'
 import MyAttendance from './pages/MyAttendance'
@@ -34,6 +36,23 @@ import Account from './pages/Account'
 import ChangePassword from './pages/ChangePassword'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
+import { useAuth } from './context/AuthContext'
+
+/** Painel: qualquer admin (principal ou secundário) acessa. */
+function RequireAdmin({ children }: { children: React.ReactElement }) {
+  const { isAdmin, isLoading } = useAuth()
+  if (isLoading) return null
+  if (!isAdmin) return <Navigate to="/" replace />
+  return children
+}
+
+/** Página de administradores: SOMENTE o admin principal (dono). */
+function RequireOwner({ children }: { children: React.ReactElement }) {
+  const { isOwner, isLoading } = useAuth()
+  if (isLoading) return null
+  if (!isOwner) return <Navigate to="/painel" replace />
+  return children
+}
 
 const App = () => (
   <BrowserRouter>
@@ -59,6 +78,14 @@ const App = () => (
               <Route path="/painel/financeiro" element={<AdminFinance />} />
               <Route path="/painel/configuracoes" element={<AdminEmailSettings />} />
               <Route path="/painel/site" element={<AdminSiteSettings />} />
+              <Route
+                path="/painel/admins"
+                element={
+                  <RequireOwner>
+                    <AdminRoles />
+                  </RequireOwner>
+                }
+              />
               <Route path="/minha-presenca" element={<Navigate to="/area-do-aluno" replace />} />
               <Route path="/area-do-aluno" element={<StudentArea />} />
               <Route path="/entrar" element={<Login />} />

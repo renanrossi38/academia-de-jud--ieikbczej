@@ -101,8 +101,12 @@ export default function Account() {
         <div className="bg-white rounded-2xl border border-[#E8E0D5] p-6 shadow-xs">
           <h2 className="font-serif font-bold text-base text-[#1C1B1A] mb-4 pb-3 border-b border-[#E8E0D5] flex items-center justify-between">
             <span>Dados do Aluno</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#FAF6F0] border border-[#E8E0D5] text-[#C1272D] font-mono font-bold capitalize">
-              {user.role}
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#FAF6F0] border border-[#E8E0D5] text-[#C1272D] font-mono font-bold">
+              {user.role === 'aluno'
+                ? 'Aluno'
+                : user.is_owner
+                  ? 'Administrador principal'
+                  : 'Administrador secundário'}
             </span>
           </h2>
 
