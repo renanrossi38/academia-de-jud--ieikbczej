@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Student } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,7 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
       console.error('Erro ao gerar acesso do aluno:', err)
       toast({
         title: 'Não foi possível gerar o acesso',
-        description: err?.message || 'Verifique se o e-mail já não está em uso por outra conta.',
+        description: getErrorMessage(err),
         variant: 'destructive',
       })
     } finally {

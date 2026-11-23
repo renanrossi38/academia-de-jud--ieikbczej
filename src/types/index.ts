@@ -24,6 +24,7 @@ export interface User {
   phone?: string
   belt?: Belt
   active?: boolean
+  verified?: boolean
   created: string
   updated: string
 }

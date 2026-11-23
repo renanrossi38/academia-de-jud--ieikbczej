@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { Belt, Student, User } from '@/types'
+import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 
 export interface CreateStudentInput {
   name: string
@@ -47,6 +48,88 @@ export function generateInitialPassword(): string {
     .join('')
 
   return password
+}
+
+/** users.belt só aceita as 9 faixas base — valores "ponta" viram a faixa base. */
+function baseBeltForUser(belt?: Belt | ''): Belt | '' {
+  if (!belt) return ''
+  return belt.endsWith('_ponta') ? ((belt.split('_')[0] as Belt) ?? '') : belt
+}
+
+/** Traduz erros de validação do PocketBase para mensagens claras em português. */
+function friendlyCreateAccessError(err: unknown, email: string): string {
+  const fieldErrors = extractFieldErrors(err)
+  const raw = getErrorMessage(err).toLowerCase()
+  const emailErr = (fieldErrors.email || '').toLowerCase()
+
+  if (raw.includes('not unique') || emailErr.includes('not unique')) {
+    return `O e-mail ${email} já está em uso por outra conta. Corrija o e-mail no cadastro do aluno.`
+  }
+  if (raw.includes('validation_min_text_constraint') || raw.includes('must be at least')) {
+    return 'A senha gerada ficou curta demais. Tente gerar o acesso novamente.'
+  }
+  if (raw.includes('cannot be blank') || raw.includes('validation_required')) {
+    return 'Há campos obrigatórios faltando no cadastro do aluno (nome ou e-mail). Complete o cadastro e tente de novo.'
+  }
+  if (raw.includes('validation_invalid_email') || raw.includes('invalid email')) {
+    return `O e-mail ${email} não é válido. Corrija o e-mail no cadastro do aluno e tente de novo.`
+  }
+  const msg = getErrorMessage(err)
+  return msg.startsWith('Failed to create record') || !msg
+    ? 'Não foi possível criar a conta de acesso. Verifique o e-mail do aluno e tente novamente.'
+    : msg
+}
+
+/**
+ * Gera a conta de acesso ao site de um aluno que tem e-mail: cria o usuário
+ * (role 'aluno') com senha inicial e vincula student.user a ele.
+ */
+export async function createAccess(
+  student: Student,
+): Promise<{ account: User; initialPassword: string }> {
+  if (!student.email || !student.email.trim()) {
+    throw new Error('O aluno precisa de um e-mail para ganhar acesso ao site.')
+  }
+  if (student.user) {
+    throw new Error('Este aluno já possui acesso ao site.')
+  }
+
+  const email = student.email.trim()
+  const initialPassword = generateInitialPassword()
+
+  let account: User
+  try {
+    account = await pb.collection('users').create<User>({
+      email,
+      password: initialPassword,
+      passwordConfirm: initialPassword,
+      name: student.name,
+      phone: student.phone || '',
+      // users.belt não tem os valores "ponta" — envia apenas o valor base
+      belt: baseBeltForUser(student.belt),
+      role: 'aluno',
+      active: true,
+      verified: true,
+    })
+  } catch (err) {
+    throw new Error(friendlyCreateAccessError(err, email))
+  }
+
+  try {
+    await pb.collection('students').update(student.id, { user: account.id })
+  } catch (err) {
+    // Não deixa uma conta órfã se o vínculo falhar
+    await pb
+      .collection('users')
+      .delete(account.id)
+      .catch(() => {})
+    console.error('Falha ao vincular student.user:', err)
+    throw new Error(
+      'A conta foi criada, mas o vínculo com o cadastro do aluno falhou. Tente novamente.',
+    )
+  }
+
+  return { account, initialPassword }
 }
 
 export const studentsService = {
@@ -105,42 +188,5 @@ export const studentsService = {
     return pb.collection('students').update<Student>(id, payload)
   },
 
-  /**
-   * Gera a conta de acesso ao site de um aluno que tem e-mail: cria o usuário
-   * (role 'aluno') com senha inicial e vincula student.user a ele.
-   */
-  async createAccess(student: Student): Promise<{ account: User; initialPassword: string }> {
-    if (!student.email) {
-      throw new Error('O aluno precisa de um e-mail para ganhar acesso ao site.')
-    }
-    if (student.user) {
-      throw new Error('Este aluno já possui acesso ao site.')
-    }
-
-    const initialPassword = generateInitialPassword()
-    const account = await pb.collection('users').create<User>({
-      email: student.email.trim(),
-      password: initialPassword,
-      passwordConfirm: initialPassword,
-      name: student.name,
-      phone: student.phone || '',
-      belt: student.belt || '',
-      role: 'aluno',
-      active: true,
-      verified: true,
-    })
-
-    try {
-      await pb.collection('students').update(student.id, { user: account.id })
-    } catch (err) {
-      // Não deixa uma conta órfã se o vínculo falhar
-      await pb
-        .collection('users')
-        .delete(account.id)
-        .catch(() => {})
-      throw err
-    }
-
-    return { account, initialPassword }
-  },
+  createAccess,
 }
