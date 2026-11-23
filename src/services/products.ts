@@ -123,6 +123,25 @@ export const productsService = {
     await pb.collection('products').delete(id)
   },
 
+  /**
+   * Atualiza a galeria do produto (migration 0028, campo file múltiplo).
+   * Semântica PocketBase v0.23: upload novo só ANEXA; para reordenar envia-se
+   * o array de nomes de arquivo na ordem desejada (1ª posição = principal);
+   * para remover um arquivo, envia-se 'gallery-' = nome do arquivo.
+   */
+  async updateGallery(
+    id: string,
+    change: { append?: File[]; remove?: string[]; reorder?: string[] },
+  ): Promise<Product> {
+    const payload = new FormData()
+    if (change.remove?.length) change.remove.forEach((name) => payload.append('gallery-', name))
+    // A ordem dos campos importa: nomes já gravados vêm primeiro (definem a
+    // posição — 1ª = principal) e os arquivos novos são anexados ao final.
+    if (change.reorder?.length) change.reorder.forEach((name) => payload.append('gallery', name))
+    if (change.append?.length) change.append.forEach((f) => payload.append('gallery', f))
+    return pb.collection('products').update<Product>(id, payload)
+  },
+
   /** Todas as variações do catálogo (agrupadas por product na UI) — painel admin. */
   async listAllVariations(): Promise<ProductVariation[]> {
     return pb.collection('product_variations').getFullList<ProductVariation>({
@@ -173,5 +192,21 @@ export const productsService = {
   getImageUrl(product: Product): string | null {
     if (!product.image) return null
     return pb.files.getURL(product, product.image)
+  },
+
+  /**
+   * URLs da galeria na ordem gravada (1ª = principal). Quando a galeria está
+   * vazia mas existe a image legada, cai para ela — nunca devolve lista vazia
+   * se o produto tem alguma foto.
+   */
+  getGalleryUrls(product: Product): string[] {
+    const names = product.gallery?.length ? product.gallery : product.image ? [product.image] : []
+    return names.map((name) => pb.files.getURL(product, name))
+  },
+
+  /** URL da i-ésima foto da galeria com fallback para a principal. */
+  getGalleryThumbUrl(product: Product, index: number): string | null {
+    const urls = this.getGalleryUrls(product)
+    return urls[index] ?? urls[0] ?? null
   },
 }

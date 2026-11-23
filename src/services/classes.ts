@@ -10,6 +10,8 @@ export interface CreateClassInput {
   /** Número de vagas da turma (limite de matrículas). */
   vagas: number
   active?: boolean
+  /** Foto de capa (upload na criação). */
+  cover?: File | null
 }
 
 export interface UpdateClassInput {
@@ -19,6 +21,10 @@ export interface UpdateClassInput {
   monthly_fee?: number | null
   vagas?: number
   active?: boolean
+  /** Novo arquivo de capa (upload). */
+  cover?: File | null
+  /** Sinaliza remoção da capa atual (PocketBase: campo "cover-"). */
+  removeCover?: boolean
 }
 
 export const classLevelLabel = (level?: string): string => {
@@ -58,21 +64,50 @@ export const classesService = {
   },
 
   async createClass(input: CreateClassInput): Promise<Class> {
-    return pb.collection('classes').create<Class>({
+    const fields = {
       name: input.name.trim(),
       level: input.level || '',
       schedule: input.schedule?.trim() || '',
       monthly_fee: input.monthly_fee ?? null,
       vagas: input.vagas,
       active: input.active ?? true,
-    })
+    }
+    if (input.cover) {
+      const payload = new FormData()
+      Object.entries(fields).forEach(([key, value]) => payload.append(key, String(value)))
+      payload.append('cover', input.cover)
+      return pb.collection('classes').create<Class>(payload)
+    }
+    return pb.collection('classes').create<Class>(fields)
   },
 
   async updateClass(id: string, input: UpdateClassInput): Promise<Class> {
-    const payload: UpdateClassInput = { ...input }
-    if (typeof payload.name === 'string') payload.name = payload.name.trim()
-    if (typeof payload.schedule === 'string') payload.schedule = payload.schedule.trim()
+    // Com arquivo de capa (upload/remoção) o PocketBase exige multipart.
+    const needsForm = !!input.cover || !!input.removeCover
+    if (!needsForm) {
+      const payload: UpdateClassInput = { ...input }
+      if (typeof payload.name === 'string') payload.name = payload.name.trim()
+      if (typeof payload.schedule === 'string') payload.schedule = payload.schedule.trim()
+      return pb.collection('classes').update<Class>(id, payload)
+    }
+
+    const payload = new FormData()
+    if (input.name !== undefined) payload.append('name', input.name.trim())
+    if (input.level !== undefined) payload.append('level', input.level || '')
+    if (input.schedule !== undefined) payload.append('schedule', input.schedule.trim())
+    if (input.monthly_fee !== undefined)
+      payload.append('monthly_fee', input.monthly_fee === null ? '' : String(input.monthly_fee))
+    if (input.vagas !== undefined) payload.append('vagas', String(input.vagas))
+    if (input.active !== undefined) payload.append('active', String(input.active))
+    if (input.cover) payload.append('cover', input.cover)
+    if (input.removeCover) payload.append('cover-', '')
     return pb.collection('classes').update<Class>(id, payload)
+  },
+
+  /** URL da capa da turma (null quando não tem). */
+  getCoverUrl(klass: Class): string | null {
+    if (!klass.cover) return null
+    return pb.files.getURL(klass, klass.cover)
   },
 
   /** Exclui a turma; as matrículas (class_students) saem junto por cascata. */

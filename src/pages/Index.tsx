@@ -3,7 +3,8 @@ import { useSiteContent } from '@/services/siteSettings'
 import { Link } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
 import { productsService } from '@/services/products'
-import { classLevelLabel, classLevelBadgeClass } from '@/services/classes'
+import { classLevelLabel, classLevelBadgeClass, classesService } from '@/services/classes'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Product, ProductCategory, Class } from '@/types'
 import { HankoStamp, ProductPlaceholder, OfficialLogo } from '@/components/HankoStamp'
 import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero/HeroDecor'
@@ -59,6 +60,15 @@ const feeOf = (c: Class): number =>
 const money = (v: number): string =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+/** URL da capa de uma turma (null quando não tem foto gravada). */
+const coverUrlOf = (c: Class): string | null => classesService.getCoverUrl(c)
+
+/** Insere ou substitui uma turma pelo id (mesma semântica do painel). */
+const upsertClass = (list: Class[], record: Class): Class[] =>
+  list.some((c) => c.id === record.id)
+    ? list.map((c) => (c.id === record.id ? record : c))
+    : [record, ...list]
+
 export default function Index() {
   const site = useSiteContent()
   const [activeTab, setActiveTab] = useState<HomeTab>('turmas')
@@ -75,6 +85,30 @@ export default function Index() {
     // A aba de turmas é a inicial: produtos carregam só quando ela abre.
     loadClasses()
   }, [])
+
+  // Realtime: capa nova na turma (ou turma criada/removida no painel) reflete na home na hora.
+  useRealtime('classes', (action, record) => {
+    const cls = record as unknown as Class
+    if (action === 'create') {
+      setClasses((prev) => (cls.active === false ? prev : upsertClass(prev, cls)))
+    } else if (action === 'update') {
+      setClasses((prev) =>
+        cls.active === false ? prev.filter((c) => c.id !== cls.id) : upsertClass(prev, cls),
+      )
+    } else if (action === 'delete') {
+      setClasses((prev) => prev.filter((c) => c.id !== cls.id))
+    }
+  })
+
+  // Realtime: galeria de fotos do produto salva no painel reflete nos cards da loja.
+  useRealtime('products', (action, record) => {
+    const prod = record as unknown as Product
+    if (action === 'delete') {
+      setProducts((prev) => prev.filter((p) => p.id !== prod.id))
+    } else {
+      setProducts((prev) => prev.map((p) => (p.id === prod.id ? prod : p)))
+    }
+  })
 
   useEffect(() => {
     if (activeTab === 'kimonos' && !productsLoaded) {
@@ -229,14 +263,25 @@ export default function Index() {
                   key={c.id}
                   className="group relative bg-white rounded-2xl border border-[#E8E0D5] shadow-xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden"
                 >
-                  {/* Cabeçalho washi com sol vermelho + traço de pincel na base (folder) */}
-                  <div className="relative bg-[#FAF6F0] h-24 flex items-center justify-center overflow-hidden">
-                    <HeroSun className="absolute -right-8 -top-10 w-40 h-40 opacity-90" />
-                    <div className="relative z-10">
-                      <HankoStamp size="lg" />
+                  {/* Capa da turma quando houver foto; senão, cabeçalho washi com sol + hanko */}
+                  {coverUrlOf(c) ? (
+                    <div className="relative h-32 sm:h-36 overflow-hidden">
+                      <img
+                        src={coverUrlOf(c) as string}
+                        alt={`Turma ${c.name}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <BrushDivider className="absolute bottom-0 left-0 right-0 w-full text-[#C1272D]" />
                     </div>
-                    <BrushDivider className="absolute bottom-0 left-0 right-0 w-full text-[#C1272D]" />
-                  </div>
+                  ) : (
+                    <div className="relative bg-[#FAF6F0] h-24 flex items-center justify-center overflow-hidden">
+                      <HeroSun className="absolute -right-8 -top-10 w-40 h-40 opacity-90" />
+                      <div className="relative z-10">
+                        <HankoStamp size="lg" />
+                      </div>
+                      <BrushDivider className="absolute bottom-0 left-0 right-0 w-full text-[#C1272D]" />
+                    </div>
+                  )}
 
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="flex items-start justify-between gap-2">

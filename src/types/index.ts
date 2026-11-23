@@ -86,6 +86,8 @@ export interface Product {
   description: string
   price: number
   image?: string
+  /** Galeria de fotos (file múltiplo, migration 0028). 1ª posição = imagem principal. */
+  gallery?: string[]
   category: ProductCategory
   active: boolean
   /** Campos personalizados (sob medida). Produto "sob medida" = lista não vazia. */
@@ -176,6 +178,8 @@ export interface Class {
   monthly_fee?: number
   /** Número de vagas da turma (limite de matrículas). */
   vagas: number
+  /** Imagem de capa da turma (file único, migration 0028). */
+  cover?: string
   created: string
   updated: string
 }

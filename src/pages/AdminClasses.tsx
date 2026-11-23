@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { classesService, classLevelLabel, classLevelBadgeClass } from '@/services/classes'
@@ -53,6 +53,8 @@ interface ClassFormState {
   monthly_fee: string
   vagas: string
   active: boolean
+  cover: File | null
+  removeCover: boolean
 }
 
 const emptyForm: ClassFormState = {
@@ -62,6 +64,8 @@ const emptyForm: ClassFormState = {
   monthly_fee: '',
   vagas: '20',
   active: true,
+  cover: null,
+  removeCover: false,
 }
 
 interface ClassFormDialogProps {
@@ -80,6 +84,10 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
   const { toast } = useToast()
   const [form, setForm] = useState<ClassFormState>(emptyForm)
   const [saving, setSaving] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+
+  // Capa atual: URL da foto quando a turma já tem uma gravada (só no modo edição).
+  const existingCoverUrl = editing?.cover && open ? classesService.getCoverUrl(editing) : null
 
   useEffect(() => {
     if (open) {
@@ -92,6 +100,8 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               monthly_fee: editing.monthly_fee != null ? String(editing.monthly_fee) : '',
               vagas: String(editing.vagas ?? ''),
               active: editing.active !== false,
+              cover: null,
+              removeCover: false,
             }
           : emptyForm,
       )
@@ -119,25 +129,22 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
     }
     setSaving(true)
     try {
+      const basePayload = {
+        name: form.name,
+        level: form.level as Class['level'],
+        schedule: form.schedule,
+        monthly_fee: form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
+        vagas: Math.round(vagasNum),
+        active: form.active,
+      }
       const saved = editing
         ? await classesService.updateClass(editing.id, {
-            name: form.name,
-            level: form.level as Class['level'],
-            schedule: form.schedule,
-            monthly_fee:
-              form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
-            vagas: Math.round(vagasNum),
-            active: form.active,
+            ...basePayload,
+            // Só leva capa quando o admin mexeu: arquivo novo ou remoção explícita.
+            cover: form.cover ?? null,
+            removeCover: form.removeCover || undefined,
           })
-        : await classesService.createClass({
-            name: form.name,
-            level: form.level as Class['level'],
-            schedule: form.schedule,
-            monthly_fee:
-              form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
-            vagas: Math.round(vagasNum),
-            active: form.active,
-          })
+        : await classesService.createClass({ ...basePayload, cover: form.cover ?? null })
       onSaved(saved)
       onOpenChange(false)
       toast({
@@ -244,6 +251,70 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               ))}
             </select>
           </div>
+          {/* Capa da turma: aparece no card do painel e na home */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-[#1C1B1A]">Foto de capa</Label>
+            {existingCoverUrl && !form.removeCover && !form.cover ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={existingCoverUrl}
+                  alt={`Capa atual de ${editing?.name}`}
+                  className="w-24 h-16 object-cover rounded-lg border border-[#E8E0D5]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, removeCover: true }))}
+                  className="text-xs font-semibold text-[#C1272D] hover:underline"
+                >
+                  Remover capa
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      cover: e.target.files?.[0] ?? null,
+                      removeCover: false,
+                    }))
+                  }
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => coverInputRef.current?.click()}
+                  className="border-[#E8E0D5] text-[#1C1B1A] text-xs font-semibold"
+                >
+                  {form.cover ? 'Trocar arquivo' : 'Escolher imagem'}
+                </Button>
+                {form.cover && (
+                  <>
+                    <span className="text-[11px] text-[#6B6560] truncate max-w-[9rem]">
+                      {form.cover.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm((f) => ({ ...f, cover: null }))
+                        if (coverInputRef.current) coverInputRef.current.value = ''
+                      }}
+                      className="text-xs font-semibold text-[#C1272D] hover:underline"
+                    >
+                      Desfazer
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            <p className="text-[11px] text-[#6B6560]">
+              JPG, PNG ou WebP até 5 MB. Aparece no card da turma (painel e home).
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-xs font-semibold text-[#1C1B1A]">
             <input
               type="checkbox"
@@ -284,6 +355,9 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
     </Dialog>
   )
 }
+
+/** URL da capa de uma turma (null quando não tem foto gravada). */
+const coverUrlOf = (c: Class): string | null => classesService.getCoverUrl(c)
 
 /** Insere ou substitui uma turma pelo id (evita duplicar com o realtime). */
 const upsert = (list: Class[], record: Class): Class[] =>
@@ -461,13 +535,21 @@ export default function AdminClasses() {
               key={c.id}
               className="relative overflow-hidden bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-5 pt-6 flex flex-col gap-3 hover:border-[#C1272D]/40 transition-colors"
             >
-              {/* Traço de pincel vermelho no topo do card (identidade do folder) */}
-              <div
-                className="absolute top-0 left-0 right-0 h-2 text-[#C1272D] pointer-events-none"
-                aria-hidden
-              >
-                <BrushDivider className="w-full h-full" preserveAspectRatio="none" />
-              </div>
+              {/* Foto de capa da turma (quando houver) — substitui o traço de pincel */}
+              {coverUrlOf(c) ? (
+                <img
+                  src={coverUrlOf(c) as string}
+                  alt={`Capa da turma ${c.name}`}
+                  className="-mx-5 -mt-6 mb-3 w-[calc(100%+2.5rem)] h-32 sm:h-40 object-cover"
+                />
+              ) : (
+                <div
+                  className="absolute top-0 left-0 right-0 h-2 text-[#C1272D] pointer-events-none"
+                  aria-hidden
+                >
+                  <BrushDivider className="w-full h-full" preserveAspectRatio="none" />
+                </div>
+              )}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-[#F7E4E2]/60 border border-[#C1272D]/20 flex items-center justify-center shrink-0">

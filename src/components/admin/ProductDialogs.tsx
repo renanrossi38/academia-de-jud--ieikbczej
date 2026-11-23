@@ -19,6 +19,7 @@ import {
   UpdateProductInput,
 } from '@/services/products'
 import { CustomFieldsSection } from '@/components/admin/CustomFieldsSection'
+import { GallerySection } from '@/components/admin/GallerySection'
 import { Loader2, Plus, Trash2, Check } from 'lucide-react'
 
 const CATEGORY_OPTIONS: { label: string; value: ProductCategory }[] = [
@@ -357,14 +358,17 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 }) => {
   const { toast } = useToast()
   const [form, setForm] = useState<ProductFormState>(emptyForm)
-  const [existingImage, setExistingImage] = useState<string | null>(null)
   const [variations, setVariations] = useState<VariationDraft[]>([])
   const [saving, setSaving] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
   /** Salvar-tudo das linhas de variação, registrado pela VariationSection. */
   const saveVariationsRef = useRef<(() => Promise<boolean>) | null>(null)
   const registerSaveAll = useCallback((fn: (() => Promise<boolean>) | null) => {
     saveVariationsRef.current = fn
+  }, [])
+  /** Salvar-tudo da galeria de fotos, registrado pela GallerySection. */
+  const saveGalleryRef = useRef<(() => Promise<boolean>) | null>(null)
+  const registerGallerySave = useCallback((fn: (() => Promise<boolean>) | null) => {
+    saveGalleryRef.current = fn
   }, [])
 
   useEffect(() => {
@@ -384,7 +388,6 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             }
           : emptyForm,
       )
-      setExistingImage(editing?.image ? productsService.getImageUrl(editing) : null)
       setVariations([])
     }
   }, [open, editing])
@@ -419,6 +422,17 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
         toast({
           title: 'Produto salvo, mas há variações pendentes',
           description: 'Corrija as linhas destacadas em "Erro ao salvar variação" e salve de novo.',
+          variant: 'destructive',
+        })
+        onSaved(saved)
+        return
+      }
+      // Salva também as fotos pendentes da galeria (upload/remoção/reordenação).
+      const galleryOk = await saveGalleryRef.current?.()
+      if (galleryOk === false) {
+        toast({
+          title: 'Produto salvo, mas há fotos pendentes',
+          description: 'Tente salvar as fotos de novo — o produto já está gravado.',
           variant: 'destructive',
         })
         onSaved(saved)
@@ -538,37 +552,11 @@ export const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="product-image" className="text-xs font-bold text-[#1C1B1A]">
-              Imagem (png/jpeg/webp)
-            </Label>
-            {existingImage && !form.removeImage && (
-              <div className="flex items-center gap-3 mb-1">
-                <img
-                  src={existingImage}
-                  alt="Imagem atual"
-                  className="w-14 h-14 rounded-md object-cover border border-[#E8E0D5]"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setForm((f) => ({ ...f, removeImage: true }))}
-                  className="text-[11px] text-[#B3261E] border-[#E8E0D5]"
-                >
-                  Remover imagem
-                </Button>
-              </div>
-            )}
-            <input
-              ref={fileRef}
-              id="product-image"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => setForm((f) => ({ ...f, image: e.target.files?.[0] || null }))}
-              className="text-xs text-[#6B6560] file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#F7E4E2] file:text-[#C1272D] hover:file:bg-[#F7E4E2]/80"
-            />
-          </div>
+          <GallerySection
+            productId={editing?.id || null}
+            product={editing}
+            registerGallerySave={registerGallerySave}
+          />
 
           <label className="flex items-center gap-2 text-xs font-semibold text-[#1C1B1A]">
             <input

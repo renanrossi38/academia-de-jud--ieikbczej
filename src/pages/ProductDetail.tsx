@@ -48,6 +48,8 @@ export default function ProductDetail() {
   const [isAdding, setIsAdding] = useState(false)
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({})
   const [customError, setCustomError] = useState('')
+  /** Índice da foto exibida na galeria (0 = principal). */
+  const [selectedImage, setSelectedImage] = useState(0)
 
   useEffect(() => {
     if (!slug) return
@@ -123,7 +125,13 @@ export default function ProductDetail() {
   const currentUnitPrice = computedUnitPrice(basePrice, variationDelta, optionsDelta)
   const totalPrice = currentUnitPrice * quantity
 
-  const imageUrl = productsService.getImageUrl(product)
+  const galleryUrls = productsService.getGalleryUrls(product)
+  const imageUrl = galleryUrls[0] ?? null
+  // Produto novo carregado: volta para a foto principal.
+  useEffect(() => {
+    setSelectedImage(0)
+  }, [product.id])
+  const selectedUrl = galleryUrls[selectedImage] ?? galleryUrls[0] ?? null
 
   const campos = product.custom_options ?? []
   const temCampos = campos.length > 0
@@ -179,19 +187,51 @@ export default function ProductDetail() {
       {/* Main product presentation: 2 columns desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
         {/* Left: Product photo / visual */}
-        <div className="bg-white rounded-2xl border border-[#E8E0D5] overflow-hidden shadow-xs relative">
-          <div className="aspect-square w-full bg-[#FAF6F0] flex items-center justify-center overflow-hidden">
-            {imageUrl ? (
-              <img src={imageUrl} alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-              <ProductPlaceholder name={product.name} className="h-full" />
-            )}
+        <div>
+          <div className="bg-white rounded-2xl border border-[#E8E0D5] overflow-hidden shadow-xs relative">
+            <div className="aspect-square w-full bg-[#FAF6F0] flex items-center justify-center overflow-hidden">
+              {selectedUrl ? (
+                <img
+                  src={selectedUrl}
+                  alt={product.name}
+                  className="w-full h-full object-cover animate-fade-rise"
+                />
+              ) : (
+                <ProductPlaceholder name={product.name} className="h-full" />
+              )}
+            </div>
+            <div className="absolute top-4 left-4">
+              <Badge className="bg-white/95 text-[#1C1B1A] border border-[#E8E0D5] font-medium text-xs shadow-xs">
+                {product.category.toUpperCase()}
+              </Badge>
+            </div>
           </div>
-          <div className="absolute top-4 left-4">
-            <Badge className="bg-white/95 text-[#1C1B1A] border border-[#E8E0D5] font-medium text-xs shadow-xs">
-              {product.category.toUpperCase()}
-            </Badge>
-          </div>
+
+          {/* Miniaturas da galeria: dentro da mesma coluna, abaixo da foto grande */}
+          {galleryUrls.length > 1 && (
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mt-3">
+              {galleryUrls.map((url, idx) => (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setSelectedImage(idx)}
+                  aria-label={`Ver foto ${idx + 1} de ${product.name}`}
+                  className={`relative aspect-square rounded-lg border overflow-hidden transition-all ${
+                    idx === selectedImage
+                      ? 'border-[#C1272D] ring-2 ring-[#C1272D]/30'
+                      : 'border-[#E8E0D5] hover:border-[#C1272D]/50 opacity-80 hover:opacity-100'
+                  }`}
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  {idx === 0 && (
+                    <span className="absolute top-1 left-1 bg-[#C1272D] text-white text-[8px] font-bold px-1 py-0.5 rounded-full leading-none">
+                      Principal
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Info, Variations & Order CTA */}
