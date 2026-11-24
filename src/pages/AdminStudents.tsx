@@ -14,7 +14,12 @@ import { GuardianContactButtons } from '@/components/admin/GuardianContactButton
 import { studentsService } from '@/services/students'
 import { feeStanding, monthlyFeesService, type OverdueNoticeResult } from '@/services/monthlyFees'
 import { latestBeltMap } from '@/services/beltPromotions'
-import { normalizarTelefone, mesCobrancaDeAluno, waMeUrl } from '@/services/whatsapp'
+import {
+  normalizarTelefone,
+  mesCobrancaDeAluno,
+  waMeUrl,
+  digitosTelefoneValido,
+} from '@/services/whatsapp'
 import { appSettingsService } from '@/services/appSettings'
 import { DEFAULT_FEE_WHATSAPP_TEMPLATE } from '@/services/whatsapp'
 import { Mail, Send, MessageCircle } from 'lucide-react'
@@ -682,13 +687,23 @@ export default function AdminStudents() {
                             {student.guardian_phone && (
                               <span className="flex items-center gap-1.5 text-[10px]">
                                 {student.guardian_phone}
-                                <GuardianContactButtons phone={student.guardian_phone} />
+                                <GuardianContactButtons
+                                  phone={student.guardian_phone}
+                                  studentPhone={student.phone}
+                                />
                               </span>
                             )}
                           </span>
-                        ) : (
-                          '—'
-                        )}
+                        ) : null}
+                        {/* Sem responsável com número válido → WhatsApp pelo
+                            telefone PRÓPRIO do aluno (fallback do pedido). */}
+                        {!digitosTelefoneValido(student.guardian_phone || '') &&
+                          !!digitosTelefoneValido(student.phone || '') && (
+                            <span className="flex items-center gap-1.5 text-[10px]">
+                              {student.phone}
+                              <GuardianContactButtons studentPhone={student.phone} />
+                            </span>
+                          )}
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge
@@ -826,8 +841,16 @@ export default function AdminStudents() {
                       <p className="flex items-center gap-1.5">
                         <Phone className="w-3 h-3" />
                         {student.phone}
+                        {/* WhatsApp pelo telefone PRÓPRIO quando não há
+                            responsável com número válido (fallback do pedido). */}
+                        {!digitosTelefoneValido(student.guardian_phone || '') &&
+                          !!digitosTelefoneValido(student.phone || '') && (
+                            <GuardianContactButtons studentPhone={student.phone} />
+                          )}
                       </p>
                     )}
+                    {/* Aluno SEM telefone próprio, mas responsável com número
+                        válido: os botões já ficam na linha "Resp." abaixo. */}
                     <p className="flex items-center gap-1.5">
                       <Calendar className="w-3 h-3" />
                       Cadastro em {formatDate(student.created)}
@@ -860,7 +883,10 @@ export default function AdminStudents() {
                           Resp.: {student.guardian_name}
                           {student.guardian_phone ? ` · ${student.guardian_phone}` : ''}
                         </span>
-                        <GuardianContactButtons phone={student.guardian_phone} />
+                        <GuardianContactButtons
+                          phone={student.guardian_phone}
+                          studentPhone={student.phone}
+                        />
                       </p>
                     )}
                   </div>
