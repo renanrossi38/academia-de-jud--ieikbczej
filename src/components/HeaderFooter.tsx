@@ -109,8 +109,8 @@ const PANEL_NAV: { area: AdminArea; to: string; icon: React.ReactNode; label: st
 const HOME_SECTIONS: { href: string; label: string }[] = [
   { href: '#turmas', label: 'Turmas' },
   { href: '#kimonos', label: 'Kimonos' },
-  { href: '#destaques', label: 'Talentos' },
-  { href: '#instagram', label: 'Instagram' },
+  { href: '#destaques', label: 'Destaques' },
+  { href: '#instagram', label: 'Notícias' },
   { href: '#como-funciona', label: 'Como funciona' },
 ]
 

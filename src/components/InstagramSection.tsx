@@ -68,7 +68,7 @@ export default function InstagramSection() {
             Novidades do Dojo
           </span>
           <h2 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
-            Instagram do <span className="text-[#A31B21]">Judô Tatsu</span>
+            Notícias do <span className="text-[#A31B21]">Judô Tatsu</span>
           </h2>
           <p className="text-sm text-[#4A443F] mt-2">
             Acompanhe competições, graduações e o dia a dia da academia direto do nosso feed.

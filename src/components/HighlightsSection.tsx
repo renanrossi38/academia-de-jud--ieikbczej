@@ -42,7 +42,7 @@ export const HighlightsSection = () => {
             Destaques
           </span>
           <h2 className="font-serif font-bold text-3xl sm:text-4xl text-[#1C1B1A] mt-4">
-            Nossos talentos em cena
+            Nossos destaques em cena
           </h2>
           <BrushDivider className="w-48 h-3 mt-3" />
           <p className="text-xs sm:text-sm text-[#6B6560] mt-3 max-w-xl leading-relaxed">
