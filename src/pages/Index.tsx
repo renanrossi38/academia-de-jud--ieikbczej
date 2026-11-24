@@ -186,19 +186,24 @@ export default function Index() {
         {/* Sol vermelho texturizado (sem imagem externa).
             MOBILE: sobe para o topo/direita e fica MENOR e mais transparente,
             longe do bloco de texto central — era ele que "apagava" o texto. */}
-        <HeroSun className="absolute -right-16 -top-10 w-[260px] h-[260px] opacity-50 pointer-events-none sm:opacity-100 sm:top-1/2 sm:-translate-y-1/2 sm:right-[-10%] sm:w-[420px] sm:h-[420px] md:opacity-100 md:right-[4%] md:top-1/2 md:w-[460px] md:h-[460px]" />
+        {/* Sol + kanji no MESMO contêiner: o kanji fica EXATAMENTE no centro
+            do disco (flex center sobre inset-0) em qualquer breakpoint, porque
+            o contêiner tem o mesmo tamanho/posição do sol.
+            MOBILE: o sol sobe para o topo/direita, menor e translúcido, e o
+            kanji some junto (hidden sm:flex) — comportamento mantido. */}
+        <div className="absolute -right-16 -top-10 w-[260px] h-[260px] pointer-events-none sm:top-1/2 sm:-translate-y-1/2 sm:right-[-10%] sm:w-[420px] sm:h-[420px] md:right-[4%] md:w-[460px] md:h-[460px]">
+          <HeroSun className="absolute inset-0 w-full h-full opacity-50 sm:opacity-100" />
+          {/* Kanji centrado no disco: branco, vertical, com sombra suave.
+              Fonte proporcional ao sol (sol 420/460px → kanji 60/72px). */}
+          <div className="absolute inset-0 hidden sm:flex items-center justify-center z-[5]">
+            <span className="text-white/95 drop-shadow-[0_1px_2px_rgba(28,27,26,0.35)] font-serif font-black leading-none text-6xl lg:text-7xl [writing-mode:vertical-rl] tracking-widest">
+              {'\u67D4\u9053'}
+            </span>
+          </div>
+        </div>
 
         {/* Ondas sumi-e na base (tinta preta) */}
         <HeroWaves className="absolute bottom-0 left-0 right-0 w-full pointer-events-none" />
-
-        {/* Kanji em coluna vertical DENTRO do sol vermelho — desktop/tablet.
-            No celular o sol sobe para o topo (fora do texto), então o kanji
-            some junto (era escondido no mobile antes e continua). */}
-        <div className="absolute right-[2%] md:right-[6.5%] top-1/2 -translate-y-1/2 hidden sm:flex flex-col items-center pointer-events-none z-[5] [&>span]:text-white/95 [&>span]:drop-shadow-[0_1px_2px_rgba(28,27,26,0.35)]">
-          <span className="text-[#1C1B1A] font-serif font-black leading-[1.05] text-5xl md:text-6xl [writing-mode:vertical-rl] tracking-widest">
-            柔道
-          </span>
-        </div>
 
         {/* Pétalas de sakura caindo */}
         <HeroPetals />
