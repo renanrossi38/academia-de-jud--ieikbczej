@@ -147,6 +147,26 @@ export function mergeSiteContent(saved: Partial<SiteContent> | null | undefined)
  * defaults. Não lança: qualquer erro (rede, regra, JSON corrompido) devolve
  * os defaults, e a home segue funcionando.
  */
+/**
+ * Lê o JSON BRUTO salvo no registro único de site_settings, SEM mesclar com os
+ * defaults — para quem precisa distinguir "campo vazio no painel" de "default"
+ * (ex.: o botão de WhatsApp, que some quando contact_whatsapp está vazio).
+ * Não lança: sem registro ou erro devolve null.
+ */
+export async function loadRawSiteData(): Promise<Partial<SiteContent> | null> {
+  try {
+    const rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {
+      sort: '-updated',
+    })
+    const raw = rows.items[0]?.data
+    if (!raw) return null
+    return typeof raw === 'string' ? (JSON.parse(raw) as Partial<SiteContent>) : raw
+  } catch (err) {
+    console.error('Erro ao carregar dados brutos do site:', err)
+    return null
+  }
+}
+
 export async function loadSiteContent(): Promise<SiteContent> {
   try {
     const rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {
