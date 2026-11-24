@@ -236,6 +236,8 @@ export interface Class {
   vagas: number
   /** Imagem de capa da turma (file único, migration 0028). */
   cover?: string
+  /** Turma infantil (habilita medalhas dorme dorme / fica fica, migration 0035). */
+  is_kids?: boolean
   created: string
   updated: string
 }

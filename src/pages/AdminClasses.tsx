@@ -53,6 +53,7 @@ interface ClassFormState {
   monthly_fee: string
   vagas: string
   active: boolean
+  isKids: boolean
   cover: File | null
   removeCover: boolean
 }
@@ -64,6 +65,7 @@ const emptyForm: ClassFormState = {
   monthly_fee: '',
   vagas: '20',
   active: true,
+  isKids: false,
   cover: null,
   removeCover: false,
 }
@@ -100,6 +102,7 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               monthly_fee: editing.monthly_fee != null ? String(editing.monthly_fee) : '',
               vagas: String(editing.vagas ?? ''),
               active: editing.active !== false,
+              isKids: editing.is_kids === true,
               cover: null,
               removeCover: false,
             }
@@ -136,6 +139,7 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
         monthly_fee: form.monthly_fee === '' ? null : Number(form.monthly_fee.replace(',', '.')),
         vagas: Math.round(vagasNum),
         active: form.active,
+        isKids: form.isKids,
       }
       const saved = editing
         ? await classesService.updateClass(editing.id, {
@@ -324,6 +328,20 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
             />
             Turma ativa
           </label>
+          <label className="flex items-center gap-2 text-xs font-semibold text-[#1C1B1A]">
+            <input
+              type="checkbox"
+              checked={form.isKids}
+              onChange={(e) => setForm((f) => ({ ...f, isKids: e.target.checked }))}
+              className="w-4 h-4 accent-[#C1272D]"
+            />
+            Turma infantil
+          </label>
+          {form.isKids && (
+            <p className="text-[11px] text-[#6B6560] -mt-2">
+              Habilita as medalhas "dorme dorme" e "fica fica" no detalhe da turma.
+            </p>
+          )}
           <DialogFooter className="gap-2">
             <Button
               type="button"
@@ -574,6 +592,11 @@ export default function AdminClasses() {
                       >
                         {c.active !== false ? 'Ativa' : 'Inativa'}
                       </Badge>
+                      {c.is_kids && (
+                        <Badge className="text-[10px] font-bold border bg-[#FFF8E1] text-[#B45309] border-[#B45309]/20">
+                          Infantil
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>

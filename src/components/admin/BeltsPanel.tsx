@@ -134,6 +134,11 @@ export default function BeltsPanel({ studentId }: { studentId: string }) {
 
         {latest ? (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {latest.exam_score != null && (
+              <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-[11px] font-bold">
+                Nota {String(latest.exam_score).replace('.', ',')}
+              </Badge>
+            )}
             <Badge className={`text-xs font-bold border ${beltBadgeClass(latest.belt)}`}>
               Faixa {beltLabel(latest.belt)}
             </Badge>
@@ -184,6 +189,11 @@ export default function BeltsPanel({ studentId }: { studentId: string }) {
                 {idx === 0 && (
                   <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-[10px] font-bold">
                     atual
+                  </Badge>
+                )}
+                {p.exam_score != null && (
+                  <Badge className="bg-[#FAF6F0] text-[#1C1B1A] border-[#E8E0D5] text-[10px] font-bold">
+                    Nota {String(p.exam_score).replace('.', ',')}
                   </Badge>
                 )}
                 {p.notes && <span className="text-[11px] text-[#6B6560]">{p.notes}</span>}
@@ -277,6 +287,8 @@ function PromoteBeltDialog({
   const [belt, setBelt] = useState<Belt | ''>('')
   const [date, setDate] = useState('')
   const [notes, setNotes] = useState('')
+  // Nota do exame: string para permitir campo vazio; vira número ou é omitida.
+  const [examScore, setExamScore] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   // Ao abrir: sugere a próxima faixa da sequência e a data de hoje (Brasília).
@@ -285,6 +297,7 @@ function PromoteBeltDialog({
       setBelt(suggested || '')
       setDate(todayKeyBrasilia())
       setNotes('')
+      setExamScore('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -313,6 +326,7 @@ function PromoteBeltDialog({
         studentId,
         belt,
         date,
+        examScore: examScore.trim() === '' ? undefined : Number(examScore.replace(',', '.')),
         notes: notes.trim() || undefined,
       }
       const created = await beltPromotionsService.create(input)
@@ -388,6 +402,25 @@ function PromoteBeltDialog({
               required
               className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="belt-exam-score" className="text-xs font-semibold text-[#1C1B1A]">
+              Nota do exame (opcional)
+            </Label>
+            <Input
+              id="belt-exam-score"
+              type="number"
+              min={0}
+              max={10}
+              step={0.5}
+              value={examScore}
+              onChange={(e) => setExamScore(e.target.value)}
+              placeholder="Ex.: 8.5"
+              className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+            />
+            <p className="text-[11px] text-[#6B6560]">
+              De 0 a 10 — aparece no histórico de graduações e na Área do aluno.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="belt-notes" className="text-xs font-semibold text-[#1C1B1A]">

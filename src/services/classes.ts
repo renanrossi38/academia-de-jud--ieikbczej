@@ -10,6 +10,8 @@ export interface CreateClassInput {
   /** Número de vagas da turma (limite de matrículas). */
   vagas: number
   active?: boolean
+  /** Turma infantil (habilita medalhas dorme dorme / fica fica). */
+  isKids?: boolean
   /** Foto de capa (upload na criação). */
   cover?: File | null
 }
@@ -21,6 +23,8 @@ export interface UpdateClassInput {
   monthly_fee?: number | null
   vagas?: number
   active?: boolean
+  /** Turma infantil (habilita medalhas dorme dorme / fica fica). */
+  isKids?: boolean
   /** Novo arquivo de capa (upload). */
   cover?: File | null
   /** Sinaliza remoção da capa atual (PocketBase: campo "cover-"). */
@@ -71,6 +75,7 @@ export const classesService = {
       monthly_fee: input.monthly_fee ?? null,
       vagas: input.vagas,
       active: input.active ?? true,
+      is_kids: input.isKids ?? false,
     }
     if (input.cover) {
       const payload = new FormData()
@@ -91,6 +96,10 @@ export const classesService = {
       const payload: UpdateClassInput = { ...rest }
       if (typeof payload.name === 'string') payload.name = payload.name.trim()
       if (typeof payload.schedule === 'string') payload.schedule = payload.schedule.trim()
+      if (payload.isKids !== undefined) {
+        payload.is_kids = payload.isKids
+        delete payload.isKids
+      }
       return pb.collection('classes').update<Class>(id, payload)
     }
 
@@ -102,6 +111,7 @@ export const classesService = {
       payload.append('monthly_fee', input.monthly_fee === null ? '' : String(input.monthly_fee))
     if (input.vagas !== undefined) payload.append('vagas', String(input.vagas))
     if (input.active !== undefined) payload.append('active', String(input.active))
+    if (input.isKids !== undefined) payload.append('is_kids', String(input.isKids))
     if (input.cover) payload.append('cover', input.cover)
     if (input.removeCover) payload.append('cover-', '')
     return pb.collection('classes').update<Class>(id, payload)

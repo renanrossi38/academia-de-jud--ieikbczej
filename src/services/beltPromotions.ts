@@ -17,6 +17,8 @@ export interface CreateBeltPromotionInput {
   /** Data da promoção (YYYY-MM-DD). Padrão: hoje em Brasília. */
   date?: string
   notes?: string
+  /** Nota do exame (0–10, meio ponto). Opcional — nem toda graduação tem exame. */
+  examScore?: number
 }
 
 /**
@@ -135,6 +137,9 @@ export const beltPromotionsService = {
       // Meio-dia UTC: a data não desloca um dia para trás no fuso de Brasília.
       promoted_at: `${dateKey} 12:00:00.000Z`,
       notes: input.notes?.trim() || '',
+      // Nota do exame: só quando o admin preencheu (campo opcional 0–10).
+      exam_score:
+        input.examScore != null && Number.isFinite(input.examScore) ? input.examScore : '',
     })
   },
 

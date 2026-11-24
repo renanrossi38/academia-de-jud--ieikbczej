@@ -19,16 +19,50 @@ const statusBtnClass: Record<AttendanceStatus, string> = {
   justificado: 'bg-[#6B6560] text-white border-[#6B6560] shadow-xs',
 }
 
+export interface RosterMedals {
+  /** Alunos com medalha "dorme dorme" no mês vigente (🏅 — some quando o mês vira). */
+  dormeDormeMesAtual: Set<string>
+  /** Alunos que já foram destaque "fica fica" em qualquer mês (⭐ — permanente). */
+  everFicaFica: Set<string>
+}
+
 interface ClassRosterListProps {
   /** Matrículas da turma já filtradas pela busca. */
   links: ClassStudent[]
   markings: Record<string, AttendanceStatus>
   onMark: (studentId: string, status: AttendanceStatus) => void
   onRemove: (link: ClassStudent) => void
+  /** Medalhas da turma infantil (opcional — só em turmas is_kids). */
+  medals?: RosterMedals
+}
+
+/** Ícone(s) de medalha ao lado do nome do aluno. */
+function MedalIcons({ studentId, medals }: { studentId: string; medals?: RosterMedals }) {
+  if (!medals) return null
+  return (
+    <>
+      {medals.dormeDormeMesAtual.has(studentId) && (
+        <span className="text-base leading-none" title="Medalha dorme dorme — mês vigente">
+          🏅
+        </span>
+      )}
+      {medals.everFicaFica.has(studentId) && (
+        <span className="text-base leading-none" title="Aluno destaque — fica fica">
+          ⭐
+        </span>
+      )}
+    </>
+  )
 }
 
 /** Lista dos alunos matriculados: tabela no desktop, cartões no mobile. */
-export function ClassRosterList({ links, markings, onMark, onRemove }: ClassRosterListProps) {
+export function ClassRosterList({
+  links,
+  markings,
+  onMark,
+  onRemove,
+  medals,
+}: ClassRosterListProps) {
   const rows = links
     .map((link) => ({ link, student: link.expand?.student }))
     .filter((r): r is { link: ClassStudent; student: Student } => !!r.student)
@@ -66,7 +100,8 @@ export function ClassRosterList({ links, markings, onMark, onRemove }: ClassRost
                     title="Abrir ficha do aluno"
                   >
                     {student.name || '—'}
-                  </Link>
+                  </Link>{' '}
+                  <MedalIcons studentId={student.id} medals={medals} />
                 </td>
                 <td className="py-3.5 px-4">
                   <Badge className={`text-[10px] font-bold border ${beltBadgeClass(student.belt)}`}>
@@ -103,7 +138,8 @@ export function ClassRosterList({ links, markings, onMark, onRemove }: ClassRost
               >
                 {student.name || '—'}
               </Link>
-              <div className="mt-1.5">
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <MedalIcons studentId={student.id} medals={medals} />
                 <Badge className={`text-[10px] font-bold border ${beltBadgeClass(student.belt)}`}>
                   {beltLabel(student.belt)}
                 </Badge>

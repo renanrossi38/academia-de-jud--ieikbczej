@@ -3,7 +3,8 @@
 // ROTA (autenticada):
 //   GET /backend/v1/student-area
 //   → { student, paidFees[], orders[], attendance[], rankingPosition, rankingTotal,
-//       rankingPoints, beltHistory[], currentBelt, timeInBelt }
+//       rankingPoints, beltHistory[], currentBelt, timeInBelt,
+//       medals: { dormeDormeMesAtual[], everFicaFica[] }, medalsCurrentMonth }
 //
 // O FRONT NÃO consegue ler sozinho: monthly_fees, belt_promotions e
 // points_entries são admin-only; attendance e orders do aluno não dão os dias
@@ -356,6 +357,33 @@ routerAdd(
         }
       }
 
+      // ---- Medalhas das turmas infantis (class_medals, migration 0035) ----
+      // dormeDormeMesAtual: medalhas "dorme dorme" do MES VIGENTE (Brasília) —
+      // quando o mês vira, o front simplesmente não as encontra mais aqui.
+      // everFicaFica: "fica fica" de QUALQUER mês — destaque permanente.
+      var medalsOut = { dormeDormeMesAtual: [], everFicaFica: [] }
+      var mesVigente = chaveDoMes(nowB)
+      var medalRows = $app.findRecordsByFilter(
+        'class_medals',
+        'student = {:sid}',
+        '-created',
+        0,
+        0,
+        { sid: studentId },
+      )
+      for (var md = 0; md < medalRows.length; md++) {
+        var medal = medalRows[md]
+        var kind = medal.getString('kind')
+        var medalMonth = medal.getString('month')
+        if (kind === 'dorme_dorme') {
+          if (medalMonth === mesVigente) {
+            medalsOut.dormeDormeMesAtual.push(medalMonth)
+          }
+        } else if (kind === 'fica_fica') {
+          medalsOut.everFicaFica.push(medalMonth)
+        }
+      }
+
       // ---- Faixas: histórico da mais recente para a mais antiga ----
       var beltHistory = []
       var promos = $app.findRecordsByFilter(
@@ -395,6 +423,10 @@ routerAdd(
         beltHistory: beltHistory,
         currentBelt: beltHistory.length > 0 ? beltHistory[0].belt : student.getString('belt'),
         timeInBelt: '',
+        medals: medalsOut,
+        medalsDormeDormeMesAtual: medalsOut.dormeDormeMesAtual,
+        medalsEverFicaFica: medalsOut.everFicaFica,
+        medalsCurrentMonth: mesVigente,
       }
     }
   },
