@@ -3,6 +3,19 @@ import pb from '@/lib/pocketbase/client'
 import { User } from '@/types'
 import { AdminArea, hasArea } from '@/lib/adminAreas'
 
+/**
+ * A sessão pode "morrer" no servidor sem o front saber (backend recriado,
+ * tokenKey girado, senhas/tokens revogados): o authStore local continua
+ * "válido" mas o PocketBase responde cada request como anônimo — GET do
+ * próprio usuário vira 404 e toda escrita falha em API rule (404/400
+ * mascarados como "não encontrado"). Nesse estado o painel mostra um admin
+ * fantasma: vê o menu, mas não salva nada nem carrega áreas.
+ */
+const isAuthError = (err: unknown): boolean => {
+  const status = (err as { status?: number } | null)?.status
+  return status === 401 || status === 403 || status === 404
+}
+
 interface AuthContextType {
   user: User | null
   isAdmin: boolean
@@ -31,8 +44,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setUser(null)
       }
-    } catch (_) {
-      setUser((pb.authStore.record as unknown as User) || null)
+    } catch (err) {
+      // Token morto/revogado no servidor (401/403/404 ao buscar o próprio
+      // registro): a sessão local é FANTASMA — limpa o authStore de verdade
+      // para o usuário relogar, em vez de manter um admin que não consegue
+      // salvar nada (causa do "erro ao salvar" persistente em /painel/site).
+      if (isAuthError(err)) {
+        pb.authStore.clear()
+        setUser(null)
+      } else {
+        // Erro de rede/outro: mantém o registro local (o app funciona offline).
+        setUser((pb.authStore.record as unknown as User) || null)
+      }
     } finally {
       setIsLoading(false)
     }

@@ -283,29 +283,131 @@ export async function loadRawSiteData(): Promise<Partial<SiteContent> | null> {
   }
 }
 
+/**
+ * Converte o erro bruto do PocketBase em mensagem clara para o toast do
+ * painel. Os códigos importam: no PocketBase, uma API rule que nega um
+ * UPDATE/GET devolve 404 ("não encontrado") e uma que nega um CREATE
+ * devolve 400 — sem isso o admin via só "erro ao salvar".
+ */
+function explainSaveError(err: unknown): Error {
+  const e = err as {
+    status?: number
+    message?: string
+    response?: { data?: Record<string, { message?: string }> }
+  } | null
+  const status = e?.status
+  if (status === 401) {
+    return new Error('Sua sessão expirou — saia da conta e entre novamente para salvar.')
+  }
+  if (status === 403 || status === 404) {
+    return new Error(
+      'O servidor recusou o salvamento: sessão expirada ou sem permissão "Página inicial". Saia e entre novamente; se persistir, peça ao dono a permissão da área.',
+    )
+  }
+  if (status === 400) {
+    const fieldMsgs = Object.values(e?.response?.data || {})
+      .map((d) => d?.message)
+      .filter(Boolean)
+    if (fieldMsgs.length > 0) return new Error(fieldMsgs.join(' '))
+    return new Error(
+      'O servidor recusou o salvamento (requisição inválida). Sua sessão pode ter expirado — saia e entre novamente.',
+    )
+  }
+  if (status === 0 || status === undefined) {
+    return new Error('Sem comunicação com o servidor. Verifique sua conexão e tente novamente.')
+  }
+  return new Error(e?.message || 'Falha ao salvar no servidor. Tente novamente.')
+}
+
+/**
+ * Verifica se a sessão atual ainda vale para ESCRITA, antes de tentar o save.
+ * Um token morto no servidor (backend recriado, sessão revogada) faz o
+ * PocketBase tratar o pedido como anônimo: GET do próprio usuário → 404 e
+ * toda escrita falha em API rule (PATCH → 404, POST → 400 "Failed to create
+ * record"). Detectar isso AQUI evita o ciclo PATCH 404 → POST 400 que o
+ * usuário via como "erro ao salvar" persistente em /painel/site.
+ */
+async function assertWritableSession(): Promise<void> {
+  const id = pb.authStore.record?.id
+  if (!pb.authStore.isValid || !id) {
+    throw new Error('Sua sessão expirou — saia da conta e entre novamente para salvar.')
+  }
+  try {
+    await pb.collection('users').getOne(id)
+  } catch (err: any) {
+    if (err?.status === 401 || err?.status === 403 || err?.status === 404) {
+      // Limpa a sessão fantasma: o authStore.onChange desloga a UI e o painel
+      // manda para o login, em vez de continuar exibindo um admin que não
+      // consegue salvar (nem acessar áreas) até o usuário recarregar.
+      pb.authStore.clear()
+      throw new Error(
+        'Sua sessão não é mais válida no servidor. Entre novamente na sua conta para salvar.',
+      )
+    }
+    // Erro de rede: deixa o fluxo do save tentar (e reportar) o que acontecer.
+  }
+}
+
 /** Salva o conteúdo no registro único (upsert) — só admin pelas rules. */
 export async function saveSiteContent(
   content: SiteContent,
   savedBy?: string,
 ): Promise<SiteSettingsRecord> {
-  let rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {})
-  try {
-    if (rows.items.length > 0) {
+  await assertWritableSession()
+
+  const payload = { data: content, saved_by: savedBy || '' }
+  const listRecords = () => pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {})
+
+  const rows = await listRecords().catch((err) => {
+    throw explainSaveError(err)
+  })
+  if (rows.items.length > 0) {
+    try {
       return await pb
         .collection('site_settings')
-        .update<SiteSettingsRecord>(rows.items[0].id, { data: content, saved_by: savedBy || '' })
+        .update<SiteSettingsRecord>(rows.items[0].id, payload)
+    } catch (err: any) {
+      if (err?.status !== 404) throw explainSaveError(err)
+      // PATCH 404 é AMBÍGUO: o registro pode ter sumido de verdade OU a regra
+      // de update negou (o PocketBase mascara negação de rule como 404 —
+      // típico de token de sessão morto). Reconsulta para decidir em vez de
+      // criar às cegas, o que devolvia 400 "Failed to create record" e o
+      // toast genérico que o usuário via.
+      const again = await listRecords().catch(() => null)
+      if (again && again.items.length > 0) {
+        if (again.items[0].id !== rows.items[0].id) {
+          // Outro registro apareceu (ambiente recriado): atualiza esse.
+          try {
+            return await pb
+              .collection('site_settings')
+              .update<SiteSettingsRecord>(again.items[0].id, payload)
+          } catch (e2) {
+            throw explainSaveError(e2)
+          }
+        }
+        // Registro ainda existe → o 404 foi a REGRA negando. Erro claro.
+        throw explainSaveError(err)
+      }
+      // Registro realmente sumiu → cai no create abaixo.
     }
-  } catch (err: any) {
-    // Registro sumiu (ou id de cache velho) entre o load e o save — típico
-    // quando o painel fica aberto enquanto o ambiente é recriado: o PATCH
-    // devolve 404 e o admin via "erro ao atualizar o conteúdo". Reconsulta
-    // e reenvia UMA vez; sem registro, cria.
-    if (err?.status !== 404) throw err
-    rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {})
   }
-  return pb
-    .collection('site_settings')
-    .create<SiteSettingsRecord>({ data: content, saved_by: savedBy || '' })
+  try {
+    return await pb.collection('site_settings').create<SiteSettingsRecord>(payload)
+  } catch (err: any) {
+    // Create falhou: pode ser outro admin criando o registro nesse intervalo.
+    // Última tentativa: reconsulta e atualiza o que existir.
+    const again = await listRecords().catch(() => null)
+    if (again && again.items.length > 0) {
+      try {
+        return await pb
+          .collection('site_settings')
+          .update<SiteSettingsRecord>(again.items[0].id, payload)
+      } catch (e2) {
+        throw explainSaveError(e2)
+      }
+    }
+    throw explainSaveError(err)
+  }
 }
 
 /**
