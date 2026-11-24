@@ -34,7 +34,7 @@ export default function ScrollToTop() {
         }
       }
       // Espera o paint da rota antes de medir a posição da seção.
-      requestAnimationFrame(() => attempt(8))
+      requestAnimationFrame(() => attempt(16))
       return
     }
 

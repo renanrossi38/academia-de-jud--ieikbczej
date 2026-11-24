@@ -33,7 +33,7 @@ export const HighlightsSection = () => {
   if (!hasMonth && !hasComp) return null
 
   return (
-    <section id="destaques" className="py-14 sm:py-20 bg-[#FAF6F0]">
+    <section id="destaques" className="py-14 sm:py-20 bg-[#FAF6F0] scroll-mt-24">
       <div className="container mx-auto px-4 max-w-6xl">
         {/* Cabeçalho no idioma da casa: etiqueta + divisor em pincelada */}
         <div className="flex flex-col items-center text-center mb-10">
