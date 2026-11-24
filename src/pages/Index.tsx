@@ -238,25 +238,6 @@ export default function Index() {
                 <CheckCircle2 className="w-4 h-4 text-[#A31B21]" /> {site.hero_chip2}
               </span>
             </div>
-
-            {/* CTAs do hero: primário vermelho (mesma linguagem do botão das
-                turmas) + secundário que rola até as turmas. Altura ≥ 44px no
-                mobile (alvo de toque), foco visível e feedback de toque. */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
-              <Link
-                to="/criar-conta"
-                className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-8 py-3 bg-[#C1272D] text-white text-sm font-bold rounded-lg shadow-sm hover:bg-[#A01E23] hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0] transition-all duration-200"
-              >
-                Quero me matricular
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <button
-                onClick={() => scrollToSection('turmas')}
-                className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/80 border border-[#1C1B1A]/15 text-[#1C1B1A] text-sm font-semibold rounded-lg hover:border-[#C1272D]/50 hover:bg-[#F7E4E2]/50 hover:text-[#A31B21] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0] transition-all duration-200"
-              >
-                Ver turmas
-              </button>
-            </div>
           </div>
 
           <div className="shrink-0 hidden md:flex items-center justify-center relative z-10">
