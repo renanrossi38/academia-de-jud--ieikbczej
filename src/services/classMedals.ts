@@ -1,10 +1,10 @@
-import { pb } from '@/lib/pocketbase/client'
+import pb from '@/lib/pocketbase/client'
 import { ClassMedal } from '@/types'
 
 /**
  * Medalhas de turmas infantis (collection class_medals, migration 0035).
- * - 'dorme_dorme': medalha levada pelo aluno no mês — vale só no mês vigente.
- * - 'fica_fica': aluno destaque do mês — aparece para sempre (⭐ permanente).
+ * - 'dorme_dorme': medalha levada pelo aluno no mês — vale só no mês concedido.
+ * - 'fica_fica': aluno destaque do mês — fica em destaque durante o mês seguinte ao concedido.
  */
 export type MedalKind = 'dorme_dorme' | 'fica_fica'
 

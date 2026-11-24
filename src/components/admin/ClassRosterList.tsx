@@ -22,8 +22,8 @@ const statusBtnClass: Record<AttendanceStatus, string> = {
 export interface RosterMedals {
   /** Alunos com medalha "dorme dorme" no mês vigente (🏅 — some quando o mês vira). */
   dormeDormeMesAtual: Set<string>
-  /** Alunos que já foram destaque "fica fica" em qualquer mês (⭐ — permanente). */
-  everFicaFica: Set<string>
+  /** Alunos em destaque "fica fica" — destaque visível durante o MÊS SEGUINTE ao concedido. */
+  ficaFicaDestaque: Set<string>
 }
 
 interface ClassRosterListProps {
@@ -46,8 +46,8 @@ function MedalIcons({ studentId, medals }: { studentId: string; medals?: RosterM
           🏅
         </span>
       )}
-      {medals.everFicaFica.has(studentId) && (
-        <span className="text-base leading-none" title="Aluno destaque — fica fica">
+      {medals.ficaFicaDestaque.has(studentId) && (
+        <span className="text-base leading-none" title="Aluno destaque do mês — fica fica">
           ⭐
         </span>
       )}

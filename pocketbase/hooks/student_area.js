@@ -360,8 +360,9 @@ routerAdd(
       // ---- Medalhas das turmas infantis (class_medals, migration 0035) ----
       // dormeDormeMesAtual: medalhas "dorme dorme" do MES VIGENTE (Brasília) —
       // quando o mês vira, o front simplesmente não as encontra mais aqui.
-      // everFicaFica: "fica fica" de QUALQUER mês — destaque permanente.
-      var medalsOut = { dormeDormeMesAtual: [], everFicaFica: [] }
+      // ficaFicaDestaqueMes: chave do MES em que o aluno está em destaque por
+      // "fica fica" — concedido no mês M ⇒ destaque durante M+1 apenas.
+      var medalsOut = { dormeDormeMesAtual: [], ficaFicaDestaqueMes: null }
       var mesVigente = chaveDoMes(nowB)
       var medalRows = $app.findRecordsByFilter(
         'class_medals',
@@ -380,7 +381,17 @@ routerAdd(
             medalsOut.dormeDormeMesAtual.push(medalMonth)
           }
         } else if (kind === 'fica_fica') {
-          medalsOut.everFicaFica.push(medalMonth)
+          // "YYYY-MM" seguinte ao concedido (M+1); destaque só nesse mês.
+          var partes = (medalMonth || '').split('-')
+          var anoM = Number(partes[0])
+          var mesM = Number(partes[1])
+          if (anoM > 0 && mesM >= 1 && mesM <= 12) {
+            var mesDestaque =
+              mesM === 12 ? String(anoM + 1) + '-01' : anoM + '-' + ('0' + (mesM + 1)).slice(-2)
+            if (mesDestaque === mesVigente) {
+              medalsOut.ficaFicaDestaqueMes = mesVigente
+            }
+          }
         }
       }
 
@@ -425,7 +436,7 @@ routerAdd(
         timeInBelt: '',
         medals: medalsOut,
         medalsDormeDormeMesAtual: medalsOut.dormeDormeMesAtual,
-        medalsEverFicaFica: medalsOut.everFicaFica,
+        medalsFicaFicaDestaqueMes: medalsOut.ficaFicaDestaqueMes,
         medalsCurrentMonth: mesVigente,
       }
     }

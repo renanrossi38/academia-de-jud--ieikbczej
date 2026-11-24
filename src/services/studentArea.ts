@@ -69,6 +69,8 @@ export interface StudentAreaBelt {
   belt: string
   promoted_at: string
   notes: string
+  /** Nota do exame de graduação (0–10, aceita meio ponto). Null quando não há nota. */
+  exam_score: number | null
 }
 
 export interface StudentAreaData {
@@ -82,6 +84,14 @@ export interface StudentAreaData {
   rankingPoints: number
   beltHistory: StudentAreaBelt[]
   currentBelt: string | null
+  /** Medalhas de turmas infantis: dorme dorme do mês vigente + mês de destaque fica fica. */
+  medals?: {
+    dormeDormeMesAtual: string[]
+    ficaFicaDestaqueMes: string | null
+  }
+  medalsDormeDormeMesAtual?: string[]
+  medalsFicaFicaDestaqueMes?: string | null
+  medalsCurrentMonth?: string
 }
 
 /** Mês "2026-11" → "novembro de 2026" (por extenso, pt-BR). */

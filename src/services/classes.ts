@@ -93,13 +93,12 @@ export const classesService = {
     const { cover, removeCover, ...rest } = input
     const needsForm = !!cover || !!removeCover
     if (!needsForm) {
-      const payload: UpdateClassInput = { ...rest }
-      if (typeof payload.name === 'string') payload.name = payload.name.trim()
-      if (typeof payload.schedule === 'string') payload.schedule = payload.schedule.trim()
-      if (payload.isKids !== undefined) {
-        payload.is_kids = payload.isKids
-        delete payload.isKids
-      }
+      const { isKids, ...payloadRest } = rest
+      const payload: Record<string, unknown> = { ...payloadRest }
+      if (typeof payload.name === 'string') payload.name = (payload.name as string).trim()
+      if (typeof payload.schedule === 'string')
+        payload.schedule = (payload.schedule as string).trim()
+      if (isKids !== undefined) payload.is_kids = isKids
       return pb.collection('classes').update<Class>(id, payload)
     }
 

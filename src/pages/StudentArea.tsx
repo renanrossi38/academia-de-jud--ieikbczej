@@ -388,6 +388,14 @@ export default function StudentArea() {
                       </span>
                     </div>
                   </div>
+                  {typeof belt.exam_score === 'number' && (
+                    <Badge
+                      className="text-[10px] font-bold border bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 shrink-0"
+                      title="Nota do exame de graduação"
+                    >
+                      Nota {String(belt.exam_score).replace('.', ',')}
+                    </Badge>
+                  )}
                   {idx === 0 && (
                     <Badge className="text-[10px] font-bold border bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20">
                       Atual
