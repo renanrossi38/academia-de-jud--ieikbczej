@@ -147,6 +147,13 @@ export function PixPaymentBlock({ kind, id, title, autoOpen, className }: PixPay
         </div>
       ) : (
         <>
+          <p className="text-[11px] text-[#6B6560] text-center leading-relaxed border-b border-[#E8E0D5] pb-2 mb-1">
+            O Pix é <strong className="text-[#1C1B1A]">
+              confirmado manualmente pela academia
+            </strong>{' '}
+            após o pagamento — o valor cai direto na conta da academia (não há integração bancária
+            automática).
+          </p>
           <div className="flex justify-center">
             {qrDataUrl && (
               <img
@@ -160,8 +167,9 @@ export function PixPaymentBlock({ kind, id, title, autoOpen, className }: PixPay
           {description && <p className="text-center text-[11px] text-[#6B6560]">{description}</p>}
 
           <p className="text-[11px] text-[#6B6560] text-center leading-relaxed">
-            Abra o app do seu banco, leia o QR ou cole o código Pix. Após pagar, a confirmação é
-            feita pela academia — não é automático.
+            Abra o app do seu banco, leia o QR ou cole o código Pix. Após o pagamento, o Pix é{' '}
+            <strong className="text-[#1C1B1A]">confirmado manualmente pela academia</strong> — a
+            confirmação não é automática.
           </p>
 
           <div className="flex gap-2">

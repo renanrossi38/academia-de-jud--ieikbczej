@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Plus,
   Package,
+  QrCode,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -657,6 +658,18 @@ export default function AdminOrders() {
                     <strong>Observações do cliente:</strong> {activeOrder.notes}
                   </div>
                 )}
+              </div>
+
+              {/* Nota de confirmação manual do Pix (combinado com o usuário) */}
+              <div className="flex items-start gap-2.5 rounded-xl border border-[#C1272D]/25 bg-[#FAF6F0]/70 p-3 text-[11px] text-[#6B6560] leading-relaxed">
+                <QrCode className="w-4 h-4 text-[#C1272D] shrink-0 mt-0.5" />
+                <span>
+                  Se o aluno pagar por <strong className="text-[#1C1B1A]">Pix</strong>, a
+                  confirmação é <strong className="text-[#1C1B1A]">manual</strong>: confira o
+                  comprovante e confirme aqui mudando o status do pedido (ex.: para{' '}
+                  <strong className="text-[#1C1B1A]">{STATUS_LABELS.confirmado}</strong>) — não há
+                  aviso automático do banco.
+                </span>
               </div>
 
               {/* Itens */}

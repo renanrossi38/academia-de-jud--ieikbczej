@@ -36,6 +36,12 @@ const KEY_SUBJECT = 'fee_overdue_subject'
 const KEY_TEMPLATE = 'fee_overdue_template'
 const KEY_WHATSAPP_TEMPLATE = 'fee_whatsapp_template'
 
+/** As duas chaves de app_settings que o hook pix_payload.js consome no servidor. */
+const KEY_PIX_KEY = 'pix_key'
+const KEY_PIX_RECEIVER_NAME = 'pix_receiver_name'
+/** Limite do BR Code para o campo 59 (nome do recebedor). */
+export const PIX_RECEIVER_NAME_MAX = 25
+
 /** Os dois templates de cobrança numa leitura só (usado pela ficha do aluno). */
 export type FeeTemplates = {
   email: FeeOverdueTemplate
@@ -119,11 +125,37 @@ export const appSettingsService = {
     }
   },
 
-  /**
-   * Lê os DOIS templates de cobrança numa leitura só (e-mail + WhatsApp, com
-   * os respectivos fallbacks) — o painel de Alunos usa para montar a mensagem
-   * pronta do wa.me sem duas idas ao servidor.
-   */
+  /** Lê a configuração Pix da academia (chaves pix_key / pix_receiver_name). */
+  async getPixConfig(): Promise<{ pixKey: string; receiverName: string; configured: boolean }> {
+    const records = await pb
+      .collection('app_settings')
+      .getFullList<AppSetting>({ filter: `key ~ "pix_"` })
+    const map: Record<string, string> = {}
+    for (const r of records) map[r.key] = r.value
+    const pixKey = map[KEY_PIX_KEY]?.trim() || ''
+    const receiverName = map[KEY_PIX_RECEIVER_NAME]?.trim() || ''
+    return { pixKey, receiverName, configured: pixKey !== '' && receiverName !== '' }
+  },
+
+  /** Salva a chave Pix e o nome do recebedor (upsert por chave, como os templates). */
+  async savePixConfig(pixKey: string, receiverName: string): Promise<void> {
+    const entries: Array<{ key: string; value: string }> = [
+      { key: KEY_PIX_KEY, value: pixKey },
+      { key: KEY_PIX_RECEIVER_NAME, value: receiverName },
+    ]
+    for (const entry of entries) {
+      const existing = await pb.collection('app_settings').getList<AppSetting>(1, 1, {
+        filter: `key = "${entry.key}"`,
+      })
+      if (existing.items.length > 0) {
+        await pb.collection('app_settings').update(existing.items[0].id, { value: entry.value })
+      } else {
+        await pb.collection('app_settings').create({ key: entry.key, value: entry.value })
+      }
+    }
+  },
+
+  /** Os DOIS templates de cobrança numa leitura só (e-mail + WhatsApp). */
   async getFeeTemplates(): Promise<FeeTemplates> {
     const [email, whatsappTemplate] = await Promise.all([
       this.getFeeOverdueTemplate(),

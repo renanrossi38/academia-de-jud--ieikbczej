@@ -2,13 +2,27 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Mail, MessageCircle, RotateCcw, Save, Settings, Info } from 'lucide-react'
+import {
+  Loader2,
+  Mail,
+  MessageCircle,
+  RotateCcw,
+  Save,
+  Settings,
+  Info,
+  QrCode,
+  HandCoins,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { AdminPageHeader, AdminPageLoader } from '@/components/admin/AdminPage'
-import { DEFAULT_FEE_OVERDUE_TEMPLATE, appSettingsService } from '@/services/appSettings'
+import {
+  DEFAULT_FEE_OVERDUE_TEMPLATE,
+  PIX_RECEIVER_NAME_MAX,
+  appSettingsService,
+} from '@/services/appSettings'
 import { DEFAULT_FEE_WHATSAPP_TEMPLATE } from '@/services/whatsapp'
 
 /**
@@ -35,23 +49,31 @@ export default function AdminEmailSettings() {
   const { toast } = useToast()
 
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState<'email' | 'whatsapp' | null>(null)
+  const [isSaving, setIsSaving] = useState<'email' | 'whatsapp' | 'pix' | null>(null)
   // E-mail
   const [subject, setSubject] = useState('')
   const [template, setTemplate] = useState('')
   // WhatsApp
   const [waTemplate, setWaTemplate] = useState('')
+  // Pix
+  const [pixKey, setPixKey] = useState('')
+  const [receiverName, setReceiverName] = useState('')
+  const [savedPix, setSavedPix] = useState({ pixKey: '', receiverName: '' })
 
   const load = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [tpl, waTpl] = await Promise.all([
+      const [tpl, waTpl, pix] = await Promise.all([
         appSettingsService.getFeeOverdueTemplate(),
         appSettingsService.getFeeWhatsappTemplate(),
+        appSettingsService.getPixConfig(),
       ])
       setSubject(tpl.subject)
       setTemplate(tpl.body)
       setWaTemplate(waTpl)
+      setPixKey(pix.pixKey)
+      setReceiverName(pix.receiverName)
+      setSavedPix({ pixKey: pix.pixKey, receiverName: pix.receiverName })
     } catch (err) {
       console.error('Erro ao carregar configurações de cobrança:', err)
       toast({
@@ -85,6 +107,8 @@ export default function AdminEmailSettings() {
 
   const emailDirty = subject.trim() !== '' && template.trim() !== ''
   const waDirty = waTemplate.trim() !== ''
+  const pixDirty =
+    pixKey.trim() !== savedPix.pixKey || receiverName.trim() !== savedPix.receiverName
 
   const handleSaveEmail = async () => {
     if (subject.trim() === '') {
@@ -152,6 +176,45 @@ export default function AdminEmailSettings() {
     }
   }
 
+  const handleSavePix = async () => {
+    if (pixKey.trim() === '') {
+      toast({
+        title: 'Chave Pix obrigatória',
+        description:
+          'Informe a chave Pix da academia (CPF/CNPJ, celular, e-mail ou chave aleatória) — é dela que o QR é gerado.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (receiverName.trim() === '') {
+      toast({
+        title: 'Nome do recebedor obrigatório',
+        description: 'É o nome que aparece para o aluno no app do banco (máx. 25 caracteres).',
+        variant: 'destructive',
+      })
+      return
+    }
+    setIsSaving('pix')
+    try {
+      await appSettingsService.savePixConfig(pixKey.trim(), receiverName.trim())
+      setSavedPix({ pixKey: pixKey.trim(), receiverName: receiverName.trim() })
+      toast({
+        title: 'Pix configurado',
+        description:
+          'Os QR Codes da Área do aluno e da confirmação de pedido passam a usar esta chave.',
+      })
+    } catch (err: any) {
+      console.error('Erro ao salvar configuração Pix:', err)
+      toast({
+        title: 'Erro ao salvar',
+        description: err?.message || 'Falha ao salvar no servidor. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(null)
+    }
+  }
+
   const handleReset = () => {
     setSubject(DEFAULT_FEE_OVERDUE_TEMPLATE.subject)
     setTemplate(DEFAULT_FEE_OVERDUE_TEMPLATE.body)
@@ -172,7 +235,7 @@ export default function AdminEmailSettings() {
         title="Configurações"
         breadcrumb="Configurações"
         breadcrumbTo="/painel/configuracoes"
-        description="Textos de aviso de mensalidade em atraso: e-mail (manual e automático) e WhatsApp."
+        description="Textos de aviso de mensalidade em atraso e pagamento via Pix."
       />
 
       <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-5 sm:p-6 space-y-6">
@@ -343,6 +406,93 @@ export default function AdminEmailSettings() {
           </div>
         </section>
 
+        {/* ── Pagamento via Pix ── */}
+        <section className="space-y-4 pt-4 border-t border-[#E8E0D5]">
+          <p className="font-serif font-bold text-sm text-[#1C1B1A] flex items-center gap-2">
+            <QrCode className="w-4 h-4 text-[#C1272D]" />
+            Pagamento via Pix
+          </p>
+
+          <div className="flex items-start gap-3 bg-[#FAF6F0] border border-[#E8E0D5] rounded-xl p-4">
+            <HandCoins className="w-4 h-4 shrink-0 mt-0.5 text-[#C1272D]" />
+            <div className="text-xs text-[#6B6560] leading-relaxed">
+              <p className="font-semibold text-[#1C1B1A] mb-1">Como funciona</p>
+              <p>
+                A chave abaixo gera o QR Code Pix (copia e cola) da{' '}
+                <strong className="text-[#1C1B1A]">Área do aluno</strong> e da{' '}
+                <strong className="text-[#1C1B1A]">confirmação de pedido</strong> — o valor cai
+                direto na conta da academia. A{' '}
+                <strong className="text-[#1C1B1A]">confirmação é manual</strong>: após o aluno
+                pagar, marque a mensalidade como paga no painel ou avance o status do pedido — os
+                bancos (incluindo o Nubank) não avisam automaticamente.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="pix-key"
+              className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
+            >
+              Chave Pix
+            </Label>
+            <Input
+              id="pix-key"
+              value={pixKey}
+              onChange={(e) => setPixKey(e.target.value)}
+              placeholder="CPF/CNPJ, celular, e-mail ou chave aleatória"
+              className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="pix-receiver-name"
+              className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
+            >
+              Nome do recebedor
+              <span className="ml-2 font-sans font-medium normal-case tracking-normal text-[#6B6560]">
+                ({receiverName.trim().length}/{PIX_RECEIVER_NAME_MAX} caracteres — limite do BR
+                Code)
+              </span>
+            </Label>
+            <Input
+              id="pix-receiver-name"
+              value={receiverName}
+              onChange={(e) => setReceiverName(e.target.value.slice(0, PIX_RECEIVER_NAME_MAX))}
+              placeholder="ex.: Academia Judô Tatsu"
+              maxLength={PIX_RECEIVER_NAME_MAX}
+              className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+            <Button
+              onClick={handleSavePix}
+              disabled={isSaving !== null || !pixDirty}
+              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+            >
+              {isSaving === 'pix' ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Salvar Pix
+                </>
+              )}
+            </Button>
+            <span className="sm:ml-auto inline-flex items-center gap-1.5 text-[11px] text-[#6B6560]">
+              <QrCode className="w-3.5 h-3.5" />
+              {savedPix.pixKey && savedPix.receiverName
+                ? 'Configurado — os blocos Pix já exibem o QR Code'
+                : 'Sem chave cadastrada, os blocos Pix mostram apenas um aviso'}
+            </span>
+          </div>
+        </section>
+
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-[#E8E0D5]">
           <Button
             onClick={handleReset}
@@ -354,7 +504,7 @@ export default function AdminEmailSettings() {
           </Button>
           <span className="sm:ml-auto inline-flex items-center gap-1.5 text-[11px] text-[#6B6560]">
             <Settings className="w-3.5 h-3.5" />
-            Salvos em app_settings — vale para e-mail e WhatsApp
+            Salvos em app_settings — vale para e-mail, WhatsApp e Pix
           </span>
         </div>
       </div>
