@@ -12,8 +12,14 @@ import {
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { GuardianContactButtons } from '@/components/admin/GuardianContactButtons'
 import { studentsService } from '@/services/students'
-import { feeStanding, monthlyFeesService, type OverdueNoticeResult } from '@/services/monthlyFees'
+import {
+  feeStanding,
+  monthlyFeesService,
+  type FeeStanding,
+  type OverdueNoticeResult,
+} from '@/services/monthlyFees'
 import { latestBeltMap } from '@/services/beltPromotions'
+import { enrolledStudentIds } from '@/services/classes'
 import {
   normalizarTelefone,
   mesCobrancaDeAluno,
@@ -82,6 +88,8 @@ export default function AdminStudents() {
 
   const [students, setStudents] = useState<Student[]>([])
   const [feesByStudent, setFeesByStudent] = useState<Record<string, MonthlyFee[]>>({})
+  /** Ids de alunos matriculados em pelo menos uma turma (class_students). */
+  const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -181,13 +189,29 @@ export default function AdminStudents() {
     }
   }, [])
 
+  // Matrículas (turmas): a regra de inadimplência definida pelo usuário só vale
+  // para quem está em PELO MENOS UMA turma — cliente só da loja nunca aparece
+  // como inadimplente, nem recebe cobrança.
+  const loadEnrolled = useCallback(async () => {
+    try {
+      setEnrolledIds(await enrolledStudentIds())
+    } catch (err) {
+      console.error('Erro ao carregar matrículas:', err)
+      // Silencioso: em caso de falha, mantém o último conjunto carregado
+    }
+  }, [])
+
   useEffect(() => {
     if (authLoading || !user || !isAdmin) return
     loadFees()
+    loadEnrolled()
     // Refetch ao voltar o foco da aba: cobre eventos SSE perdidos (aba em
     // background, queda de conexão) que deixariam o badge desatualizado.
     const onVisible = () => {
-      if (document.visibilityState === 'visible') loadFees()
+      if (document.visibilityState === 'visible') {
+        loadFees()
+        loadEnrolled()
+      }
     }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
@@ -195,7 +219,13 @@ export default function AdminStudents() {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [user, isAdmin, authLoading, loadFees])
+  }, [user, isAdmin, authLoading, loadFees, loadEnrolled])
+
+  // Tempo real: matrícula criada/removida na ficha (outra aba, admin) muda a
+  // situação dos badges na hora.
+  useRealtime('class_students', () => {
+    void loadEnrolled()
+  })
 
   // Tempo real nas mensalidades: atualização otimista imediata (marcar pagamento,
   // excluir lançamento) + refetch com debounce, que é a fonte da verdade.
@@ -236,7 +266,12 @@ export default function AdminStudents() {
   //    mês já vencido em aberto);
   //  - "Atrasados": pendência vencida OU — a partir do dia 15 — aluno ativo
   //    sem a mensalidade do mês corrente paga (mesmo sem lançamento);
-  //  - "sem lançamentos" = neutro, só antes do dia 15.
+  //  - "sem lançamentos" = neutro, só antes do dia 15;
+  //  - aluno SEM turma nenhuma nunca é inadimplente (regra do usuário: pode ser
+  //    só cliente da loja).
+  const standingOf = (student: Student, fees: MonthlyFee[]): FeeStanding =>
+    feeStanding(fees, new Date(), student.active, enrolledIds.has(student.id))
+
   const { upToDateCount, overdueCount } = useMemo(() => {
     let emDia = 0
     let atrasados = 0
@@ -245,33 +280,28 @@ export default function AdminStudents() {
       // Regra do dia 15: antes dela, "sem lançamentos" é neutro (não entra em
       // nenhum contador); a partir do dia 15, aluno ativo sem o mês corrente
       // pago já é inadimplente — mesmo sem lançamento algum.
-      if (feeStanding(fees, new Date(), s.active) === 'sem_lancamentos') continue
-      if (feeStanding(fees, new Date(), s.active) === 'inadimplente') atrasados += 1
+      if (standingOf(s, fees) === 'sem_lancamentos') continue
+      if (standingOf(s, fees) === 'inadimplente') atrasados += 1
       else emDia += 1
     }
     return { upToDateCount: emDia, overdueCount: atrasados }
-  }, [students, feesByStudent])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students, feesByStudent, enrolledIds])
 
   const feeBadgeFor = (studentId: string): { label: string; className: string } => {
     const fees = feesByStudent[studentId]
     const student = students.find((s) => s.id === studentId)
-    if (!fees || fees.length === 0) {
-      // A partir do dia 15, ativo sem lançamento nenhum já é inadimplente.
-      if (feeStanding(fees || [], new Date(), student?.active ?? true) === 'inadimplente') {
-        return {
-          label: 'Inadimplente',
-          className: 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20',
-        }
-      }
-      return {
-        label: 'sem lançamentos',
-        className: 'bg-[#F5F2EC] text-[#6B6560] border-[#E8E0D5]',
-      }
-    }
-    if (feeStanding(fees, new Date(), student?.active ?? true) === 'inadimplente') {
+    const standing = student ? standingOf(student, fees || []) : 'sem_lancamentos'
+    if (standing === 'inadimplente') {
       return {
         label: 'Inadimplente',
         className: 'bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20',
+      }
+    }
+    if (!fees || fees.length === 0 || standing === 'sem_lancamentos') {
+      return {
+        label: 'sem lançamentos',
+        className: 'bg-[#F5F2EC] text-[#6B6560] border-[#E8E0D5]',
       }
     }
     return {
@@ -303,11 +333,11 @@ export default function AdminStudents() {
     let count = 0
     for (const s of students) {
       const fees = feesByStudent[s.id] || []
-      if (feeStanding(fees, new Date(), s.active) === 'inadimplente' && (s.email || '').trim())
-        count += 1
+      if (standingOf(s, fees) === 'inadimplente' && (s.email || '').trim()) count += 1
     }
     return count
-  }, [students, feesByStudent])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students, feesByStudent, enrolledIds])
 
   // Template de WhatsApp de cobrança — carregado das configurações do painel
   // (Painel → Configurações) e recarregado junto com a página.
@@ -331,7 +361,7 @@ export default function AdminStudents() {
     const tel = normalizarTelefone(student.phone || '')
     if (!tel) return null
     const fees = feesByStudent[student.id] || []
-    if (feeStanding(fees, new Date(), student.active) !== 'inadimplente') return null
+    if (standingOf(student, fees) !== 'inadimplente') return null
     const mes = mesCobrancaDeAluno(
       fees,
       fees.filter((f) => f.status === 'pago').map((f) => f.reference_month),

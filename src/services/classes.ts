@@ -57,6 +57,19 @@ export const classLevelBadgeClass = (level?: string): string => {
   }
 }
 
+/**
+ * Conjunto de ids de alunos com PELO MENOS UMA matrícula (collection
+ * class_students) — um pedido só, para a regra de inadimplência definida pelo
+ * usuário: quem não está em nenhuma turma pode ser só cliente da loja e NUNCA
+ * aparece como inadimplente.
+ */
+export async function enrolledStudentIds(): Promise<Set<string>> {
+  const links = await pb.collection('class_students').getFullList<ClassStudent>({
+    filter: 'student != ""',
+  })
+  return new Set(links.map((l) => l.student))
+}
+
 export const classesService = {
   /** Todas as turmas (mais recentes primeiro). */
   async listClasses(): Promise<Class[]> {

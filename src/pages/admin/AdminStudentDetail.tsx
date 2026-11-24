@@ -234,6 +234,7 @@ export default function AdminStudentDetail() {
             studentName={student.name || 'Aluno'}
             classes={classes}
             studentActive={student.active}
+            studentEnrolled={classes.length > 0}
             studentPhone={student.phone || ''}
           />
           <FinancePanel student={student} orders={orders} itemsByOrder={itemsByOrder} />

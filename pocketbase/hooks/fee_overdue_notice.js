@@ -32,6 +32,10 @@
 //      due_date já passado) conta em qualquer dia ({mes} = reference_month);
 //   c) Mensalidade PAGA nunca é atrasada. Aluno INATIVO não entra na regra do
 //      dia 15 (uma pendência vencida antiga ainda conta).
+//   d) Aluno SEM MATRÍCULA em NENHUMA turma (collection class_students) NUNCA é
+//      destinatário — mesmo com pendência vencida: quem não treina pode ser só
+//      cliente da loja, e cobrar mensalidade dele ofende (regra do usuário,
+//      v0.0.43). Aluno com ao menos uma turma segue a/b/c exatamente como antes.
 // Alunos sem e-mail no cadastro são pulados, sem erro, e contados na resposta.
 //
 // FUSO: "hoje"/"este mês" aqui é sempre Brasília (UTC-3 o ano todo — o Brasil
@@ -226,10 +230,21 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
       .replace('T', ' ')
       .substring(0, 19) + '.000Z'
 
+  // Alunos com ao menos UMA matrícula (class_students) — mesma regra do painel
+  // (feeStanding): sem turma nenhuma, nunca é inadimplente e nunca é avisado.
+  var matriculados = {}
+  var vinculos = $app.findRecordsByFilter('class_students', '', '', 0, 0)
+  for (var v = 0; v < vinculos.length; v++) {
+    matriculados[vinculos[v].getString('student')] = true
+  }
+
   for (var i = 0; i < alunos.length; i++) {
     var student = alunos[i]
     var studentId = student.id
     var fees = pendentesByStudent[studentId] || []
+
+    // (d) sem turma nenhuma → nunca inadimplente, nunca avisado.
+    if (!matriculados[studentId]) continue
 
     var mesCobranca = null
     var feeParaMes = null
@@ -436,6 +451,10 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
       mesAtual +
       ' depois_do_dia15=' +
       depoisDoDia15 +
+      ' alunos=' +
+      alunos.length +
+      ' matriculados=' +
+      Object.keys(matriculados).length +
       ' enviados=' +
       sent +
       ' sem_email=' +
@@ -647,10 +666,21 @@ routerAdd(
         ] = true
       }
 
+      // Alunos com ao menos UMA matrícula (class_students) — mesma regra do
+      // painel (feeStanding): sem turma nenhuma, nunca é inadimplente.
+      var matriculados = {}
+      var vinculos = $app.findRecordsByFilter('class_students', '', '', 0, 0)
+      for (var v = 0; v < vinculos.length; v++) {
+        matriculados[vinculos[v].getString('student')] = true
+      }
+
       for (var i = 0; i < alunos.length; i++) {
         var student = alunos[i]
         var studentId = student.id
         var fees = pendentesByStudent[studentId] || []
+
+        // (d) sem turma nenhuma → nunca inadimplente, nunca avisado.
+        if (!matriculados[studentId]) continue
 
         var mesCobranca = null
         var feeParaMes = null
@@ -845,6 +875,10 @@ routerAdd(
           mesAtual +
           ' depois_do_dia15=' +
           depoisDoDia15 +
+          ' alunos=' +
+          alunos.length +
+          ' matriculados=' +
+          Object.keys(matriculados).length +
           ' enviados=' +
           sent +
           ' sem_email=' +

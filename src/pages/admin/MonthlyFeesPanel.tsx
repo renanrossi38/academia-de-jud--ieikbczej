@@ -85,6 +85,8 @@ export const MonthlyFeesPanel: React.FC<{
   refreshKey?: number
   /** Aluno ativo? A regra do dia 15 (inadimplência sem lançamento) vale só p/ ativos. */
   studentActive?: boolean
+  /** Aluno matriculado em pelo menos uma turma? Sem turma, nunca é inadimplente. */
+  studentEnrolled?: boolean
   /** Celular do aluno (campo phone do cadastro) — habilita o botão de WhatsApp. */
   studentPhone?: string
 }> = ({
@@ -93,6 +95,7 @@ export const MonthlyFeesPanel: React.FC<{
   classes,
   refreshKey = 0,
   studentActive = true,
+  studentEnrolled = true,
   studentPhone = '',
 }) => {
   const { toast } = useToast()
@@ -131,7 +134,7 @@ export const MonthlyFeesPanel: React.FC<{
     loadFees()
   })
 
-  const standing = feeStanding(fees, new Date(), studentActive)
+  const standing = feeStanding(fees, new Date(), studentActive, studentEnrolled)
   const standingMeta = STANDING_META[standing]
   const paidThisYear = paidTotalInYear(fees, new Date().getFullYear())
 

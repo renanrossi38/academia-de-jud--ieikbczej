@@ -59,19 +59,29 @@ export function isPastFeeDay15(now: Date = new Date()): boolean {
  *
  * `active` = aluno ativo? A regra do dia 15 vale só para ativos; a pendência
  * vencida conta para qualquer aluno (alinhado ao hook, que não filtra status).
+ *
+ * `enrolled` = aluno matriculado em PELO MENOS UMA turma (collection
+ * class_students)? Regra definida pelo usuário: quem não está em nenhuma turma
+ * pode ser só cliente da loja — NUNCA é inadimplente, nem por pendência
+ * vencida, nem pela regra do dia 15. "sem_lancamentos" quando não tem
+ * mensalidade lançada; "em_dia" quando tem. Quem tem turma segue a regra acima
+ * exatamente como antes.
  */
 export function feeStanding(
   fees: MonthlyFee[],
   now: Date = new Date(),
   active = true,
+  enrolled = true,
 ): FeeStanding {
   const month = monthKeyOf(now)
   const hasOverdue = fees.some(
     (f) => f.status === 'pendente' && (isOverdue(f, now) || f.reference_month < month),
   )
-  if (hasOverdue) return 'inadimplente'
-  const currentMonthPaid = fees.some((f) => f.reference_month === month && f.status === 'pago')
-  if (active && isPastFeeDay15(now) && !currentMonthPaid) return 'inadimplente'
+  if (enrolled) {
+    if (hasOverdue) return 'inadimplente'
+    const currentMonthPaid = fees.some((f) => f.reference_month === month && f.status === 'pago')
+    if (active && isPastFeeDay15(now) && !currentMonthPaid) return 'inadimplente'
+  }
   if (fees.length === 0) return 'sem_lancamentos'
   return 'em_dia'
 }
