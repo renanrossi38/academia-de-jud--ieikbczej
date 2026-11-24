@@ -78,6 +78,31 @@ export function normalizarTelefone(telefone: string): string {
   return `55${digitos}`
 }
 
+/**
+ * Dígitos do telefone do responsável, quando VÁLIDO (10 ou 11 dígitos com DDD,
+ * mesma regra do cadastro — guardianPhoneError). Números já salvos com o
+ * código do país (55 + 10/11 = 12/13 dígitos) também são aceitos.
+ * Vazio/inválido devolve "" — o chamador NÃO mostra os botões de contato.
+ */
+export function digitosTelefoneValido(telefone: string): string {
+  const digitos = String(telefone || '').replace(/\D+/g, '')
+  if (digitos.length === 12 || digitos.length === 13) {
+    return digitos.startsWith('55') ? digitos : ''
+  }
+  if (digitos.length === 10 || digitos.length === 11) return `55${digitos}`
+  return ''
+}
+
+/** Link tel: para o discador ligar para o responsável (entrada sempre normalizada). */
+export function telUrlResponsavel(digitosCom55: string): string {
+  return `tel:+${digitosCom55}`
+}
+
+/** URL do wa.me SEM mensagem — abre a conversa com o responsável em nova aba. */
+export function waMeUrlResponsavel(digitosCom55: string): string {
+  return `https://wa.me/${digitosCom55}`
+}
+
 /** Dia de hoje em Brasília ("YYYY-MM-DD"), MESMA fórmula do monthlyFees. */
 function brasiliaDayKey(now: Date = new Date()): string {
   const b = new Date(now.getTime() - 3 * 60 * 60 * 1000)

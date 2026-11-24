@@ -10,6 +10,7 @@ import {
   birthDateLabel,
 } from '@/components/admin/StudentDialogs'
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
+import { GuardianContactButtons } from '@/components/admin/GuardianContactButtons'
 import { studentsService } from '@/services/students'
 import { feeStanding, monthlyFeesService, type OverdueNoticeResult } from '@/services/monthlyFees'
 import { latestBeltMap } from '@/services/beltPromotions'
@@ -679,7 +680,10 @@ export default function AdminStudents() {
                               {student.guardian_name}
                             </span>
                             {student.guardian_phone && (
-                              <span className="block text-[10px]">{student.guardian_phone}</span>
+                              <span className="flex items-center gap-1.5 text-[10px]">
+                                {student.guardian_phone}
+                                <GuardianContactButtons phone={student.guardian_phone} />
+                              </span>
                             )}
                           </span>
                         ) : (
@@ -856,6 +860,7 @@ export default function AdminStudents() {
                           Resp.: {student.guardian_name}
                           {student.guardian_phone ? ` · ${student.guardian_phone}` : ''}
                         </span>
+                        <GuardianContactButtons phone={student.guardian_phone} />
                       </p>
                     )}
                   </div>
