@@ -476,13 +476,13 @@ export default function Index() {
         </section>
       )}
 
+      {/* Destaques — medalha fica fica vigente + destaques de competição (some se vazio) */}
+      <HighlightsSection />
+
       {/* Instagram: post mais recente em destaque + grade (some sozinho se falhar) */}
       <div id="instagram" className="scroll-mt-24">
         <InstagramSection />
       </div>
-
-      {/* Destaques — medalha fica fica vigente + destaques de competição (some se vazio) */}
-      <HighlightsSection />
 
       {/* Como funciona */}
       <section id="como-funciona" className="bg-white border-y border-[#E8E0D5] py-14 scroll-mt-24">
