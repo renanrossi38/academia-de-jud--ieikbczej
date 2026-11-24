@@ -248,6 +248,21 @@ export function mergeSiteContent(saved: Partial<SiteContent> | null | undefined)
  * defaults. Não lança: qualquer erro (rede, regra, JSON corrompido) devolve
  * os defaults, e a home segue funcionando.
  */
+export async function loadSiteContent(): Promise<SiteContent> {
+  try {
+    const rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {
+      sort: '-updated',
+    })
+    const raw = rows.items[0]?.data
+    if (!raw) return { ...DEFAULT_SITE_CONTENT }
+    const parsed = typeof raw === 'string' ? (JSON.parse(raw) as Partial<SiteContent>) : raw
+    return mergeSiteContent(parsed)
+  } catch (err) {
+    console.error('Erro ao carregar conteúdo da home (usando padrão):', err)
+    return { ...DEFAULT_SITE_CONTENT }
+  }
+}
+
 /**
  * Lê o JSON BRUTO salvo no registro único de site_settings, SEM mesclar com os
  * defaults — para quem precisa distinguir "campo vazio no painel" de "default"
@@ -268,31 +283,25 @@ export async function loadRawSiteData(): Promise<Partial<SiteContent> | null> {
   }
 }
 
-export async function loadSiteContent(): Promise<SiteContent> {
-  try {
-    const rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {
-      sort: '-updated',
-    })
-    const raw = rows.items[0]?.data
-    if (!raw) return { ...DEFAULT_SITE_CONTENT }
-    const parsed = typeof raw === 'string' ? (JSON.parse(raw) as Partial<SiteContent>) : raw
-    return mergeSiteContent(parsed)
-  } catch (err) {
-    console.error('Erro ao carregar conteúdo da home (usando padrão):', err)
-    return { ...DEFAULT_SITE_CONTENT }
-  }
-}
-
 /** Salva o conteúdo no registro único (upsert) — só admin pelas rules. */
 export async function saveSiteContent(
   content: SiteContent,
   savedBy?: string,
 ): Promise<SiteSettingsRecord> {
-  const rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {})
-  if (rows.items.length > 0) {
-    return pb
-      .collection('site_settings')
-      .update<SiteSettingsRecord>(rows.items[0].id, { data: content, saved_by: savedBy || '' })
+  let rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {})
+  try {
+    if (rows.items.length > 0) {
+      return await pb
+        .collection('site_settings')
+        .update<SiteSettingsRecord>(rows.items[0].id, { data: content, saved_by: savedBy || '' })
+    }
+  } catch (err: any) {
+    // Registro sumiu (ou id de cache velho) entre o load e o save — típico
+    // quando o painel fica aberto enquanto o ambiente é recriado: o PATCH
+    // devolve 404 e o admin via "erro ao atualizar o conteúdo". Reconsulta
+    // e reenvia UMA vez; sem registro, cria.
+    if (err?.status !== 404) throw err
+    rows = await pb.collection('site_settings').getList<SiteSettingsRecord>(1, 1, {})
   }
   return pb
     .collection('site_settings')
@@ -320,4 +329,35 @@ export function useSiteContent(): SiteContent {
   })
 
   return content
+}
+
+/**
+ * Hook do PAINEL (/painel/site): o editor precisa distinguir "campo deixado
+ * vazio" de "default" — o painel abre com o JSON BRUTO salvo (caindo nos
+ * defaults só onde o registro nem existe ainda), e o save é o upsert com
+ * retry: se o registro sumiu entre o load e o clique em Salvar (ou o id
+ * em cache ficou velho), reconsulta e reenvia em vez de falhar com 404.
+ */
+export function useRawSiteContent(): {
+  raw: Partial<SiteContent> | null
+  isLoading: boolean
+  refresh: () => Promise<void>
+} {
+  const [raw, setRaw] = useState<Partial<SiteContent> | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const refresh = useCallback(async () => {
+    setRaw(await loadRawSiteData())
+    setIsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  useRealtime<SiteSettingsRecord>('site_settings', () => {
+    refresh()
+  })
+
+  return { raw, isLoading, refresh }
 }
