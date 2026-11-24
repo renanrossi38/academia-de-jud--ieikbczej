@@ -17,6 +17,7 @@ import {
   Users,
   GraduationCap,
   Calendar,
+  Home,
   Settings,
   Mail,
   Package,
@@ -27,32 +28,62 @@ import {
   CalendarCheck,
 } from 'lucide-react'
 import { useSiteContent } from '@/services/siteSettings'
-import { hasArea, ADMIN_AREA_LABELS, AdminArea } from '@/lib/adminAreas'
+import { hasArea, AdminArea } from '@/lib/adminAreas'
 import { AdminRoleBadge } from '@/components/admin/AdminRoleBadge'
 
 const JUDO_KANJI = '\u67D4\u9053' // 柔道 — "o caminho suave" (identidade do rodapé)
 
-/** Rotas do painel por área (o menu do admin respeita as permissões). */
-const AREA_ROUTES: Record<AdminArea, string> = {
-  alunos: '/painel/alunos',
-  mensalidades: '/painel/alunos',
-  presencas: '/painel/turmas',
-  produtos: '/painel/produtos',
-  pedidos: '/painel/pedidos',
-  financeiro: '/painel/financeiro',
-  site: '/painel/site',
-}
-
-/** Ícone de cada área do painel no menu (mesma linguagem visual do painel). */
-const AREA_ICONS: Record<AdminArea, React.ReactNode> = {
-  alunos: <UsersRound className="w-4 h-4" />,
-  mensalidades: <Wallet className="w-4 h-4" />,
-  presencas: <CalendarCheck className="w-4 h-4" />,
-  produtos: <Package className="w-4 h-4" />,
-  pedidos: <ShoppingBag className="w-4 h-4" />,
-  financeiro: <BarChart3 className="w-4 h-4" />,
-  site: <Settings className="w-4 h-4" />,
-}
+/**
+ * Itens de navegação do painel (o menu do admin respeita as permissões da
+ * área). A área "site" abre DUAS páginas distintas de propósito claro:
+ * "Página inicial" (conteúdo da home) e "Configurações" (mensagens de
+ * cobrança + Pagamento via Pix).
+ */
+const PANEL_NAV: { area: AdminArea; to: string; icon: React.ReactNode; label: string }[] = [
+  {
+    area: 'alunos',
+    to: '/painel/alunos',
+    icon: <UsersRound className="w-4 h-4" />,
+    label: 'Alunos',
+  },
+  {
+    area: 'mensalidades',
+    to: '/painel/alunos',
+    icon: <Wallet className="w-4 h-4" />,
+    label: 'Mensalidades',
+  },
+  {
+    area: 'presencas',
+    to: '/painel/turmas',
+    icon: <CalendarCheck className="w-4 h-4" />,
+    label: 'Presenças e Ranking',
+  },
+  {
+    area: 'produtos',
+    to: '/painel/produtos',
+    icon: <Package className="w-4 h-4" />,
+    label: 'Loja (Produtos)',
+  },
+  {
+    area: 'pedidos',
+    to: '/painel/pedidos',
+    icon: <ShoppingBag className="w-4 h-4" />,
+    label: 'Pedidos',
+  },
+  {
+    area: 'financeiro',
+    to: '/painel/financeiro',
+    icon: <BarChart3 className="w-4 h-4" />,
+    label: 'Financeiro',
+  },
+  { area: 'site', to: '/painel/site', icon: <Home className="w-4 h-4" />, label: 'Página inicial' },
+  {
+    area: 'site',
+    to: '/painel/configuracoes',
+    icon: <Settings className="w-4 h-4" />,
+    label: 'Configurações',
+  },
+]
 
 /** Âncoras da home (rolagem suave descontando o header — homeAnchors.tsx). */
 const HOME_SECTIONS: { href: string; label: string }[] = [
@@ -85,16 +116,11 @@ export const Header: React.FC = () => {
     navigate('/')
   }
 
-  /** Áreas do painel liberadas para o admin logado (ordem oficial). */
-  const allowedAreas: AdminArea[] = [
-    'alunos',
-    'mensalidades',
-    'presencas',
-    'produtos',
-    'pedidos',
-    'financeiro',
-    'site',
-  ].filter((a) => hasArea(a as AdminArea)) as AdminArea[]
+  /**
+   * Itens de navegação liberados para o admin logado (a permissão da área
+   * controla o par "Página inicial" + "Configurações" juntos).
+   */
+  const allowedNav = PANEL_NAV.filter((item) => hasArea(item.area))
 
   return (
     <header className="sticky top-0 z-40 bg-[#FAF6F0]/95 backdrop-blur-sm border-b border-[#E8E0D5] shadow-xs">
@@ -154,16 +180,16 @@ export const Header: React.FC = () => {
                     className="absolute right-0 top-full mt-1 w-60 bg-white rounded-xl border border-[#E8E0D5] shadow-lg py-1.5 z-50"
                     role="menu"
                   >
-                    {allowedAreas.map((area) => (
+                    {allowedNav.map((item) => (
                       <Link
-                        key={area}
-                        to={AREA_ROUTES[area]}
+                        key={item.to}
+                        to={item.to}
                         role="menuitem"
                         className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
                         onClick={() => setPanelOpen(false)}
                       >
-                        <span className="text-[#C1272D]">{AREA_ICONS[area]}</span>
-                        {ADMIN_AREA_LABELS[area]}
+                        <span className="text-[#C1272D]">{item.icon}</span>
+                        {item.label}
                       </Link>
                     ))}
                     <div className="border-t border-[#E8E0D5] mt-1.5 pt-1.5">
@@ -179,13 +205,13 @@ export const Header: React.FC = () => {
                         </Link>
                       )}
                       <Link
-                        to="/painel/pedidos"
+                        to="/painel/configuracoes"
                         role="menuitem"
                         className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
                         onClick={() => setPanelOpen(false)}
                       >
                         <Mail className="w-4 h-4 text-[#C1272D]" />
-                        Avisos e E-mails
+                        Mensagens de cobrança
                       </Link>
                     </div>
                   </div>
@@ -341,15 +367,15 @@ export const Header: React.FC = () => {
                 <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#9A948C]">
                   Painel
                 </p>
-                {allowedAreas.map((area) => (
+                {allowedNav.map((item) => (
                   <Link
-                    key={area}
-                    to={AREA_ROUTES[area]}
+                    key={item.to}
+                    to={item.to}
                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-[#1C1B1A] hover:bg-[#F7E4E2]/60 hover:text-[#C1272D] rounded-lg transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
-                    <span className="text-[#C1272D]">{AREA_ICONS[area]}</span>
-                    {ADMIN_AREA_LABELS[area]}
+                    <span className="text-[#C1272D]">{item.icon}</span>
+                    {item.label}
                   </Link>
                 ))}
                 {isOwner && (

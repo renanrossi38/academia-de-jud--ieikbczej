@@ -8,7 +8,7 @@ import {
   type SiteHowStep,
 } from '@/services/siteSettings'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import {
   AlignLeft,
@@ -23,6 +23,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  Settings,
   Sparkles,
   Trash2,
 } from 'lucide-react'
@@ -190,7 +191,7 @@ export default function AdminSiteSettings() {
         title="Página inicial"
         breadcrumb="Página inicial"
         breadcrumbTo="/painel/site"
-        description="Edite os textos, o endereço, os horários e o contato que aparecem na home pública. Ao salvar, a home atualiza na hora."
+        description="Edite os textos, o endereço, os horários e o contato que aparecem na home pública. Ao salvar, a home atualiza na hora. As mensagens de cobrança e a chave Pix ficam em “Configurações”."
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -230,7 +231,16 @@ export default function AdminSiteSettings() {
             O conteúdo salvo aqui aparece na{' '}
             <strong className="text-[#1C1B1A]">home pública</strong> (hero, seção "Como funciona") e
             no <strong className="text-[#1C1B1A]">rodapé</strong> (endereço, contato e horários).
-            Campos deixados em branco mostram o texto padrão atual.
+            Campos deixados em branco mostram o texto padrão atual. Esta página não mexe em
+            mensagens de cobrança nem no Pix — isso fica em{' '}
+            <Link
+              to="/painel/configuracoes"
+              className="inline-flex items-center gap-1 font-semibold text-[#C1272D] hover:underline"
+            >
+              <Settings className="w-3 h-3" />
+              Configurações
+            </Link>
+            .
           </p>
         </div>
 

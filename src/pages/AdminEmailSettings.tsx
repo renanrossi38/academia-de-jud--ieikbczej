@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import { Link } from 'react-router-dom'
 import {
   Loader2,
   Mail,
@@ -12,6 +13,7 @@ import {
   Info,
   QrCode,
   HandCoins,
+  Home,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -235,7 +237,7 @@ export default function AdminEmailSettings() {
         title="Configurações"
         breadcrumb="Configurações"
         breadcrumbTo="/painel/configuracoes"
-        description="Textos de aviso de mensalidade em atraso e pagamento via Pix."
+        description="Textos de aviso de mensalidade em atraso e pagamento via Pix. O conteúdo da página inicial fica em “Página inicial”."
       />
 
       <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-5 sm:p-6 space-y-6">
@@ -425,6 +427,17 @@ export default function AdminEmailSettings() {
                 <strong className="text-[#1C1B1A]">confirmação é manual</strong>: após o aluno
                 pagar, marque a mensalidade como paga no painel ou avance o status do pedido — os
                 bancos (incluindo o Nubank) não avisam automaticamente.
+              </p>
+              <p className="mt-2">
+                O restante do site (textos, horários e contato da home) se edita na página{' '}
+                <Link
+                  to="/painel/site"
+                  className="inline-flex items-center gap-1 font-semibold text-[#C1272D] hover:underline"
+                >
+                  <Home className="w-3 h-3" />
+                  Página inicial
+                </Link>
+                .
               </p>
             </div>
           </div>

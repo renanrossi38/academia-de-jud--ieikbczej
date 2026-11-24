@@ -23,6 +23,7 @@ const PANEL_LINKS = [
   { to: '/painel/produtos', label: 'Loja' },
   { to: '/painel/pedidos', label: 'Pedidos' },
   { to: '/painel/financeiro', label: 'Financeiro' },
+  { to: '/painel/site', label: 'Página inicial' },
   { to: '/painel/configuracoes', label: 'Configurações' },
 ]
 

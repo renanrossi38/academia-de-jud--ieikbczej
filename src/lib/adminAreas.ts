@@ -32,7 +32,10 @@ export const ADMIN_AREA_LABELS: Record<AdminArea, string> = {
   produtos: 'Loja (Produtos)',
   pedidos: 'Pedidos',
   financeiro: 'Financeiro',
-  site: 'Site e Configurações',
+  // A permissão "site" abre DUAS páginas separadas no menu, com propósito
+  // claro: "Página inicial" (/painel/site, conteúdo da home) e
+  // "Configurações" (/painel/configuracoes, mensagens de cobrança + Pix).
+  site: 'Página inicial',
 }
 
 export const ADMIN_AREA_DESCRIPTIONS: Record<AdminArea, string> = {
@@ -42,7 +45,7 @@ export const ADMIN_AREA_DESCRIPTIONS: Record<AdminArea, string> = {
   produtos: 'Produtos, variações e estoque da loja',
   pedidos: 'Pedidos da loja e status de entrega',
   financeiro: 'Receitas, despesas e relatórios anuais',
-  site: 'Conteúdo do site, templates e integrações',
+  site: 'Conteúdo da página inicial e configurações de cobrança/Pix (duas páginas)',
 }
 
 // Valores aceitos pelo select do banco (admin_permissions em users) —
