@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T15:27:31.071Z",
+  "generatedAt": "2026-11-24T15:42:09.768Z",
   "collections": [
     {
       "name": "users",
@@ -572,6 +572,12 @@
         {
           "name": "guardian_email",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "photo",
+          "type": "file",
           "required": false,
           "system": false
         }
@@ -1423,6 +1429,59 @@
         "CREATE UNIQUE INDEX idx_class_medals_unique ON class_medals (class, student, month, kind)",
         "CREATE INDEX idx_class_medals_class_month ON class_medals (class, month)"
       ]
+    },
+    {
+      "name": "student_highlights",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "student",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "students"
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "month",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_student_highlights_active ON student_highlights (active)"]
     }
   ]
 }
