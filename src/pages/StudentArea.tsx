@@ -16,6 +16,7 @@ import type { Belt, OrderStatus } from '@/types'
 import { paymentMethodLabel } from '@/services/monthlyFees'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
 import { OrderTrackingTimeline } from '@/components/orderTrackingTimeline/OrderTrackingTimeline'
+import { PixPaymentBlock } from '@/components/PixPaymentBlock'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Wallet, ShoppingBag, CalendarCheck, Trophy, Award, KeyRound } from 'lucide-react'
@@ -131,10 +132,15 @@ export default function StudentArea() {
   }
 
   const paidFees = data?.paidFees ?? []
+  const pendingFees = data?.pendingFees ?? []
   const orders = (data?.orders ?? []).filter((o) => o.status !== 'cancelado')
   const beltHistory = data?.beltHistory ?? []
   const hasAny =
-    paidFees.length > 0 || orders.length > 0 || months.length > 0 || beltHistory.length > 0
+    paidFees.length > 0 ||
+    pendingFees.length > 0 ||
+    orders.length > 0 ||
+    months.length > 0 ||
+    beltHistory.length > 0
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
@@ -201,6 +207,26 @@ export default function StudentArea() {
       )}
 
       <div className="space-y-6">
+        {/* Mensalidades pendentes — botão "Pagar com Pix" (confirmação manual) */}
+        <SectionCard
+          title="Mensalidades em aberto"
+          icon={<Wallet className="w-4 h-4 text-[#C1272D]" />}
+          empty={pendingFees.length === 0}
+          emptyText="Nenhuma mensalidade em aberto — você está em dia! 🎉"
+        >
+          <div className="divide-y divide-[#E8E0D5]">
+            {pendingFees.map((fee) => (
+              <PixPaymentBlock
+                key={fee.id}
+                kind="mensalidade"
+                id={fee.id}
+                title={`Pagar mensalidade de ${mesPorExtenso(fee.reference_month)}`}
+                className="py-3"
+              />
+            ))}
+          </div>
+        </SectionCard>
+
         {/* Mensalidades pagas */}
         <SectionCard
           title="Mensalidades pagas"
@@ -275,6 +301,13 @@ export default function StudentArea() {
                     )
                   })}
                 </div>
+
+                {/* Pix pendente: pedido aguardando confirmação (manual pela academia) */}
+                {['novo', 'confirmado', 'em_preparacao', 'pronto'].includes(order.status) && (
+                  <div className="mt-3">
+                    <PixPaymentBlock kind="pedido" id={order.id} title="Pagar pedido com Pix" />
+                  </div>
+                )}
 
                 {/* Rastreio do pedido (status + etapas do admin, estilo Correios) */}
                 <div className="mt-3 pt-3 border-t border-[#E8E0D5]/80">

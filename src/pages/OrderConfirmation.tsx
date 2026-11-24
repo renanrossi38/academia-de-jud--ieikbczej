@@ -4,6 +4,7 @@ import { ordersService } from '@/services/orders'
 import { Order, OrderItem } from '@/types'
 import { formatCustomAnswers } from '@/lib/customAnswers'
 import { HankoStamp, OfficialLogo } from '@/components/HankoStamp'
+import { PixPaymentBlock } from '@/components/PixPaymentBlock'
 import { Button } from '@/components/ui/button'
 import {
   ArrowLeft,
@@ -110,6 +111,13 @@ export default function OrderConfirmation() {
             disponibilidade e combinar o pagamento.
           </p>
         </div>
+
+        {/* Pix: QR + copia-e-cola do total (confirmação manual pela academia) */}
+        {order.status !== 'cancelado' && (
+          <div className="mt-6">
+            <PixPaymentBlock kind="pedido" id={order.id} title="Pagar com Pix" />
+          </div>
+        )}
 
         {/* Order status banner */}
         <div className="mt-6 p-3 rounded-lg bg-[#FAF6F0] border border-[#E8E0D5] flex items-center justify-between text-xs">

@@ -60,6 +60,7 @@ routerAdd(
         return {
           student: null,
           paidFees: [],
+          pendingFees: [],
           orders: [],
           attendance: [],
           rankingPosition: null,
@@ -73,11 +74,13 @@ routerAdd(
       var student = students[0]
       var studentId = student.id
 
-      // ---- Mensalidades PAGAS (mensalidades do aluno inteiras: é dele) ----
+      // ---- Mensalidades: pagas + pendentes/atrasadas (o front oferece o Pix
+      //      das pendentes; confirmação manual pela academia) ----
       var paidFees = []
+      var pendingFees = []
       var fees = $app.findRecordsByFilter(
         'monthly_fees',
-        'student = {:sid} && status = "pago"',
+        'student = {:sid}',
         '-reference_month',
         0,
         0,
@@ -85,13 +88,19 @@ routerAdd(
       )
       for (var i = 0; i < fees.length; i++) {
         var f = fees[i]
-        paidFees.push({
+        var feeOut = {
           id: f.id,
           reference_month: f.getString('reference_month'),
           amount: f.getFloat('amount'),
           paid_at: f.getDateTime('paid_at') ? String(f.getDateTime('paid_at')) : '',
           payment_method: f.getString('payment_method'),
-        })
+          status: f.getString('status'),
+        }
+        if (f.getString('status') === 'pago') {
+          paidFees.push(feeOut)
+        } else {
+          pendingFees.push(feeOut)
+        }
       }
 
       // ---- Rastreio do pedido (estilo Correios) -------------------------------
@@ -425,6 +434,7 @@ routerAdd(
           active: student.getBool('active'),
         },
         paidFees: paidFees,
+        pendingFees: pendingFees,
         orders: orders,
         attendance: attendance,
         attendanceMonth: attendanceMonth,

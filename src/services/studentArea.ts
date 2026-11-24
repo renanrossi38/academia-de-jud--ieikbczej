@@ -4,7 +4,6 @@ import pb from '@/lib/pocketbase/client'
  * Área do aluno — dados agregados pelo pb_hook GET /backend/v1/student-area.
  *
  * O front NÃO consegue montar isto sozinho: monthly_fees, belt_promotions e
- * points_entries são admin-only, e o % de presença precisa dos DIAS COM
  * CHAMADA da turma e a posição do ranking precisa do conjunto de todos os
  * alunos. A rota exige login e resolve o aluno via students.user.
  */
@@ -15,7 +14,11 @@ export interface StudentAreaFee {
   amount: number
   paid_at: string
   payment_method: string // pix | dinheiro | cartao | ''
+  status: string // pago | pendente | atrasado...
 }
+
+/** Mensalidade pendente/atrasada (a que oferece "Pagar com Pix"). */
+export type StudentAreaPendingFee = StudentAreaFee
 
 export interface StudentAreaOrderItem {
   product_name: string
@@ -76,6 +79,8 @@ export interface StudentAreaBelt {
 export interface StudentAreaData {
   student: { id: string; name: string; belt: string; active: boolean } | null
   paidFees: StudentAreaFee[]
+  /** Mensalidades pendentes/atrasadas — oferecem "Pagar com Pix". */
+  pendingFees?: StudentAreaFee[]
   orders: StudentAreaOrder[]
   attendance: StudentAreaAttendance[]
   attendanceMonth: StudentAreaAttendanceMonth[]
