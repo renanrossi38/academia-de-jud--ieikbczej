@@ -51,6 +51,8 @@ export interface Student {
   guardian_name?: string
   guardian_phone?: string
   guardian_email?: string
+  /** Foto do aluno (file único, migration 0039) — usada nos destaques. */
+  photo?: string
   active: boolean
   /** Conta de acesso ao site (users), quando já criada. */
   user?: string

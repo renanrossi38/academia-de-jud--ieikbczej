@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T15:42:09.768Z",
+  "generatedAt": "2026-11-24T16:01:48.960Z",
   "collections": [
     {
       "name": "users",
@@ -92,7 +92,8 @@
             "produtos",
             "pedidos",
             "financeiro",
-            "site"
+            "site",
+            "destaques"
           ]
         }
       ],
@@ -1479,6 +1480,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "photo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sort",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_student_highlights_active ON student_highlights (active)"]

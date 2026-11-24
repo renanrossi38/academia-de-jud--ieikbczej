@@ -10,6 +10,7 @@ export type AdminArea =
   | 'alunos'
   | 'mensalidades'
   | 'presencas'
+  | 'destaques'
   | 'produtos'
   | 'pedidos'
   | 'financeiro'
@@ -19,6 +20,7 @@ export const ADMIN_AREAS: AdminArea[] = [
   'alunos',
   'mensalidades',
   'presencas',
+  'destaques',
   'produtos',
   'pedidos',
   'financeiro',
@@ -29,6 +31,7 @@ export const ADMIN_AREA_LABELS: Record<AdminArea, string> = {
   alunos: 'Alunos',
   mensalidades: 'Mensalidades',
   presencas: 'Presenças e Ranking',
+  destaques: 'Destaques da página inicial',
   produtos: 'Loja (Produtos)',
   pedidos: 'Pedidos',
   financeiro: 'Financeiro',
@@ -42,6 +45,7 @@ export const ADMIN_AREA_DESCRIPTIONS: Record<AdminArea, string> = {
   alunos: 'Ficha dos alunos, graduações e credenciais de acesso',
   mensalidades: 'Mensalidades, cobranças e avisos de atraso',
   presencas: 'Chamadas, turmas e ranking de pontos',
+  destaques: 'Destaques de competição exibidos na home',
   produtos: 'Produtos, variações e estoque da loja',
   pedidos: 'Pedidos da loja e status de entrega',
   financeiro: 'Receitas, despesas e relatórios anuais',
