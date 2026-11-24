@@ -505,7 +505,7 @@ export const Footer: React.FC = () => {
                   {site.footer_about_title}
                 </p>
                 <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D8434A]">
-                  Academia de Judô
+                  {site.footer_brand_tag}
                 </span>
               </div>
             </div>
@@ -523,7 +523,7 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="font-serif font-bold text-base text-[#FAF6F0] mb-4 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#D8434A]" />
-              Horários
+              {site.footer_hours_title}
             </h3>
             <BrushDivider className="w-16 h-1.5 mb-4 text-[#C1272D]" />
             <ul className="space-y-2.5">
@@ -540,7 +540,7 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="font-serif font-bold text-base text-[#FAF6F0] mb-4 flex items-center gap-2">
               <Mail className="w-4 h-4 text-[#D8434A]" />
-              Contato
+              {site.footer_contact_title}
             </h3>
             <BrushDivider className="w-16 h-1.5 mb-4 text-[#C1272D]" />
             <ul className="space-y-2.5 text-sm text-[#B8B2A8]">
@@ -575,7 +575,7 @@ export const Footer: React.FC = () => {
         {/* ===== Barra inferior ===== */}
         <div className="mt-10 pt-6 border-t border-[#3A3630] flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-[#9A948C] text-center sm:text-left">
-            © {new Date().getFullYear()} {site.footer_about_title}. Todos os direitos reservados.
+            © {new Date().getFullYear()} {site.footer_about_title}. {site.footer_rights}
           </p>
           <nav className="flex items-center gap-4" aria-label="Seções da home">
             {HOME_SECTIONS.map((s) => (

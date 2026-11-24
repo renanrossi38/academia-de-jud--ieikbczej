@@ -53,7 +53,7 @@ export const SiteTextarea = ({
   placeholder,
   rows = 3,
   maxLength = 400,
-}: FieldBaseProps & { rows?: number }) => {
+}: FieldBaseProps & { rows?: number; maxLength?: number }) => {
   const id = useId()
   return (
     <div className="space-y-1.5">

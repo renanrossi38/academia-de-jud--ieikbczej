@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { fetchHighlights, HighlightsPayload, iniciaisDoNome } from '@/services/highlights'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useSiteContent } from '@/services/siteSettings'
 import { BrushDivider } from '@/components/hero/HeroDecor'
 import { Award, GraduationCap, Medal, Trophy } from 'lucide-react'
 
@@ -8,10 +9,15 @@ import { Award, GraduationCap, Medal, Trophy } from 'lucide-react'
  * Seção única "Destaques" da home (Judô Tatsu — vermelho/preto):
  *  - Destaque do mês: alunos com medalha fica fica vigente (foto, nome, turma).
  *  - Destaques de competição: criados no painel (foto, nome, título/motivo).
- * Some inteira quando nenhum dos grupos tem conteúdo.
- * Tempo real: useRealtime em students / class_medals / student_highlights.
+ * Os TEXTOS da seção (etiqueta, título, subtítulo, títulos dos blocos) vêm do
+ * editor da home (/painel/site) via useSiteContent; o CONTEÚDO (fotos, alunos,
+ * medalhas) vem do painel "Destaques". A seção some inteira quando nenhum dos
+ * grupos tem conteúdo.
+ * Tempo real: useRealtime em students / class_medals / student_highlights
+ * (conteúdo) e no site_settings (textos, via useSiteContent).
  */
 export const HighlightsSection = () => {
+  const site = useSiteContent()
   const [data, setData] = useState<HighlightsPayload | null>(null)
 
   const load = () => {
@@ -39,15 +45,14 @@ export const HighlightsSection = () => {
         <div className="flex flex-col items-center text-center mb-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-[#C1272D] text-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest shadow-sm">
             <Medal className="w-3.5 h-3.5" />
-            Destaques
+            {site.highlights_tag}
           </span>
           <h2 className="font-serif font-bold text-3xl sm:text-4xl text-[#1C1B1A] mt-4">
-            Nossos destaques em cena
+            {site.highlights_title}
           </h2>
           <BrushDivider className="w-48 h-3 mt-3" />
           <p className="text-xs sm:text-sm text-[#6B6560] mt-3 max-w-xl leading-relaxed">
-            Alunos que brilharam no tatame: o destaque do mês de cada turma infantil e as medalhas
-            conquistadas nos campeonatos.
+            {site.highlights_subtitle}
           </p>
         </div>
 
@@ -56,7 +61,7 @@ export const HighlightsSection = () => {
           <div className="mb-12">
             <h3 className="flex items-center justify-center gap-2 font-serif font-bold text-lg sm:text-xl text-[#1C1B1A] mb-5">
               <Award className="w-5 h-5 text-[#C1272D]" />
-              Destaques do mês
+              {site.highlights_month_title}
             </h3>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
               {data!.month.map((m) => (
@@ -78,7 +83,7 @@ export const HighlightsSection = () => {
           <div>
             <h3 className="flex items-center justify-center gap-2 font-serif font-bold text-lg sm:text-xl text-[#1C1B1A] mb-5">
               <Trophy className="w-5 h-5 text-[#C1272D]" />
-              Destaques em competições
+              {site.highlights_comp_title}
             </h3>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
               {data!.competition.map((c) => (
@@ -110,7 +115,7 @@ const HighlightCard = ({
   photoUrl: string
   name: string
   subtitle: string
-  subtitleIcon: React.ReactNode
+  subtitleIcon: ReactNode
   ringClass: string
 }) => (
   <div className="flex flex-col items-center text-center w-36 sm:w-44">
