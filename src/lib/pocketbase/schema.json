@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T05:15:18.849Z",
+  "generatedAt": "2026-11-24T05:24:57.674Z",
   "collections": [
     {
       "name": "users",
@@ -316,6 +316,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "stock_deducted",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
