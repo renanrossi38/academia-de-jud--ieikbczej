@@ -12,6 +12,8 @@ import {
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { GuardianContactButtons } from '@/components/admin/GuardianContactButtons'
 import { studentsService } from '@/services/students'
+import { iniciaisDoNome } from '@/services/highlights'
+import React from 'react'
 import {
   feeStanding,
   monthlyFeesService,
@@ -80,6 +82,27 @@ const upsert = (list: Student[], record: Student): Student[] =>
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+/** Avatar do aluno na listagem: foto (quando enviada na ficha) ou iniciais. */
+const StudentAvatar: React.FC<{ student: Student }> = ({ student }) => {
+  const url = studentsService.getPhotoUrl(student, 'sm')
+  return (
+    <span className="w-9 h-9 rounded-full overflow-hidden bg-[#F7E4E2] flex items-center justify-center shrink-0">
+      {url ? (
+        <img
+          src={url}
+          alt={'Foto de ' + student.name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <span className="font-serif font-bold text-xs text-[#C1272D]">
+          {iniciaisDoNome(student.name)}
+        </span>
+      )}
+    </span>
+  )
+}
 
 export default function AdminStudents() {
   const { user, isAdmin, isLoading: authLoading } = useAuth()
@@ -672,13 +695,16 @@ export default function AdminStudents() {
                   return (
                     <tr key={student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
                       <td className="py-3.5 px-4">
-                        <Link
-                          to={`/painel/alunos/${student.id}`}
-                          className="text-[#C1272D] font-bold hover:underline"
-                          title="Abrir ficha do aluno"
-                        >
-                          {student.name || '—'}
-                        </Link>
+                        <div className="flex items-center gap-2.5">
+                          <StudentAvatar student={student} />
+                          <Link
+                            to={`/painel/alunos/${student.id}`}
+                            className="text-[#C1272D] font-bold hover:underline"
+                            title="Abrir ficha do aluno"
+                          >
+                            {student.name || '—'}
+                          </Link>
+                        </div>
                         {student.expand?.user?.role === 'admin' && (
                           <AdminRoleBadge
                             isOwner={!!student.expand.user.is_owner}

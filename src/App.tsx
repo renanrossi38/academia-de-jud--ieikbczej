@@ -20,6 +20,7 @@ import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
 import AdminAttendance from './pages/AdminAttendance'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
+import AdminHighlights from './pages/AdminHighlights'
 import AdminEmailSettings from './pages/AdminEmailSettings'
 import AdminSiteSettings from './pages/AdminSiteSettings'
 import AdminFinance from './pages/AdminFinance'
@@ -125,6 +126,14 @@ const App = () => (
                 element={
                   <RequireArea area="pedidos">
                     <AdminOrders />
+                  </RequireArea>
+                }
+              />
+              <Route
+                path="/painel/destaques"
+                element={
+                  <RequireArea area="destaques">
+                    <AdminHighlights />
                   </RequireArea>
                 }
               />

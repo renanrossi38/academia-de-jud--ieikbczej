@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Belt, Student } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { studentsService, guardianPhoneError } from '@/services/students'
-import { Loader2 } from 'lucide-react'
+import { iniciaisDoNome } from '@/services/highlights'
+import { Loader2, X } from 'lucide-react'
 
 const BELT_LABELS: Record<Belt, string> = {
   branca: 'Branca',
@@ -96,6 +97,8 @@ const selectClass =
 interface StudentFormState {
   name: string
   email: string
+  photo: File | null
+  removePhoto: boolean
   phone: string
   belt: Belt | ''
   address: string
@@ -108,6 +111,8 @@ interface StudentFormState {
 const emptyForm: StudentFormState = {
   name: '',
   email: '',
+  photo: null,
+  removePhoto: false,
   phone: '',
   belt: '',
   address: '',
@@ -126,6 +131,87 @@ export const birthDateLabel = (value?: string): string => {
   if (!key || key.length !== 10) return '—'
   const [y, m, d] = key.split('-')
   return `${d}/${m}/${y}`
+}
+
+/** Campo "Foto do aluno" dos diálogos de criar/editar: prévia redonda com
+ * foto ou iniciais, botão de enviar e de remover (apenas no editar). */
+export const StudentPhotoField: React.FC<{
+  previewUrl: string
+  name: string
+  hasExistingPhoto: boolean
+  removing: boolean
+  onPick: (file: File | null) => void
+  onRemove?: () => void
+  idPrefix: string
+}> = ({ previewUrl, name, hasExistingPhoto, removing, onPick, onRemove, idPrefix }) => {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`${idPrefix}-photo`} className="text-xs text-[#1C1B1A] font-medium">
+        Foto do aluno
+      </Label>
+      <p className="text-[11px] text-[#6B6560]">
+        Opcional — usada nos destaques da página inicial. JPG, PNG ou WEBP, até 5&nbsp;MB.
+      </p>
+      <div className="flex items-center gap-3">
+        <div className="w-16 h-16 rounded-full overflow-hidden border border-[#E8E0D5] bg-[#F7E4E2] flex items-center justify-center shrink-0">
+          {previewUrl ? (
+            <img src={previewUrl} alt={'Foto de ' + name} className="w-full h-full object-cover" />
+          ) : removing ? (
+            <span className="text-[10px] text-[#9A948C] text-center px-1">Removida</span>
+          ) : (
+            <span className="font-serif font-bold text-lg text-[#C1272D]">
+              {iniciaisDoNome(name)}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-[#E8E0D5] text-xs"
+            onClick={() => fileRef.current?.click()}
+          >
+            {previewUrl || hasExistingPhoto ? 'Trocar foto' : 'Enviar foto'}
+          </Button>
+          {(previewUrl || (hasExistingPhoto && onRemove)) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-[#C1272D] text-xs h-7"
+              onClick={onRemove ?? (() => onPick(null))}
+            >
+              <X className="w-3 h-3 mr-1" />
+              Remover foto
+            </Button>
+          )}
+        </div>
+        <input
+          ref={fileRef}
+          id={`${idPrefix}-photo`}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            onPick(e.target.files?.[0] ?? null)
+            e.target.value = ''
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Valida o arquivo de foto escolhido (tipo e tamanho). */
+export const studentPhotoError = (f: File | null): string | null => {
+  if (!f) return null
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type))
+    return 'Envie a foto em JPG, PNG ou WEBP.'
+  if (f.size > 5 * 1024 * 1024) return 'Envie uma imagem de até 5 MB.'
+  return null
 }
 
 /** Seção "Responsável" — contato do responsável de aluno menor de idade.
@@ -216,7 +302,19 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   const beltOptions = useBeltOptions()
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [creating, setCreating] = useState(false)
+  const [photoPreview, setPhotoPreview] = useState('')
   const guardianPhoneErr = guardianPhoneError(form.guardian_phone)
+
+  // URL local de prévia da foto escolhida
+  useEffect(() => {
+    if (!form.photo) {
+      setPhotoPreview('')
+      return
+    }
+    const url = URL.createObjectURL(form.photo)
+    setPhotoPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [form.photo])
 
   const resetAndClose = () => {
     setForm(emptyForm)
@@ -245,7 +343,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
 
     setCreating(true)
     try {
-      const student = await studentsService.createStudent({
+      let student = await studentsService.createStudent({
         name: form.name,
         email: form.email,
         phone: form.phone,
@@ -256,6 +354,10 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
         guardian_phone: form.guardian_phone,
         guardian_email: form.guardian_email,
       })
+      // Foto escolhida: envia após criar o registro (campo file do PocketBase)
+      if (form.photo) {
+        student = await studentsService.setPhoto(student.id, form.photo)
+      }
       onCreated(student)
       toast({
         title: 'Aluno cadastrado!',
@@ -287,6 +389,23 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <StudentPhotoField
+              previewUrl={photoPreview}
+              name={form.name}
+              hasExistingPhoto={false}
+              removing={false}
+              onPick={(f) => {
+                const pErr = studentPhotoError(f)
+                if (pErr) {
+                  toast({ title: 'Foto inválida', description: pErr, variant: 'destructive' })
+                  return
+                }
+                setForm((prev) => ({ ...prev, photo: f, removePhoto: false }))
+              }}
+              onRemove={() => setForm((prev) => ({ ...prev, photo: null }))}
+              idPrefix="create"
+            />
+
             <div className="space-y-1.5">
               <Label htmlFor="student-name" className="text-xs text-[#1C1B1A] font-medium">
                 Nome completo *
@@ -428,6 +547,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
   const [active, setActive] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const [photoPreview, setPhotoPreview] = useState('')
+  const [photoRemoval, setPhotoRemoval] = useState(false)
   const guardianPhoneErr = guardianPhoneError(form.guardian_phone)
 
   // Preenche o formulário sempre que um aluno diferente é aberto
@@ -435,6 +556,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
     setForm({
       name: student.name || '',
       email: student.email || '',
+      photo: null,
+      removePhoto: false,
       phone: student.phone || '',
       belt: (student.belt as Belt) || '',
       address: student.address || '',
@@ -444,8 +567,21 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       guardian_email: student.guardian_email || '',
     })
     setActive(student.active !== false)
+    setPhotoRemoval(false)
+    setPhotoPreview('')
     setLoadedFor(student.id)
   }
+
+  // Prévia local da foto escolhida (novo arquivo sobrepõe a foto gravada)
+  useEffect(() => {
+    if (!form.photo) {
+      setPhotoPreview('')
+      return
+    }
+    const url = URL.createObjectURL(form.photo)
+    setPhotoPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [form.photo])
 
   const hasAccount = !!student?.user
 
@@ -466,6 +602,12 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       return
     }
 
+    const photoErr = studentPhotoError(form.photo)
+    if (photoErr) {
+      toast({ title: 'Foto inválida', description: photoErr, variant: 'destructive' })
+      return
+    }
+
     setSaving(true)
     try {
       const updated = await studentsService.updateStudent(student.id, {
@@ -480,8 +622,13 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
         guardian_email: form.guardian_email.trim(),
         active,
       })
+      let final = updated
+      // Foto: troca (arquivo novo) ou remove (campo vazio via FormData)
+      if (form.photo || form.removePhoto) {
+        final = await studentsService.setPhoto(student.id, form.photo)
+      }
 
-      onSaved(updated)
+      onSaved(final)
       onOpenChange(false)
       toast({
         title: 'Dados do aluno atualizados!',
@@ -511,6 +658,29 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <StudentPhotoField
+              previewUrl={
+                photoPreview || (photoRemoval ? '' : studentsService.getPhotoUrl(student, 'sm'))
+              }
+              name={form.name}
+              hasExistingPhoto={!!student?.photo}
+              removing={photoRemoval}
+              onPick={(f) => {
+                const pErr = studentPhotoError(f)
+                if (pErr) {
+                  toast({ title: 'Foto inválida', description: pErr, variant: 'destructive' })
+                  return
+                }
+                setPhotoRemoval(false)
+                setForm((prev) => ({ ...prev, photo: f, removePhoto: false }))
+              }}
+              onRemove={() => {
+                setPhotoRemoval(true)
+                setForm((prev) => ({ ...prev, photo: null, removePhoto: true }))
+              }}
+              idPrefix="edit"
+            />
+
             <div className="space-y-1.5">
               <Label htmlFor="edit-name" className="text-xs text-[#1C1B1A] font-medium">
                 Nome completo *

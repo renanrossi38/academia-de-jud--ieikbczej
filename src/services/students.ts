@@ -221,5 +221,13 @@ export const studentsService = {
     return pb.collection('students').update<Student>(id, payload)
   },
 
+  /** Salva (File) ou remove (null) a foto do aluno — multipart/form-data.
+   * A foto é usada nos destaques da home (medalha fica fica e competição). */
+  async setPhoto(id: string, file: File | null): Promise<Student> {
+    const fd = new FormData()
+    fd.append('photo', file ?? '')
+    return pb.collection('students').update<Student>(id, fd)
+  },
+
   createAccess,
 }

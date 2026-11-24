@@ -11,7 +11,7 @@ import { HankoStamp, ProductPlaceholder, OfficialLogo } from '@/components/Hanko
 import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero/HeroDecor'
 import { BrushDivider } from '@/components/hero/HeroDecor'
 import InstagramSection from '@/components/InstagramSection'
-import KidsHighlightsSection from '@/components/KidsHighlightsSection'
+import { HighlightsSection } from '@/components/HighlightsSection'
 import { Badge } from '@/components/ui/badge'
 import {
   ArrowRight,
@@ -481,8 +481,8 @@ export default function Index() {
         <InstagramSection />
       </div>
 
-      {/* Alunos destaque do mês — turmas infantis, destaque vigente (fica fica) */}
-      <KidsHighlightsSection />
+      {/* Destaques — medalha fica fica vigente + destaques de competição (some se vazio) */}
+      <HighlightsSection />
 
       {/* Como funciona */}
       <section id="como-funciona" className="bg-white border-y border-[#E8E0D5] py-14 scroll-mt-24">
