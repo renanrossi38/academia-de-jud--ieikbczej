@@ -9,10 +9,11 @@ import { attendanceCalendarService, AttendanceDaysMap } from '@/services/attenda
 import { studentsService } from '@/services/students'
 import { Attendance, AttendanceStatus, Class, ClassStudent, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
-import { classMedalsService, MedalKind } from '@/services/classMedals'
+import { classMedalsService } from '@/services/classMedals'
 import { ClassMedal } from '@/types'
 import { brasiliaMonthKey } from '@/services/monthlyFees'
-import { Trash2, Award, Star } from 'lucide-react'
+import { MedalsPanel } from '@/components/admin/MedalsPanel'
+import { Award, Star } from 'lucide-react'
 import { AttendanceCalendar } from '@/components/admin/AttendanceCalendar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -100,10 +101,6 @@ export default function AdminClassDetail() {
 
   // Medalhas da turma infantil (dorme dorme / fica fica)
   const [medals, setMedals] = useState<ClassMedal[]>([])
-  const [medalStudentId, setMedalStudentId] = useState('')
-  const [medalKind, setMedalKind] = useState<MedalKind>('dorme_dorme')
-  const [medalMonth, setMedalMonth] = useState(() => brasiliaMonthKey())
-  const [isSavingMedal, setIsSavingMedal] = useState(false)
   const [medalsLoading, setMedalsLoading] = useState(false)
   // Ano exibido na tabela anual de destaques (padrão: ano vigente de Brasília).
   const [tableYear, setTableYear] = useState(() => Number(brasiliaMonthKey().slice(0, 4)))
@@ -355,53 +352,6 @@ export default function AdminClassDetail() {
     loadMedals()
   })
 
-  const handleAddMedal = async () => {
-    if (!classId || !medalStudentId) return
-    if (medalMonth > brasiliaMonthKey()) {
-      toast({
-        title: 'Mês inválido',
-        description: 'Não é possível atribuir medalha com mês futuro.',
-        variant: 'destructive',
-      })
-      return
-    }
-    setIsSavingMedal(true)
-    try {
-      await classMedalsService.add({
-        classId,
-        studentId: medalStudentId,
-        month: medalMonth,
-        kind: medalKind,
-      })
-      toast({ title: 'Medalha atribuída!' })
-      setMedalStudentId('')
-      loadMedals()
-    } catch (err: any) {
-      console.error('Erro ao atribuir medalha:', err)
-      toast({
-        title: 'Erro ao atribuir medalha',
-        description: err?.message || 'Tente novamente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSavingMedal(false)
-    }
-  }
-
-  const handleRemoveMedal = async (id: string) => {
-    try {
-      await classMedalsService.remove(id)
-      setMedals((prev) => prev.filter((m) => m.id !== id))
-    } catch (err: any) {
-      console.error('Erro ao remover medalha:', err)
-      toast({
-        title: 'Erro ao remover medalha',
-        description: err?.message || 'Tente novamente.',
-        variant: 'destructive',
-      })
-    }
-  }
-
   const handleMonthChange = useCallback((year: number, month0: number) => {
     setCalMonth((prev) => (prev.year === year && prev.month0 === month0 ? prev : { year, month0 }))
   }, [])
@@ -612,75 +562,17 @@ export default function AdminClassDetail() {
 
       {/* Medalhas — aba própria, só em turma infantil */}
       {isKidsClass && activeTab === 'medalhas' && (
-        <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-4 sm:p-5 mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Award className="w-4 h-4 text-[#C1272D]" />
-            <span className="text-xs font-bold text-[#1C1B1A] font-serif">Medalhas do mês</span>
-            {medalsLoading && (
-              <Loader2
-                className="w-3.5 h-3.5 animate-spin text-[#C1272D]/60"
-                aria-label="Carregando medalhas"
-              />
-            )}
-          </div>
-          <p className="text-[11px] text-[#6B6560] mb-3">
-            🏅 <b>dorme dorme</b>: medalha levada pelo aluno — aparece apenas no mês vigente. ⭐{' '}
-            <b>fica fica</b>: aluno destaque do mês — fica em destaque na lista durante TODO o mês
-            seguinte ao concedido.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-end mb-3">
-            <div className="space-y-1 flex-1 min-w-[140px]">
-              <Label className="text-[11px] font-semibold text-[#1C1B1A]">Aluno</Label>
-              <Select value={medalStudentId} onValueChange={setMedalStudentId}>
-                <SelectTrigger className="h-9 text-sm bg-white border-[#E8E0D5] focus:ring-[#C1272D]">
-                  <SelectValue placeholder="Selecione o aluno" />
-                </SelectTrigger>
-                <SelectContent>
-                  {links.map((l) => (
-                    <SelectItem key={l.id} value={l.student}>
-                      {l.expand?.student?.name || 'Aluno'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1 sm:w-44">
-              <Label className="text-[11px] font-semibold text-[#1C1B1A]">Medalha</Label>
-              <Select value={medalKind} onValueChange={(v) => setMedalKind(v as MedalKind)}>
-                <SelectTrigger className="h-9 text-sm bg-white border-[#E8E0D5] focus:ring-[#C1272D]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dorme_dorme">🏅 Dorme dorme</SelectItem>
-                  <SelectItem value="fica_fica">⭐ Fica fica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1 sm:w-40">
-              <Label className="text-[11px] font-semibold text-[#1C1B1A]">Mês</Label>
-              <Input
-                type="month"
-                value={medalMonth}
-                onChange={(e) => e.target.value && setMedalMonth(e.target.value)}
-                className="h-9 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
-              />
-            </div>
-            <Button
-              onClick={handleAddMedal}
-              disabled={!medalStudentId || isSavingMedal}
-              className="h-9 bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
-            >
-              {isSavingMedal ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Salvando...
-                </>
-              ) : (
-                <>
-                  <Award className="w-3.5 h-3.5 mr-1.5" /> Atribuir
-                </>
-              )}
-            </Button>
-          </div>
+        <>
+          <MedalsPanel
+            classId={classId || ''}
+            medals={medals}
+            medalsLoading={medalsLoading}
+            onChanged={loadMedals}
+            students={links.map((l) => ({
+              id: l.student,
+              name: l.expand?.student?.name || 'Aluno',
+            }))}
+          />
           {/* Tabela anual de destaques (fica fica) — visível o ano todo, anos
               anteriores arquivados e consultáveis pela navegação ‹ ano ›. */}
           <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-4 sm:p-5 mb-4">
@@ -741,32 +633,7 @@ export default function AdminClassDetail() {
               })}
             </div>
           </div>
-          <ul className="divide-y divide-[#E8E0D5] border border-[#E8E0D5] rounded-xl overflow-hidden">
-            {medals.map((m) => {
-              const studentName =
-                links.find((l) => l.student === m.student)?.expand?.student?.name || 'Aluno'
-              return (
-                <li key={m.id} className="flex items-center gap-2 px-3 py-2 text-sm bg-white">
-                  <span className="text-base leading-none">
-                    {m.kind === 'dorme_dorme' ? '🏅' : '⭐'}
-                  </span>
-                  <span className="font-semibold text-[#1C1B1A]">{studentName}</span>
-                  <span className="text-[11px] text-[#6B6560]">
-                    {m.kind === 'dorme_dorme' ? 'dorme dorme' : 'fica fica'} —{' '}
-                    {monthLabelFromKey(m.month)}
-                  </span>
-                  <button
-                    onClick={() => handleRemoveMedal(m.id)}
-                    className="ml-auto text-[#6B6560] hover:text-[#C1272D]"
-                    title="Remover medalha"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
+        </>
       )}
 
       {/* Chamada */}

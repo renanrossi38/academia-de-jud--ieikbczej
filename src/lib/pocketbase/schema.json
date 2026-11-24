@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T03:31:10.881Z",
+  "generatedAt": "2026-11-24T04:20:09.298Z",
   "collections": [
     {
       "name": "users",
@@ -1343,7 +1343,7 @@
         "list": "(@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'presencas'))",
         "view": "(@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'presencas'))",
         "create": "(@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'presencas'))",
-        "update": null,
+        "update": "(@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'presencas'))",
         "delete": "(@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'presencas'))"
       },
       "fields": [
@@ -1387,6 +1387,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "received_at",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

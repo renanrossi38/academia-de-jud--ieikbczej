@@ -378,6 +378,8 @@ export interface ClassMedal {
   /** Mês de referência no formato "YYYY-MM". */
   month: string
   kind: MedalKind
+  /** Dia em que a medalha foi recebida ("YYYY-MM-DD", Brasília) — migration 0036. */
+  received_at?: string
   created: string
   updated: string
   expand?: {
