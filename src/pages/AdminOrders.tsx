@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { ordersService } from '@/services/orders'
-import { Order, OrderItem, OrderStatus, OrderStatusLog } from '@/types'
+import { orderTrackingService } from '@/services/orderTracking'
+import { Order, OrderItem, OrderStatus, OrderStatusLog, OrderTrackingStep } from '@/types'
 import { formatCustomAnswers } from '@/lib/customAnswers'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
+import { OrderTrackingTimeline } from '@/components/orderTrackingTimeline/OrderTrackingTimeline'
 import {
   AdminPageHeader,
   AdminSummary,
@@ -14,7 +16,16 @@ import {
 } from '@/components/admin/AdminPage'
 import { useToast } from '@/hooks/use-toast'
 import { useRealtime } from '@/hooks/use-realtime'
-import { Loader2, X, MessageSquare, ShoppingBag, Filter, CheckCircle2, History } from 'lucide-react'
+import {
+  Loader2,
+  X,
+  MessageSquare,
+  ShoppingBag,
+  Filter,
+  CheckCircle2,
+  Plus,
+  Package,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'todos' }[] = [
@@ -65,9 +76,13 @@ export default function AdminOrders() {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null)
   const [activeOrderItems, setActiveOrderItems] = useState<OrderItem[]>([])
   const [activeOrderLog, setActiveOrderLog] = useState<OrderStatusLog[]>([])
+  const [activeOrderTracking, setActiveOrderTracking] = useState<OrderTrackingStep[]>([])
   const [drawerLoading, setDrawerLoading] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [newStepLabel, setNewStepLabel] = useState('')
+  const [addingStep, setAddingStep] = useState(false)
+  const [deletingStepId, setDeletingStepId] = useState<string | null>(null)
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true)
@@ -142,21 +157,92 @@ export default function AdminOrders() {
     !!activeOrder,
   )
 
+  // Realtime: etapas de rastreio personalizadas (order_tracking) do pedido aberto
+  useRealtime<OrderTrackingStep>(
+    'order_tracking',
+    (e) => {
+      if (!activeOrder || e.record.order !== activeOrder.id) return
+      if (e.action === 'create') {
+        setActiveOrderTracking((prev) =>
+          prev.some((t) => t.id === e.record.id)
+            ? prev
+            : [...prev, { ...e.record } as OrderTrackingStep],
+        )
+      } else if (e.action === 'delete') {
+        setActiveOrderTracking((prev) => prev.filter((t) => t.id !== e.record.id))
+      }
+    },
+    !!activeOrder,
+  )
+
   const handleOpenDetail = async (order: Order) => {
     setActiveOrder(order)
     setDrawerLoading(true)
     setActiveOrderLog([])
+    setActiveOrderTracking([])
     try {
-      const [items, log] = await Promise.all([
+      const [items, log, tracking] = await Promise.all([
         ordersService.getOrderItems(order.id),
         ordersService.listStatusLog(order.id),
+        orderTrackingService.listByOrder(order.id),
       ])
       setActiveOrderItems(items)
       setActiveOrderLog(log)
+      setActiveOrderTracking(tracking)
     } catch (err) {
       console.error('Erro ao carregar detalhes do pedido:', err)
     } finally {
       setDrawerLoading(false)
+    }
+  }
+
+  /** Admin: adiciona etapa de rastreio personalizada (ex.: "Em produção"). */
+  const handleAddTrackingStep = async () => {
+    if (!activeOrder) return
+    const label = newStepLabel.trim()
+    if (label.length < 2) {
+      toast({
+        title: 'Descreva a etapa',
+        description: 'Escreva o texto da etapa (ex.: "Encomendado na fábrica").',
+        variant: 'destructive',
+      })
+      return
+    }
+    setAddingStep(true)
+    try {
+      await orderTrackingService.addStep(activeOrder.id, label)
+      setNewStepLabel('')
+      toast({ title: 'Etapa de rastreio adicionada' })
+    } catch (err: any) {
+      console.error('Erro ao adicionar etapa de rastreio:', err)
+      toast({
+        title: 'Erro ao adicionar etapa',
+        description: err?.message || 'Falha ao salvar no servidor.',
+        variant: 'destructive',
+      })
+    } finally {
+      setAddingStep(false)
+    }
+  }
+
+  /** Admin: remove uma etapa registrada por engano (com confirmação). */
+  const handleDeleteTrackingStep = async (trackingId: string, label: string) => {
+    if (!activeOrder) return
+    if (!window.confirm(`Remover a etapa "${label}" do rastreio deste pedido?`)) return
+    setDeletingStepId(trackingId)
+    try {
+      await orderTrackingService.removeStep(trackingId)
+      setActiveOrderTracking((prev) => prev.filter((t) => t.id !== trackingId))
+      toast({ title: 'Etapa removida do rastreio' })
+    } catch (err: any) {
+      console.error('Erro ao remover etapa de rastreio:', err)
+      toast({
+        title: 'Erro ao remover etapa',
+        description: err?.message || 'Falha ao salvar no servidor.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingStepId(null)
     }
   }
 
@@ -618,52 +704,58 @@ export default function AdminOrders() {
                 )}
               </div>
 
-              {/* Histórico de etapas do pedido */}
+              {/* Rastreio do pedido (timeline estilo Correios) */}
               <div>
                 <h4 className="font-serif font-bold text-sm text-[#1C1B1A] mb-2 uppercase tracking-wider flex items-center gap-2">
-                  <History className="w-4 h-4 text-[#C1272D]" />
-                  Histórico do Pedido
+                  <Package className="w-4 h-4 text-[#C1272D]" />
+                  Rastreio do Pedido
                 </h4>
 
                 {drawerLoading ? (
                   <div className="py-4 text-[#6B6560] text-xs flex items-center">
                     <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                    Carregando histórico...
+                    Carregando rastreio...
                   </div>
-                ) : activeOrderLog.length === 0 ? (
-                  <p className="text-xs text-[#6B6560] italic p-3 border border-dashed border-[#E8E0D5] rounded-xl">
-                    Nenhuma etapa registrada ainda. Toda mudança de status passa a ficar registrada
-                    aqui com quem fez e quando.
-                  </p>
                 ) : (
-                  <ol className="relative border-l-2 border-[#E8E0D5] ml-2 space-y-3">
-                    {activeOrderLog.map((entry) => {
-                      const actor = entry.expand?.user?.name || 'Sistema'
-                      const from = entry.from_status ? STATUS_LABELS[entry.from_status] : null
-                      const to = STATUS_LABELS[entry.to_status] || entry.to_status
-                      return (
-                        <li key={entry.id} className="ml-4">
-                          <span className="absolute -left-[5px] mt-1.5 w-2.5 h-2.5 rounded-full bg-[#C1272D] border-2 border-white" />
-                          <p className="text-xs text-[#1C1B1A]">
-                            {from ? (
-                              <>
-                                <strong>
-                                  {from} → {to}
-                                </strong>{' '}
-                                por <strong>{actor}</strong>
-                              </>
-                            ) : (
-                              <>
-                                <strong>{to}</strong> por <strong>{actor}</strong>
-                              </>
-                            )}
-                          </p>
-                          <p className="text-[11px] text-[#6B6560]">{fmtDateTime(entry.created)}</p>
-                        </li>
-                      )
-                    })}
-                  </ol>
+                  <OrderTrackingTimeline
+                    statusLog={activeOrderLog}
+                    tracking={activeOrderTracking}
+                    currentStatus={activeOrder.status}
+                    onDeleteStep={handleDeleteTrackingStep}
+                    deletingStepId={deletingStepId}
+                    emptyText="Nenhum evento ainda. Mude o status ou registre uma etapa de rastreio abaixo (ex.: “Encomendado na fábrica”)."
+                  />
                 )}
+
+                {/* Admin: adicionar etapa de rastreio personalizada */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    handleAddTrackingStep()
+                  }}
+                  className="mt-3 flex items-start gap-2"
+                >
+                  <input
+                    type="text"
+                    value={newStepLabel}
+                    onChange={(e) => setNewStepLabel(e.target.value)}
+                    maxLength={200}
+                    placeholder='Nova etapa (ex.: "Encomendado na fábrica")'
+                    className="flex-1 min-w-0 text-xs rounded-lg border border-[#E8E0D5] bg-white px-3 py-2 text-[#1C1B1A] placeholder:text-[#A8A099] focus:outline-none focus:ring-1 focus:ring-[#C1272D]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={addingStep || newStepLabel.trim().length < 2}
+                    className="inline-flex items-center gap-1 text-xs font-semibold bg-[#C1272D] text-white rounded-lg px-3 py-2 hover:bg-[#A51E24] disabled:opacity-50 shrink-0"
+                  >
+                    {addingStep ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                    Etapa
+                  </button>
+                </form>
               </div>
             </div>
 

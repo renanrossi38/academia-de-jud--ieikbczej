@@ -33,6 +33,19 @@ export interface StudentAreaOrder {
   delivery_type: string
   created: string
   items: StudentAreaOrderItem[]
+  /** Rastreio estilo Correios (status + etapas do admin), mais recente em cima. */
+  tracking: StudentAreaTrackingEvent[]
+}
+
+/** Evento da linha do tempo do pedido na Área do aluno. */
+export interface StudentAreaTrackingEvent {
+  /** "status" = mudança de status; "etapa" = etapa personalizada do admin. */
+  kind: 'status' | 'etapa'
+  at: string
+  by: string
+  from_status?: string
+  to_status?: string
+  label?: string
 }
 
 export interface StudentAreaAttendanceMonth {

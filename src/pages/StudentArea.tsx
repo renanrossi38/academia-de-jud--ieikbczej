@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
 import { fetchStudentArea, mesPorExtenso } from '@/services/studentArea'
@@ -11,9 +12,10 @@ import type {
 import { formatCustomAnswers } from '@/lib/customAnswers'
 import { BELT_ORDER } from '@/services/beltPromotions'
 import { beltLabel } from '@/components/admin/StudentDialogs'
-import type { Belt } from '@/types'
+import type { Belt, OrderStatus } from '@/types'
 import { paymentMethodLabel } from '@/services/monthlyFees'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
+import { OrderTrackingTimeline } from '@/components/orderTrackingTimeline/OrderTrackingTimeline'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Wallet, ShoppingBag, CalendarCheck, Trophy, Award, KeyRound } from 'lucide-react'
@@ -95,6 +97,18 @@ export default function StudentArea() {
   }, [user, load])
 
   const months: StudentAreaAttendanceMonth[] = data?.attendanceMonth ?? []
+
+  // Rastreio ao vivo: quando o admin muda o status ou registra uma etapa
+  // (ex.: "Em produção"), a área do aluno atualiza sem recarregar a página.
+  useRealtime('orders', () => load())
+  useRealtime('order_status_log', (e) => {
+    const oid = (e.record as { order?: string }).order
+    if (oid && data?.orders.some((o) => o.id === oid)) load()
+  })
+  useRealtime('order_tracking', (e) => {
+    const oid = (e.record as { order?: string }).order
+    if (oid && data?.orders.some((o) => o.id === oid)) load()
+  })
 
   if (authLoading || isLoading) {
     return (
@@ -260,6 +274,34 @@ export default function StudentArea() {
                       </div>
                     )
                   })}
+                </div>
+
+                {/* Rastreio do pedido (status + etapas do admin, estilo Correios) */}
+                <div className="mt-3 pt-3 border-t border-[#E8E0D5]/80">
+                  <p className="text-[11px] font-bold text-[#1C1B1A] uppercase tracking-wider font-serif mb-2">
+                    Rastreio do pedido
+                  </p>
+                  <OrderTrackingTimeline
+                    statusLog={(order.tracking ?? [])
+                      .filter((ev) => ev.kind === 'status')
+                      .map((ev) => ({
+                        id: `${order.id}-${ev.at}-status`,
+                        created: ev.at,
+                        from_status: (ev.from_status || '') as OrderStatus | '',
+                        to_status: (ev.to_status || 'novo') as OrderStatus,
+                        expand: { user: { name: ev.by } },
+                      }))}
+                    tracking={(order.tracking ?? [])
+                      .filter((ev) => ev.kind === 'etapa')
+                      .map((ev) => ({
+                        id: `${order.id}-${ev.at}-etapa`,
+                        created: ev.at,
+                        label: ev.label || '',
+                        expand: { user: { name: ev.by } },
+                      }))}
+                    currentStatus={order.status as Parameters<typeof OrderStatusChip>[0]['status']}
+                    readOnly
+                  />
                 </div>
               </div>
             ))}

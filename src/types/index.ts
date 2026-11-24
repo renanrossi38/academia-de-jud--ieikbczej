@@ -151,6 +151,23 @@ export interface Order {
   }
 }
 
+/** Etapa de rastreio personalizada criada pelo admin (order_tracking, migration 0034). */
+export interface OrderTrackingStep {
+  id: string
+  collectionId: string
+  collectionName: string
+  order: string
+  /** Texto livre da etapa (ex.: "Encomendado na fábrica", "Em produção"). */
+  label: string
+  /** Quem registrou (preenchido pelo hook via e.auth — pode não existir mais). */
+  user: string
+  created: string
+  updated: string
+  expand?: {
+    user?: Pick<User, 'id' | 'name'>
+  }
+}
+
 /** Etapa do pedido gravada pelo hook server-side (order_status_log). */
 export interface OrderStatusLog {
   id: string

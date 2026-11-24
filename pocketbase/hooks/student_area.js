@@ -93,6 +93,73 @@ routerAdd(
         })
       }
 
+      // ---- Rastreio do pedido (estilo Correios) -------------------------------
+      // Une mudanças de status (order_status_log, gravadas pelo hook) e etapas
+      // personalizadas (order_tracking, criadas pelo admin). Mais recente em cima.
+      function trackingDoPedido(orderId) {
+        var events = []
+
+        var logRows = $app.findRecordsByFilter(
+          'order_status_log',
+          'order = {:oid}',
+          '-created',
+          0,
+          0,
+          { oid: orderId },
+        )
+        for (var i = 0; i < logRows.length; i++) {
+          var lg = logRows[i]
+          var porUsuario = ''
+          try {
+            var uLog = $app.findRecordById('users', lg.getString('user'))
+            porUsuario = uLog.getString('name')
+          } catch (errU) {
+            porUsuario = 'Sistema'
+          }
+          events.push({
+            kind: 'status',
+            at: String(lg.getDateTime('created')),
+            by: porUsuario,
+            from_status: lg.getString('from_status'),
+            to_status: lg.getString('to_status'),
+          })
+        }
+
+        var stepRows = $app.findRecordsByFilter(
+          'order_tracking',
+          'order = {:oid}',
+          '-created',
+          0,
+          0,
+          { oid: orderId },
+        )
+        for (var s = 0; s < stepRows.length; s++) {
+          var st = stepRows[s]
+          var porAdmin = ''
+          try {
+            var uStep = $app.findRecordById('users', st.getString('user'))
+            porAdmin = uStep.getString('name')
+          } catch (errS) {
+            porAdmin = 'Academia'
+          }
+          events.push({
+            kind: 'etapa',
+            at: String(st.getDateTime('created')),
+            by: porAdmin,
+            label: st.getString('label'),
+          })
+        }
+
+        events.sort(function (a, b) {
+          var ta = new Date(a.at).getTime()
+          var tb = new Date(b.at).getTime()
+          if (tb !== ta) return tb - ta
+          return a.kind === 'etapa' ? -1 : 1
+        })
+
+        return events
+      }
+
       // ---- Pedidos NÃO cancelados do usuário, com itens (e respostas sob medida) ----
       var orders = []
       var myOrders = $app.findRecordsByFilter(
@@ -136,6 +203,7 @@ routerAdd(
           delivery_type: ord.getString('delivery_type'),
           created: String(ord.getDateTime('created')),
           items: itemsOut,
+          tracking: trackingDoPedido(ord.id),
         })
       }
 
