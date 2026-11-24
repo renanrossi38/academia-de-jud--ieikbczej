@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, ArrowLeft, UserPlus, Save, Search, CalendarDays, Users, Ban } from 'lucide-react'
 
@@ -109,6 +110,16 @@ export default function AdminClassDetail() {
 
   const isFull = !!turma?.vagas && links.length >= turma.vagas
   const isKidsClass = turma?.is_kids === true
+
+  // Abas do detalhe: em turma INFANTIL, "Medalhas" fica no primeiro nível —
+  // o usuário entra na turma e encontra onde atribuir dorme dorme / fica fica
+  // em no máximo um clique (era o ponto cego relatado). Em turma comum a aba
+  // nem existe: só a chamada é renderizada.
+  const [activeTab, setActiveTab] = useState<'chamada' | 'medalhas'>('chamada')
+  useEffect(() => {
+    // Trocou de turma ou a turma não é infantil: volta para a chamada.
+    setActiveTab('chamada')
+  }, [isKidsClass, classId])
 
   const loadTurma = useCallback(async () => {
     if (!classId) return
@@ -493,7 +504,10 @@ export default function AdminClassDetail() {
           </div>
           <p className="text-xs text-[#6B6560] mt-1 flex items-center gap-1.5">
             <Users className="w-3.5 h-3.5" />
-            {links.length}/{turma.vagas ?? '—'} vagas ocupadas — faça a chamada do dia abaixo.
+            {links.length}/{turma.vagas ?? '—'} vagas ocupadas
+            {isKidsClass
+              ? ' — use as abas para a chamada e para atribuir as medalhas do mês.'
+              : ' — faça a chamada do dia abaixo.'}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -518,7 +532,34 @@ export default function AdminClassDetail() {
         </div>
       </div>
 
-      {/* Calendário do histórico + seleção de data + resumo */}
+      {/* Abas no topo — só em turma infantil: Chamada | Medalhas do mês 🏅 */}
+      {isKidsClass && (
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as 'chamada' | 'medalhas')}
+          className="mb-4"
+        >
+          <TabsList className="bg-[#FAF6F0] border border-[#E8E0D5] p-1 h-auto gap-1 w-full sm:w-auto">
+            <TabsTrigger
+              value="chamada"
+              className="flex-1 sm:flex-none data-[state=active]:bg-[#1C1B1A] data-[state=active]:text-white text-xs font-semibold px-4 py-2 gap-1.5"
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              Chamada
+            </TabsTrigger>
+            <TabsTrigger
+              value="medalhas"
+              className="flex-1 sm:flex-none data-[state=active]:bg-[#C1272D] data-[state=active]:text-white text-xs font-semibold px-4 py-2 gap-1.5"
+            >
+              <Award className="w-3.5 h-3.5" />
+              Medalhas do mês 🏅
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
+      {/* Calendário do histórico + seleção de data + resumo — aba Chamada */}
+      {(!isKidsClass || activeTab === 'chamada') && (
       <div className="grid gap-4 lg:grid-cols-[auto_1fr] mb-4 items-start">
         <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-3 sm:p-4 w-full max-w-xs mx-auto lg:mx-0">
           <div className="flex items-center gap-2 mb-2">
@@ -568,8 +609,13 @@ export default function AdminClassDetail() {
         </div>
       </div>
 
-      {/* Medalhas — só em turma infantil */}
-      {isKidsClass && (
+          </div>
+        </div>
+      </div>
+      )}
+
+      {/* Medalhas — aba própria, só em turma infantil */}
+      {isKidsClass && activeTab === 'medalhas' && (
         <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-4 sm:p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Award className="w-4 h-4 text-[#C1272D]" />

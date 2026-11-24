@@ -11,6 +11,7 @@ import { HankoStamp, ProductPlaceholder, OfficialLogo } from '@/components/Hanko
 import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero/HeroDecor'
 import { BrushDivider } from '@/components/hero/HeroDecor'
 import InstagramSection from '@/components/InstagramSection'
+import KidsHighlightsSection from '@/components/KidsHighlightsSection'
 import { Badge } from '@/components/ui/badge'
 import {
   ArrowRight,
@@ -479,6 +480,9 @@ export default function Index() {
       <div id="instagram" className="scroll-mt-24">
         <InstagramSection />
       </div>
+
+      {/* Alunos destaque do mês — turmas infantis, destaque vigente (fica fica) */}
+      <KidsHighlightsSection />
 
       {/* Como funciona */}
       <section id="como-funciona" className="bg-white border-y border-[#E8E0D5] py-14 scroll-mt-24">
