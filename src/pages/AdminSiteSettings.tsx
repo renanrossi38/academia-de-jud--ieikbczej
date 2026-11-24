@@ -1,481 +1,683 @@
-import { useAuth } from '@/context/AuthContext'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  DEFAULT_SITE_CONTENT,
-  loadSiteContent,
-  saveSiteContent,
-  type SiteContent,
-  type SiteHour,
-  type SiteHowStep,
-} from '@/services/siteSettings'
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useToast } from '@/hooks/use-toast'
-import {
-  AlignLeft,
-  Clock,
-  Globe,
+  Calendar,
+  Eye,
+  ExternalLink,
+  Footprints,
+  History,
   Home,
-  Info,
+  ImageIcon,
   Loader2,
-  MapPin,
-  MessageCircle,
-  PenLine,
-  Plus,
-  RotateCcw,
-  Save,
-  Settings,
+  Menu,
+  Newspaper,
+  Phone,
   Sparkles,
-  Trash2,
+  Trophy,
 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { AdminPageHeader } from '@/components/admin/AdminPage'
+import { AdminPageHeader, AdminPageLoader } from '@/components/admin/AdminPage'
+import {
+  SiteContent,
+  SiteHour,
+  SiteHowStep,
+  DEFAULT_SITE_CONTENT,
+  saveSiteContent,
+  useRawSiteContent,
+} from '@/services/siteSettings'
+import { SiteInput, SiteSection, SiteTextarea } from '@/pages/admin/SiteFields'
 
 /**
- * /painel/site — edição do conteúdo da página inicial (home). Salva em
- * site_settings (JSON), e a home pública reflete em tempo real (useRealtime).
- * Seções: Hero, Contato (endereço/WhatsApp/e-mail), Horários (lista editável
- * de dia(s) + horário) e Outros (seção "Como funciona").
+ * Editor da página inicial (/painel/site) — reescrito do zero.
+ *
+ * Organizado por seções, na mesma ordem em que aparecem na home: Menu, Hero,
+ * Turmas, Kimonos, Destaques, Notícias, Como funciona, Rodapé (contato +
+ * horários + textos). Todo texto visível da home tem campo aqui; o que é
+ * identidade fixa da marca (nome "Judô Tatsu" no cabeçalho, kanji) não é
+ * editável por decisão consciente — evita campos que salvam mas não refletem.
+ *
+ * O save é o upsert robusto de saveSiteContent (valida sessão gravável,
+ * recria registro em 404 real, explica 403/400 pelo motivo real).
  */
 
-/** Campo textual pequeno com label — o bloco padrão deste formulário. */
-const TextField: React.FC<{
-  id: string
-  label: string
-  value: string
-  onChange: (v: string) => void
-  textarea?: boolean
-  rows?: number
-  placeholder?: string
-  hint?: string
-}> = ({ id, label, value, onChange, textarea, rows = 3, placeholder, hint }) => (
-  <div className="space-y-1.5">
-    <Label htmlFor={id} className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider">
-      {label}
-    </Label>
-    {textarea ? (
-      <Textarea
-        id={id}
-        value={value}
-        rows={rows}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D] leading-relaxed"
+/** Par valor/onChange enxuto passado a cada seção do editor. */
+interface EditorProps {
+  content: SiteContent
+  set: (key: keyof SiteContent, value: string) => void
+}
+
+/* ============================ Seção: Menu ============================ */
+
+const MenuSection = ({ content, set }: EditorProps) => (
+  <SiteSection
+    title="Menu e abas"
+    description="Rótulos do menu no cabeçalho/rodapé e das duas abas do topo da home."
+    icon={<Menu className="w-5 h-5" />}
+  >
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <SiteInput
+        label="Aba Turmas"
+        value={content.tab_turmas}
+        onChange={(v) => set('tab_turmas', v)}
       />
-    ) : (
-      <Input
-        id={id}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+      <SiteInput
+        label="Aba Kimonos e Acessórios"
+        value={content.tab_kimonos}
+        onChange={(v) => set('tab_kimonos', v)}
       />
-    )}
-    {hint && <p className="text-[11px] text-[#6B6560]">{hint}</p>}
-  </div>
+    </div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <SiteInput
+        label="Menu — Turmas"
+        value={content.nav_turmas}
+        onChange={(v) => set('nav_turmas', v)}
+      />
+      <SiteInput
+        label="Menu — Kimonos"
+        value={content.nav_kimonos}
+        onChange={(v) => set('nav_kimonos', v)}
+      />
+      <SiteInput
+        label="Menu — Destaques"
+        value={content.nav_destaques}
+        onChange={(v) => set('nav_destaques', v)}
+      />
+      <SiteInput
+        label="Menu — Notícias"
+        value={content.nav_noticias}
+        onChange={(v) => set('nav_noticias', v)}
+      />
+      <SiteInput
+        label="Menu — Como funciona"
+        value={content.nav_como_funciona}
+        onChange={(v) => set('nav_como_funciona', v)}
+      />
+    </div>
+  </SiteSection>
 )
 
-/** Título de seção do formulário (mesmo padrão de AdminEmailSettings). */
-const SectionTitle: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
-  <p className="font-serif font-bold text-sm text-[#1C1B1A] flex items-center gap-2">
-    <span className="text-[#C1272D]">{icon}</span>
-    {label}
-  </p>
+/* ============================ Seção: Hero ============================ */
+
+const HeroSection = ({ content, set }: EditorProps) => (
+  <SiteSection
+    title="Topo (Hero)"
+    description="Primeira dobra da home: etiqueta, título com palavra destacada em vermelho e frase de apoio."
+    icon={<Home className="w-5 h-5" />}
+  >
+    <SiteInput
+      label="Etiqueta acima do título"
+      value={content.hero_badge}
+      onChange={(v) => set('hero_badge', v)}
+    />
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Título (parte normal)"
+        value={content.hero_title}
+        onChange={(v) => set('hero_title', v)}
+      />
+      <SiteInput
+        label="Palavra destacada (em vermelho)"
+        value={content.hero_highlight}
+        onChange={(v) => set('hero_highlight', v)}
+      />
+    </div>
+    <SiteTextarea
+      label="Frase de apoio"
+      value={content.hero_subtitle}
+      onChange={(v) => set('hero_subtitle', v)}
+    />
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput label="Selo 1" value={content.hero_chip1} onChange={(v) => set('hero_chip1', v)} />
+      <SiteInput label="Selo 2" value={content.hero_chip2} onChange={(v) => set('hero_chip2', v)} />
+    </div>
+  </SiteSection>
 )
+
+/* ====================== Seção: Turmas (aba ativa) ====================== */
+
+const ClassesSection = ({ content, set }: EditorProps) => (
+  <SiteSection
+    title="Turmas"
+    description="Textos da lista de turmas (aba Turmas do topo da home)."
+    icon={<Calendar className="w-5 h-5" />}
+  >
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Texto de carregamento"
+        value={content.classes_loading}
+        onChange={(v) => set('classes_loading', v)}
+      />
+      <SiteInput
+        label="Rótulo 'Mensalidade:'"
+        value={content.class_fee_label}
+        onChange={(v) => set('class_fee_label', v)}
+      />
+      <SiteInput
+        label="Rótulo 'Vagas:'"
+        value={content.class_vagas_label}
+        onChange={(v) => set('class_vagas_label', v)}
+      />
+      <SiteInput
+        label="Texto quando não há horário"
+        value={content.class_schedule_fallback}
+        onChange={(v) => set('class_schedule_fallback', v)}
+      />
+      <SiteInput
+        label="Link 'Consultar' (mensalidade)"
+        value={content.class_fee_consult}
+        onChange={(v) => set('class_fee_consult', v)}
+      />
+      <SiteInput
+        label="Botão de matrícula"
+        value={content.class_enroll_button}
+        onChange={(v) => set('class_enroll_button', v)}
+      />
+      <SiteInput
+        label="Título quando não há turma"
+        value={content.classes_empty_title}
+        onChange={(v) => set('classes_empty_title', v)}
+      />
+      <SiteInput
+        label="Texto quando não há turma"
+        value={content.classes_empty_text}
+        onChange={(v) => set('classes_empty_text', v)}
+      />
+    </div>
+  </SiteSection>
+)
+
+/* ===================== Seção: Kimonos (aba ativa) ===================== */
+
+const ShopSection = ({ content, set }: EditorProps) => (
+  <SiteSection
+    title="Kimonos e Acessórios"
+    description="Textos da vitrine de produtos (aba Kimonos do topo da home)."
+    icon={<ImageIcon className="w-5 h-5" />}
+  >
+    <SiteInput
+      label="Texto de carregamento"
+      value={content.shop_loading}
+      onChange={(v) => set('shop_loading', v)}
+    />
+    <div className="grid gap-4 sm:grid-cols-3">
+      <SiteInput
+        label="Categoria: Todos"
+        value={content.shop_cat_all}
+        onChange={(v) => set('shop_cat_all', v)}
+      />
+      <SiteInput
+        label="Categoria: Uniformes"
+        value={content.shop_cat_uniformes}
+        onChange={(v) => set('shop_cat_uniformes', v)}
+      />
+      <SiteInput
+        label="Categoria: Faixas"
+        value={content.shop_cat_faixas}
+        onChange={(v) => set('shop_cat_faixas', v)}
+      />
+      <SiteInput
+        label="Categoria: Camisetas"
+        value={content.shop_cat_camisetas}
+        onChange={(v) => set('shop_cat_camisetas', v)}
+      />
+      <SiteInput
+        label="Etiqueta: Uniforme"
+        value={content.shop_badge_uniformes}
+        onChange={(v) => set('shop_badge_uniformes', v)}
+      />
+      <SiteInput
+        label="Etiqueta: Faixa"
+        value={content.shop_badge_faixas}
+        onChange={(v) => set('shop_badge_faixas', v)}
+      />
+      <SiteInput
+        label="Etiqueta: Camiseta"
+        value={content.shop_badge_camisetas}
+        onChange={(v) => set('shop_badge_camisetas', v)}
+      />
+      <SiteInput
+        label="Prefixo de preço"
+        value={content.shop_price_prefix}
+        onChange={(v) => set('shop_price_prefix', v)}
+      />
+      <SiteInput
+        label="Botão de detalhes"
+        value={content.shop_details_button}
+        onChange={(v) => set('shop_details_button', v)}
+      />
+    </div>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Título quando não há produto"
+        value={content.shop_empty_title}
+        onChange={(v) => set('shop_empty_title', v)}
+      />
+      <SiteInput
+        label="Botão 'ver todos'"
+        value={content.shop_empty_button}
+        onChange={(v) => set('shop_empty_button', v)}
+      />
+    </div>
+    <SiteTextarea
+      label="Texto quando não há produto"
+      value={content.shop_empty_text}
+      onChange={(v) => set('shop_empty_text', v)}
+      rows={2}
+    />
+  </SiteSection>
+)
+
+/* ========================= Seção: Destaques ========================= */
+
+const HighlightsSection = ({ content, set }: EditorProps) => (
+  <SiteSection
+    title="Destaques"
+    description="Rótulos da seção de destaques de alunos e competições. O CONTEÚDO dos destaques (fotos, alunos, medalhas) continua no painel 'Destaques'."
+    icon={<Trophy className="w-5 h-5" />}
+  >
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Etiqueta acima do título"
+        value={content.highlights_tag}
+        onChange={(v) => set('highlights_tag', v)}
+      />
+      <SiteInput
+        label="Título da seção"
+        value={content.highlights_title}
+        onChange={(v) => set('highlights_title', v)}
+      />
+    </div>
+    <SiteTextarea
+      label="Frase de apoio"
+      value={content.highlights_subtitle}
+      onChange={(v) => set('highlights_subtitle', v)}
+      rows={2}
+    />
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Subtítulo do bloco do mês"
+        value={content.highlights_month_title}
+        onChange={(v) => set('highlights_month_title', v)}
+      />
+      <SiteInput
+        label="Subtítulo do bloco de competições"
+        value={content.highlights_comp_title}
+        onChange={(v) => set('highlights_comp_title', v)}
+      />
+    </div>
+  </SiteSection>
+)
+
+/* ========================= Seção: Notícias ========================= */
+
+const NewsSection = ({ content, set }: EditorProps) => (
+  <SiteSection
+    title="Notícias"
+    description="Rótulos da seção de notícias (feed do Instagram). O título tem uma parte em vermelho."
+    icon={<Newspaper className="w-5 h-5" />}
+  >
+    <SiteInput
+      label="Etiqueta acima do título"
+      value={content.news_tag}
+      onChange={(v) => set('news_tag', v)}
+    />
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Título (parte normal)"
+        value={content.news_title}
+        onChange={(v) => set('news_title', v)}
+      />
+      <SiteInput
+        label="Título (parte em vermelho)"
+        value={content.news_title_highlight}
+        onChange={(v) => set('news_title_highlight', v)}
+      />
+    </div>
+    <SiteTextarea
+      label="Frase de apoio"
+      value={content.news_subtitle}
+      onChange={(v) => set('news_subtitle', v)}
+      rows={2}
+    />
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Texto de carregamento"
+        value={content.news_loading}
+        onChange={(v) => set('news_loading', v)}
+      />
+      <SiteInput
+        label="Selo 'Mais recente'"
+        value={content.news_latest_badge}
+        onChange={(v) => set('news_latest_badge', v)}
+      />
+      <SiteInput
+        label="Link 'Ver no Instagram'"
+        value={content.news_open_label}
+        onChange={(v) => set('news_open_label', v)}
+      />
+      <SiteInput
+        label="Texto quando a publicação não tem legenda"
+        value={content.news_fallback_caption}
+        onChange={(v) => set('news_fallback_caption', v)}
+      />
+      <SiteInput
+        label="Texto nos cartões pequenos sem legenda"
+        value={content.news_fallback_thumb}
+        onChange={(v) => set('news_fallback_thumb', v)}
+      />
+    </div>
+  </SiteSection>
+)
+
+/* ====================== Seção: Como funciona ====================== */
+
+const HowSection = ({ content, set }: EditorProps) => {
+  const steps = content.how_steps
+  const setStep = (i: number, patch: Partial<SiteHowStep>) => {
+    const next = steps.map((s, j) => (j === i ? { ...s, ...patch } : s))
+    set('how_steps', JSON.stringify(next))
+  }
+  return (
+    <SiteSection
+      title="Como funciona"
+      description="Os três passos de matrícula/compra e a nota de garantia."
+      icon={<Footprints className="w-5 h-5" />}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SiteInput label="Etiqueta" value={content.how_tag} onChange={(v) => set('how_tag', v)} />
+        <SiteInput label="Título" value={content.how_title} onChange={(v) => set('how_title', v)} />
+      </div>
+      <SiteTextarea
+        label="Frase de apoio"
+        value={content.how_subtitle}
+        onChange={(v) => set('how_subtitle', v)}
+        rows={2}
+      />
+      <div className="space-y-3">
+        {steps.map((step, i) => (
+          <div key={i} className="rounded-lg border p-4 space-y-3">
+            <SiteInput
+              label={'Passo ' + (i + 1) + ' — título'}
+              value={step.title}
+              onChange={(v) => setStep(i, { title: v })}
+            />
+            <SiteTextarea
+              label={'Passo ' + (i + 1) + ' — descrição'}
+              value={step.description}
+              onChange={(v) => setStep(i, { description: v })}
+              rows={2}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-[auto_1fr] items-start">
+        <SiteInput
+          label="Garantia — rótulo em negrito"
+          value={content.how_guarantee_label}
+          onChange={(v) => set('how_guarantee_label', v)}
+        />
+        <SiteInput
+          label="Garantia — texto"
+          value={content.how_guarantee_text}
+          onChange={(v) => set('how_guarantee_text', v)}
+        />
+      </div>
+    </SiteSection>
+  )
+}
+
+/* ================== Seção: Rodapé (contato e horários) ================== */
+
+const FooterSection = ({ content, set }: EditorProps) => {
+  const hours = content.hours
+  const setHour = (i: number, patch: Partial<SiteHour>) => {
+    const next = hours.map((h, j) => (j === i ? { ...h, ...patch } : h))
+    set('hours', JSON.stringify(next))
+  }
+  return (
+    <SiteSection
+      title="Rodapé, contato e horários"
+      description="Textos das três colunas do rodapé e os dados de contato exibidos nele."
+      icon={<Phone className="w-5 h-5" />}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SiteInput
+          label="Nome da academia (rodapé)"
+          value={content.footer_about_title}
+          onChange={(v) => set('footer_about_title', v)}
+        />
+        <SiteInput
+          label="Etiqueta abaixo do nome"
+          value={content.footer_brand_tag}
+          onChange={(v) => set('footer_brand_tag', v)}
+        />
+      </div>
+      <SiteTextarea
+        label="Texto sobre a academia"
+        value={content.footer_about_text}
+        onChange={(v) => set('footer_about_text', v)}
+        rows={3}
+      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SiteInput
+          label="Título da coluna Horários"
+          value={content.footer_hours_title}
+          onChange={(v) => set('footer_hours_title', v)}
+        />
+        <SiteInput
+          label="Título da coluna Contato"
+          value={content.footer_contact_title}
+          onChange={(v) => set('footer_contact_title', v)}
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SiteInput
+          label="WhatsApp exibido"
+          value={content.contact_whatsapp}
+          onChange={(v) => set('contact_whatsapp', v)}
+        />
+        <SiteInput
+          label="E-mail exibido"
+          value={content.contact_email}
+          onChange={(v) => set('contact_email', v)}
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SiteInput
+          label="Endereço — linha 1"
+          value={content.contact_address_line1}
+          onChange={(v) => set('contact_address_line1', v)}
+        />
+        <SiteInput
+          label="Endereço — linha 2"
+          value={content.contact_address_line2}
+          onChange={(v) => set('contact_address_line2', v)}
+        />
+      </div>
+      <div>
+        <p className="text-sm font-medium mb-2">Horários de funcionamento</p>
+        <div className="space-y-2">
+          {hours.map((h, i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr]">
+              <SiteInput
+                label={'Linha ' + (i + 1) + ' — dia(s)'}
+                value={h.days}
+                onChange={(v) => setHour(i, { days: v })}
+              />
+              <SiteInput
+                label={'Linha ' + (i + 1) + ' — horário'}
+                value={h.time}
+                onChange={(v) => setHour(i, { time: v })}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+      <SiteInput
+        label="Frase de direitos autorais"
+        value={content.footer_rights}
+        onChange={(v) => set('footer_rights', v)}
+      />
+    </SiteSection>
+  )
+}
+
+const SECTIONS = [
+  MenuSection,
+  HeroSection,
+  ClassesSection,
+  ShopSection,
+  HighlightsSection,
+  NewsSection,
+  HowSection,
+  FooterSection,
+]
+
+/* ============================== Página ============================== */
 
 export default function AdminSiteSettings() {
-  const { user, isAdmin, isLoading: authLoading } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const { toast } = useToast()
+  const navigate = useNavigate()
+  const { raw, isLoading, refresh } = useRawSiteContent()
+  const [content, setContent] = useState<SiteContent | null>(null)
+  const [saving, setSaving] = useState(false)
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [content, setContent] = useState<SiteContent>(DEFAULT_SITE_CONTENT)
-
+  // O formulário abre com o JSON BRUTO salvo (defaults só onde nada foi salvo),
+  // mas NÃO segue realtime: edits locais não são sobrescritos no meio da edição.
   useEffect(() => {
-    if (authLoading) return
-    if (!user) {
-      navigate('/entrar?redirect=/painel/site')
-      return
+    if (content === null && raw !== null) {
+      setContent({ ...DEFAULT_SITE_CONTENT, ...raw } as SiteContent)
     }
-    if (!isAdmin) {
-      toast({
-        title: 'Acesso Restrito',
-        description: 'Esta área é exclusiva para administradores da academia.',
-        variant: 'destructive',
-      })
-      navigate('/')
-      return
-    }
-    loadSiteContent()
-      .then(setContent)
-      .catch(() => {})
-      .finally(() => setIsLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, authLoading])
+  }, [raw, content])
 
-  const set = (key: keyof SiteContent, value: string) => setContent((c) => ({ ...c, [key]: value }))
+  const set = useCallback((key: keyof SiteContent, value: string) => {
+    setContent((prev) => {
+      if (!prev) return prev
+      // Campos array (how_steps, hours) chegam como JSON string.
+      if (key === 'how_steps' || key === 'hours') {
+        try {
+          return { ...prev, [key]: JSON.parse(value) }
+        } catch {
+          return prev
+        }
+      }
+      return { ...prev, [key]: value }
+    })
+  }, [])
 
-  const setHour = (i: number, key: keyof SiteHour, value: string) =>
-    setContent((c) => ({
-      ...c,
-      hours: c.hours.map((h, j) => (j === i ? { ...h, [key]: value } : h)),
-    }))
-
-  const addHour = () => setContent((c) => ({ ...c, hours: [...c.hours, { days: '', time: '' }] }))
-
-  const removeHour = (i: number) =>
-    setContent((c) => ({ ...c, hours: c.hours.filter((_, j) => j !== i) }))
-
-  const setStep = (i: number, key: keyof SiteHowStep, value: string) =>
-    setContent((c) => ({
-      ...c,
-      how_steps: c.how_steps.map((s, j) => (j === i ? { ...s, [key]: value } : s)),
-    }))
+  const dirty = useMemo(
+    () =>
+      !!content && JSON.stringify(content) !== JSON.stringify({ ...DEFAULT_SITE_CONTENT, ...raw }),
+    [content, raw],
+  )
 
   const handleSave = async () => {
-    if (
-      content.hero_title.trim() === '' ||
-      (content.hero_title + ' ' + content.hero_highlight).trim() === ''
-    ) {
-      toast({
-        title: 'Título obrigatório',
-        description: 'Escreva o texto principal do hero antes de salvar.',
-        variant: 'destructive',
-      })
-      return
-    }
-    setIsSaving(true)
+    if (!content) return
+    setSaving(true)
     try {
-      await saveSiteContent(content, user?.name || user?.email)
+      await saveSiteContent(content, user?.name)
       toast({
-        title: 'Conteúdo salvo',
-        description: 'A página inicial já mostra o novo conteúdo — em tempo real.',
+        title: 'Conteúdo atualizado!',
+        description: 'A página inicial já mostra os novos textos.',
       })
-    } catch (err: any) {
-      console.error('Erro ao salvar conteúdo da home:', err)
+      await refresh()
+    } catch (err) {
       toast({
         title: 'Erro ao salvar',
-        description: err?.message || 'Falha ao salvar no servidor. Tente novamente.',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
         variant: 'destructive',
       })
+      // Sessão morta: saveSiteContent já limpou o authStore; manda para o login.
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('não é mais válida') || msg.includes('expirou')) {
+        navigate('/entrar')
+        return
+      }
     } finally {
-      setIsSaving(false)
+      setSaving(false)
     }
   }
 
-  const handleReset = () => {
-    setContent(DEFAULT_SITE_CONTENT)
-    toast({
-      title: 'Textos padrão restaurados',
-      description: 'Clique em "Salvar" para aplicar o conteúdo original da home.',
-    })
-  }
-
-  if (authLoading || isLoading) {
+  if (isLoading || content === null) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="min-h-[40vh] flex flex-col items-center justify-center text-[#6B6560]">
-          <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-          <p className="font-serif text-sm">Carregando conteúdo da página inicial...</p>
-        </div>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <AdminPageHeader
+          breadcrumb="Página inicial"
+          breadcrumbTo="/painel/site"
+          title="Editar página inicial"
+          description="Todos os textos da home, organizados por seção."
+          icon={<Eye className="w-6 h-6" />}
+        />
+        <AdminPageLoader label="Carregando conteúdo da página inicial..." />
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-fade-rise">
+    <div className="p-4 sm:p-6 lg:p-8 pb-28">
       <AdminPageHeader
-        title="Página inicial"
         breadcrumb="Página inicial"
         breadcrumbTo="/painel/site"
-        description="Edite os textos, o endereço, os horários e o contato que aparecem na home pública. Ao salvar, a home atualiza na hora. As mensagens de cobrança e a chave Pix ficam em “Configurações”."
+        title="Editar página inicial"
+        description="Todos os textos da home, organizados por seção. Ao salvar, a home aberta atualiza na hora (tempo real)."
+        icon={<Eye className="w-6 h-6" />}
         action={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={isSaving}
-              className="border-[#E8E0D5] text-[#1C1B1A] hover:bg-[#FAF6F0] text-sm font-semibold"
-            >
-              <RotateCcw className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Padrão</span>
+            <Button variant="outline" asChild>
+              <a href="/" target="_blank" rel="noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Ver home
+              </a>
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
-            >
-              {isSaving ? (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
                 <>
-                  <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
-                  <span className="hidden sm:inline">Salvando...</span>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
                 </>
               ) : (
-                <>
-                  <Save className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Salvar conteúdo</span>
-                </>
+                'Salvar'
               )}
             </Button>
+            {dirty && <span className="text-xs text-amber-600">alterações não salvas</span>}
           </div>
         }
       />
 
-      <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-5 sm:p-6 space-y-6">
-        <div className="flex items-start gap-3 bg-[#FAF6F0] border border-[#E8E0D5] rounded-xl p-4">
-          <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#C1272D]" />
-          <p className="text-xs text-[#6B6560] leading-relaxed">
-            O conteúdo salvo aqui aparece na{' '}
-            <strong className="text-[#1C1B1A]">home pública</strong> (hero, seção "Como funciona") e
-            no <strong className="text-[#1C1B1A]">rodapé</strong> (endereço, contato e horários).
-            Campos deixados em branco mostram o texto padrão atual. Esta página não mexe em
-            mensagens de cobrança nem no Pix — isso fica em{' '}
-            <Link
-              to="/painel/configuracoes"
-              className="inline-flex items-center gap-1 font-semibold text-[#C1272D] hover:underline"
-            >
-              <Settings className="w-3 h-3" />
-              Configurações
-            </Link>
-            .
-          </p>
-        </div>
-
-        {/* ── Hero ── */}
-        <section className="space-y-4">
-          <SectionTitle icon={<Home className="w-4 h-4" />} label="Hero (topo da home)" />
-          <TextField
-            id="hero-badge"
-            label="Selo pequeno acima do título"
-            value={content.hero_badge}
-            onChange={(v) => set('hero_badge', v)}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextField
-              id="hero-title"
-              label="Título principal"
-              value={content.hero_title}
-              onChange={(v) => set('hero_title', v)}
-            />
-            <TextField
-              id="hero-highlight"
-              label="Palavra destacada (vermelha)"
-              value={content.hero_highlight}
-              onChange={(v) => set('hero_highlight', v)}
-            />
-          </div>
-          <TextField
-            id="hero-subtitle"
-            label="Texto descritivo da academia"
-            textarea
-            rows={3}
-            value={content.hero_subtitle}
-            onChange={(v) => set('hero_subtitle', v)}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextField
-              id="hero-chip1"
-              label="Verificação 1"
-              value={content.hero_chip1}
-              onChange={(v) => set('hero_chip1', v)}
-            />
-            <TextField
-              id="hero-chip2"
-              label="Verificação 2"
-              value={content.hero_chip2}
-              onChange={(v) => set('hero_chip2', v)}
-            />
-          </div>
-          <TextField
-            id="hero-side-label"
-            label="Legenda abaixo do logo (coluna direita)"
-            value={content.hero_side_label}
-            onChange={(v) => set('hero_side_label', v)}
-          />
-        </section>
-
-        {/* ── Rodapé — primeiro bloco ── */}
-        <section className="space-y-4 pt-2 border-t border-[#E8E0D5]">
-          <SectionTitle
-            icon={<PenLine className="w-4 h-4" />}
-            label="Rodapé — bloco sobre a academia"
-          />
-          <TextField
-            id="footer-about-title"
-            label="Título (ao lado do logo)"
-            value={content.footer_about_title}
-            onChange={(v) => set('footer_about_title', v)}
-          />
-          <TextField
-            id="footer-about-text"
-            label="Texto de apresentação da academia"
-            textarea
-            rows={3}
-            value={content.footer_about_text}
-            onChange={(v) => set('footer_about_text', v)}
-          />
-        </section>
-
-        {/* ── Contato ── */}
-        <section className="space-y-4 pt-2 border-t border-[#E8E0D5]">
-          <SectionTitle icon={<MapPin className="w-4 h-4" />} label="Contato e endereço (rodapé)" />
-          <TextField
-            id="contact-address1"
-            label="Endereço — linha 1"
-            value={content.contact_address_line1}
-            onChange={(v) => set('contact_address_line1', v)}
-          />
-          <TextField
-            id="contact-address2"
-            label="Endereço — linha 2 (cidade / CEP)"
-            value={content.contact_address_line2}
-            onChange={(v) => set('contact_address_line2', v)}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextField
-              id="contact-whatsapp"
-              label="Telefone / WhatsApp"
-              value={content.contact_whatsapp}
-              onChange={(v) => set('contact_whatsapp', v)}
-            />
-            <TextField
-              id="contact-email"
-              label="E-mail de contato"
-              value={content.contact_email}
-              onChange={(v) => set('contact_email', v)}
-            />
-          </div>
-        </section>
-
-        {/* ── Horários ── */}
-        <section className="space-y-4 pt-2 border-t border-[#E8E0D5]">
-          <SectionTitle
-            icon={<Clock className="w-4 h-4" />}
-            label="Horários de funcionamento (rodapé)"
-          />
-          <div className="space-y-3">
-            {content.hours.map((h, i) => (
-              <div
-                key={i}
-                className="flex flex-col sm:flex-row gap-2 sm:items-center bg-[#FAF6F0] border border-[#E8E0D5] rounded-xl p-3"
-              >
-                <Input
-                  value={h.days}
-                  placeholder="Dia(s) — ex.: Segunda a Sexta"
-                  onChange={(e) => setHour(i, 'days', e.target.value)}
-                  className="h-9 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D] sm:max-w-[42%]"
-                />
-                <Input
-                  value={h.time}
-                  placeholder="Horário — ex.: 07h às 21h30"
-                  onChange={(e) => setHour(i, 'time', e.target.value)}
-                  className="h-9 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeHour(i)}
-                  disabled={content.hours.length <= 1}
-                  aria-label={`Remover horário ${i + 1}`}
-                  className="text-[#B3261E] hover:bg-[#F7E4E2] shrink-0 self-end sm:self-auto"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={addHour}
-            className="border-[#C1272D]/40 text-[#C1272D] hover:bg-[#F7E4E2] text-xs font-semibold"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Adicionar horário
-          </Button>
-        </section>
-
-        {/* ── Como funciona ── */}
-        <section className="space-y-4 pt-2 border-t border-[#E8E0D5]">
-          <SectionTitle
-            icon={<AlignLeft className="w-4 h-4" />}
-            label={'Seção "Como funciona" (rodapé da home)'}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextField
-              id="how-tag"
-              label="Etiqueta pequena"
-              value={content.how_tag}
-              onChange={(v) => set('how_tag', v)}
-            />
-            <TextField
-              id="how-title"
-              label="Título da seção"
-              value={content.how_title}
-              onChange={(v) => set('how_title', v)}
-            />
-          </div>
-          <TextField
-            id="how-subtitle"
-            label="Subtítulo"
-            textarea
-            rows={2}
-            value={content.how_subtitle}
-            onChange={(v) => set('how_subtitle', v)}
-          />
-          {content.how_steps.map((s, i) => (
-            <div key={i} className="bg-[#FAF6F0] border border-[#E8E0D5] rounded-xl p-4 space-y-3">
-              <p className="flex items-center gap-2 text-xs font-bold text-[#1C1B1A] uppercase tracking-wider">
-                <span className="w-5 h-5 rounded-full bg-[#C1272D] text-white flex items-center justify-center font-serif text-[10px]">
-                  {i + 1}
-                </span>
-                Passo {i + 1}
-              </p>
-              <TextField
-                id={`how-step-${i}-title`}
-                label="Título"
-                value={s.title}
-                onChange={(v) => setStep(i, 'title', v)}
-              />
-              <TextField
-                id={`how-step-${i}-desc`}
-                label="Descrição"
-                textarea
-                rows={2}
-                value={s.description}
-                onChange={(v) => setStep(i, 'description', v)}
-              />
-            </div>
-          ))}
-          <TextField
-            id="how-guarantee-label"
-            label="Nota de rodapé — título (em negrito)"
-            value={content.how_guarantee_label}
-            onChange={(v) => set('how_guarantee_label', v)}
-          />
-          <TextField
-            id="how-guarantee-text"
-            label="Nota de rodapé — texto"
-            textarea
-            rows={2}
-            value={content.how_guarantee_text}
-            onChange={(v) => set('how_guarantee_text', v)}
-          />
-        </section>
+      <div className="space-y-5 max-w-4xl">
+        {SECTIONS.map((S, i) => (
+          <S key={i} content={content} set={set} />
+        ))}
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-2 text-[11px] text-[#6B6560] px-1">
-        <span className="inline-flex items-center gap-1.5">
-          <Globe className="w-3.5 h-3.5" />
-          Válido para a home pública e o rodapé
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <MessageCircle className="w-3.5 h-3.5" />
-          Dúvidas? <Sparkles className="w-3 h-3 text-[#C1272D]" />
-        </span>
+      {/* Barra de ação fixa (sempre acessível com a página longa) */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 backdrop-blur-sm p-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground truncate">
+            {dirty ? 'Você tem alterações não salvas' : 'Tudo salvo'}
+          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" asChild>
+              <a href="/" target="_blank" rel="noreferrer">
+                <Eye className="w-4 h-4 mr-2" />
+                Ver home
+              </a>
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar'
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

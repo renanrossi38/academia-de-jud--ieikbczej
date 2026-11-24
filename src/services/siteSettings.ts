@@ -34,7 +34,6 @@ export interface SiteContent {
   hero_subtitle: string
   hero_chip1: string
   hero_chip2: string
-  hero_side_label: string
   /** Contato (exibido no rodapé) */
   contact_address_line1: string
   contact_address_line2: string
@@ -116,7 +115,6 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     'Conheça nossas turmas, escolha um horário para começar e adquira seu kimono, faixa e acessórios oficiais com tradição e honra.',
   hero_chip1: 'Aulas para todas as idades',
   hero_chip2: 'Matrícula aberta todo mês',
-  hero_side_label: 'Academia de Judô',
   contact_address_line1: 'Rua da Sakura, 123 — Bairro Central',
   contact_address_line2: 'São Paulo - SP — CEP 01234-567',
   contact_whatsapp: '(11) 98765-4321',
