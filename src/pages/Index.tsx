@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSiteContent } from '@/services/siteSettings'
+import { useSiteContent, type SiteContent } from '@/services/siteSettings'
 import { Link, useLocation } from 'react-router-dom'
 import { scrollToSection } from '@/components/homeAnchors'
 import pb from '@/lib/pocketbase/client'
@@ -26,22 +26,24 @@ import {
 
 type HomeTab = 'turmas' | 'kimonos'
 
-/** Categorias exibidas na aba "Kimonos e Acessórios" (sem equipamentos/planos). */
-const SHOP_CATEGORIES: { label: string; value: ProductCategory | 'todos' }[] = [
-  { label: 'Todos', value: 'todos' },
-  { label: 'Uniformes (Gi)', value: 'uniformes' },
-  { label: 'Faixas (Obi)', value: 'faixas' },
-  { label: 'Camisetas', value: 'camisetas' },
+/** Categorias exibidas na aba "Kimonos e Acessórios" (sem equipamentos/planos). Rótulos vêm do painel. */
+const shopCategories = (
+  site: SiteContent,
+): { label: string; value: ProductCategory | 'todos' }[] => [
+  { label: site.shop_cat_all, value: 'todos' },
+  { label: site.shop_cat_uniformes, value: 'uniformes' },
+  { label: site.shop_cat_faixas, value: 'faixas' },
+  { label: site.shop_cat_camisetas, value: 'camisetas' },
 ]
 
-const getCategoryLabel = (cat: ProductCategory): string => {
+const getCategoryLabel = (cat: ProductCategory, site: SiteContent): string => {
   switch (cat) {
     case 'uniformes':
-      return 'Uniforme / Kimono'
+      return site.shop_badge_uniformes
     case 'faixas':
-      return 'Faixa / Obi'
+      return site.shop_badge_faixas
     case 'camisetas':
-      return 'Camiseta'
+      return site.shop_badge_camisetas
     case 'equipamentos':
       return 'Equipamento'
     case 'planos':
@@ -51,9 +53,9 @@ const getCategoryLabel = (cat: ProductCategory): string => {
   }
 }
 
-/** Horário plausível quando a turma não tem o campo preenchido. */
-const scheduleOf = (c: Class): string =>
-  c.schedule && c.schedule.trim() !== '' ? c.schedule : 'Consulte os horários na academia'
+/** Horário plausível quando a turma não tem o campo preenchido (texto vem do painel). */
+const scheduleOf = (c: Class, fallback: string): string =>
+  c.schedule && c.schedule.trim() !== '' ? c.schedule : fallback
 
 /** Mensalidade plausível quando a turma não tem o campo preenchido. */
 const feeOf = (c: Class): number =>
@@ -260,11 +262,11 @@ export default function Index() {
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-2xl mx-auto">
           <button onClick={() => setActiveTab('turmas')} className={tabClass('turmas')}>
             <Users className="w-4 h-4" />
-            Turmas
+            {site.tab_turmas}
           </button>
           <button onClick={() => setActiveTab('kimonos')} className={tabClass('kimonos')}>
             <Sparkles className="w-4 h-4" />
-            Kimonos e Acessórios
+            {site.tab_kimonos}
           </button>
         </div>
       </section>
@@ -275,17 +277,15 @@ export default function Index() {
           {classesLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-[#4A443F]">
               <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-              <p className="font-serif text-sm">Carregando turmas do Judô Tatsu...</p>
+              <p className="font-serif text-sm">{site.classes_loading}</p>
             </div>
           ) : classes.length === 0 ? (
             <div className="py-16 text-center bg-white rounded-2xl border border-[#E8E0D5] p-8 max-w-md mx-auto my-6">
               <HankoStamp size="lg" className="mx-auto mb-4" />
               <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
-                Nenhuma turma ativa no momento
+                {site.classes_empty_title}
               </h3>
-              <p className="text-sm text-[#4A443F] mt-1">
-                Fale com a recepção para conhecer os horários disponíveis.
-              </p>
+              <p className="text-sm text-[#4A443F] mt-1">{site.classes_empty_text}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -329,21 +329,22 @@ export default function Index() {
                     <div className="mt-4 space-y-2.5 text-sm">
                       <span className="flex items-center gap-2 text-[#1C1B1A]">
                         <Clock className="w-4 h-4 text-[#C1272D] shrink-0" />
-                        {scheduleOf(c)}
+                        {scheduleOf(c, site.class_schedule_fallback)}
                       </span>
                       <span className="flex items-center gap-2 text-[#1C1B1A]">
                         <CalendarDays className="w-4 h-4 text-[#C1272D] shrink-0" />
                         <span>
-                          Mensalidade:{' '}
+                          {site.class_fee_label}{' '}
                           <strong className="text-[#C1272D] font-semibold">
-                            {feeOf(c) > 0 ? money(feeOf(c)) : 'Consultar'}
+                            {feeOf(c) > 0 ? money(feeOf(c)) : site.class_fee_consult}
                           </strong>
                         </span>
                       </span>
                       {!!c.vagas && (
                         <span className="flex items-center gap-2 text-[#1C1B1A]">
                           <Users className="w-4 h-4 text-[#C1272D] shrink-0" />
-                          Vagas: <strong className="font-semibold">{c.vagas}</strong>
+                          {site.class_vagas_label}{' '}
+                          <strong className="font-semibold">{c.vagas}</strong>
                         </span>
                       )}
                     </div>
@@ -352,7 +353,7 @@ export default function Index() {
                       to="/criar-conta"
                       className="mt-5 inline-flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-white text-sm font-semibold transition-all duration-200 mt-auto bg-[#C1272D] hover:bg-[#A01E23] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 [clip-path:polygon(2%_18%,97%_8%,100%_55%,98%_88%,3%_96%,0_60%)] hover:[clip-path:polygon(1%_12%,98%_14%,100%_60%,97%_92%,2%_90%,0_55%)]"
                     >
-                      Quero me matricular
+                      {site.class_enroll_button}
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
@@ -368,7 +369,7 @@ export default function Index() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
           {/* Filtros de categoria */}
           <div className="flex items-center gap-2 overflow-x-auto pb-4">
-            {SHOP_CATEGORIES.map((cat) => {
+            {shopCategories(site).map((cat) => {
               const isSelected = selectedCategory === cat.value
               return (
                 <button
@@ -390,23 +391,21 @@ export default function Index() {
           {productsLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-[#4A443F]">
               <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
-              <p className="font-serif text-sm">Carregando catálogo da loja...</p>
+              <p className="font-serif text-sm">{site.shop_loading}</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             /* Vazio */
             <div className="py-16 text-center bg-white rounded-2xl border border-[#E8E0D5] p-8 max-w-md mx-auto my-6">
               <HankoStamp size="lg" className="mx-auto mb-4" />
               <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
-                Nenhum produto nesta categoria
+                {site.shop_empty_title}
               </h3>
-              <p className="text-sm text-[#4A443F] mt-1 mb-4">
-                Explore outras categorias ou volte para ver todos os itens disponíveis.
-              </p>
+              <p className="text-sm text-[#4A443F] mt-1 mb-4">{site.shop_empty_text}</p>
               <button
                 onClick={() => setSelectedCategory('todos')}
                 className="min-h-[44px] inline-flex items-center justify-center w-full sm:w-auto px-5 py-2 rounded-lg text-sm font-semibold text-[#C1272D] hover:underline hover:bg-[#F7E4E2]/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2"
               >
-                Ver todos os produtos
+                {site.shop_empty_button}
               </button>
             </div>
           ) : (
@@ -438,7 +437,7 @@ export default function Index() {
                           variant="secondary"
                           className="bg-white/90 backdrop-blur-xs text-[#1C1B1A] border border-[#E8E0D5] text-[11px] font-medium"
                         >
-                          {getCategoryLabel(product.category)}
+                          {getCategoryLabel(product.category, site)}
                         </Badge>
                       </div>
                     </div>
@@ -456,14 +455,16 @@ export default function Index() {
 
                       <div className="mt-4 pt-3 border-t border-[#E8E0D5] flex items-baseline justify-between">
                         <div>
-                          <span className="text-[11px] text-[#6B6560] block">a partir de</span>
+                          <span className="text-[11px] text-[#6B6560] block">
+                            {site.shop_price_prefix}
+                          </span>
                           <span className="font-semibold text-lg text-[#C1272D]">
                             {money(product.price)}
                           </span>
                         </div>
 
                         <span className="text-xs font-semibold text-[#1C1B1A] flex items-center gap-1 group-hover:text-[#C1272D] transition-colors">
-                          Ver detalhes
+                          {site.shop_details_button}
                           <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                         </span>
                       </div>

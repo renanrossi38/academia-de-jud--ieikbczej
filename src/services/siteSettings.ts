@@ -52,6 +52,59 @@ export interface SiteContent {
   /** Rodapé — primeiro bloco (logo + nome + texto sobre a academia) */
   footer_about_title: string
   footer_about_text: string
+  /** Rodapé — rótulos das colunas e da barra inferior */
+  footer_brand_tag: string
+  footer_hours_title: string
+  footer_contact_title: string
+  footer_rights: string
+  /** Menu e âncoras da home (cabeçalho e rodapé) */
+  nav_turmas: string
+  nav_kimonos: string
+  nav_destaques: string
+  nav_noticias: string
+  nav_como_funciona: string
+  /** Abas da home (Turmas | Kimonos e Acessórios) */
+  tab_turmas: string
+  tab_kimonos: string
+  /** Seção Turmas */
+  classes_loading: string
+  classes_empty_title: string
+  classes_empty_text: string
+  class_schedule_fallback: string
+  class_fee_label: string
+  class_fee_consult: string
+  class_vagas_label: string
+  class_enroll_button: string
+  /** Seção Kimonos e Acessórios */
+  shop_loading: string
+  shop_cat_all: string
+  shop_cat_uniformes: string
+  shop_cat_faixas: string
+  shop_cat_camisetas: string
+  shop_badge_uniformes: string
+  shop_badge_faixas: string
+  shop_badge_camisetas: string
+  shop_empty_title: string
+  shop_empty_text: string
+  shop_empty_button: string
+  shop_price_prefix: string
+  shop_details_button: string
+  /** Seção Destaques */
+  highlights_tag: string
+  highlights_title: string
+  highlights_subtitle: string
+  highlights_month_title: string
+  highlights_comp_title: string
+  /** Seção Notícias (Instagram) */
+  news_tag: string
+  news_title: string
+  news_title_highlight: string
+  news_subtitle: string
+  news_loading: string
+  news_latest_badge: string
+  news_open_label: string
+  news_fallback_caption: string
+  news_fallback_thumb: string
 }
 
 /** Defaults = conteúdo atual da home (seed idêntico na migration 0026). */
@@ -100,6 +153,54 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   footer_about_title: 'Judô Tatsu',
   footer_about_text:
     'Tradição, disciplina e excelência no ensino do judô. Atendendo judocas de todas as idades desde a faixa branca até a preta.',
+  footer_brand_tag: 'Academia de Judô',
+  footer_hours_title: 'Horários',
+  footer_contact_title: 'Contato',
+  footer_rights: 'Todos os direitos reservados.',
+  nav_turmas: 'Turmas',
+  nav_kimonos: 'Kimonos',
+  nav_destaques: 'Destaques',
+  nav_noticias: 'Notícias',
+  nav_como_funciona: 'Como funciona',
+  tab_turmas: 'Turmas',
+  tab_kimonos: 'Kimonos e Acessórios',
+  classes_loading: 'Carregando turmas do Judô Tatsu...',
+  classes_empty_title: 'Nenhuma turma ativa no momento',
+  classes_empty_text: 'Fale com a recepção para conhecer os horários disponíveis.',
+  class_schedule_fallback: 'Consulte os horários na academia',
+  class_fee_label: 'Mensalidade:',
+  class_fee_consult: 'Consultar',
+  class_vagas_label: 'Vagas:',
+  class_enroll_button: 'Quero me matricular',
+  shop_loading: 'Carregando catálogo da loja...',
+  shop_cat_all: 'Todos',
+  shop_cat_uniformes: 'Uniformes (Gi)',
+  shop_cat_faixas: 'Faixas (Obi)',
+  shop_cat_camisetas: 'Camisetas',
+  shop_badge_uniformes: 'Uniforme / Kimono',
+  shop_badge_faixas: 'Faixa / Obi',
+  shop_badge_camisetas: 'Camiseta',
+  shop_empty_title: 'Nenhum produto nesta categoria',
+  shop_empty_text: 'Explore outras categorias ou volte para ver todos os itens disponíveis.',
+  shop_empty_button: 'Ver todos os produtos',
+  shop_price_prefix: 'a partir de',
+  shop_details_button: 'Ver detalhes',
+  highlights_tag: 'Destaques',
+  highlights_title: 'Nossos destaques em cena',
+  highlights_subtitle:
+    'Alunos que brilharam no tatame: o destaque do mês de cada turma infantil e as medalhas conquistadas nos campeonatos.',
+  highlights_month_title: 'Destaques do mês',
+  highlights_comp_title: 'Destaques em competições',
+  news_tag: 'Novidades do Dojo',
+  news_title: 'Notícias do',
+  news_title_highlight: 'Judô Tatsu',
+  news_subtitle:
+    'Acompanhe competições, graduações e o dia a dia da academia direto do nosso feed.',
+  news_loading: 'Carregando novidades do Instagram...',
+  news_latest_badge: 'Mais recente',
+  news_open_label: 'Ver no Instagram',
+  news_fallback_caption: 'Veja esta publicação no Instagram',
+  news_fallback_thumb: 'Ver publicação no Instagram',
 }
 
 /** Registro bruto da collection site_settings. */
