@@ -218,7 +218,7 @@ export default function ProductDetail() {
                   type="button"
                   onClick={() => setSelectedImage(idx)}
                   aria-label={`Ver foto ${idx + 1} de ${product.name}`}
-                  className={`relative aspect-square rounded-lg border overflow-hidden transition-all ${
+                  className={`relative aspect-square rounded-lg border overflow-hidden transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 ${
                     idx === selectedImage
                       ? 'border-[#C1272D] ring-2 ring-[#C1272D]/30'
                       : 'border-[#E8E0D5] hover:border-[#C1272D]/50 opacity-80 hover:opacity-100'
@@ -297,7 +297,7 @@ export default function ProductDetail() {
                     <button
                       key={v.id}
                       onClick={() => setSelectedVariation(v)}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all border flex items-center gap-2 ${
+                      className={`px-3.5 py-2.5 min-h-[40px] rounded-lg text-xs font-semibold transition-all duration-200 border flex items-center gap-2 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 active:scale-[0.97] ${
                         isSelected
                           ? 'bg-[#C1272D] text-white border-[#C1272D] shadow-xs'
                           : 'bg-white text-[#1C1B1A] border-[#E8E0D5] hover:border-[#C1272D]/50 hover:bg-[#F7E4E2]/30'
@@ -388,7 +388,7 @@ export default function ProductDetail() {
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1}
-                  className="p-2 text-[#1C1B1A] hover:bg-[#F7E4E2] rounded disabled:opacity-40 transition-colors"
+                  className="p-2.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-[#1C1B1A] hover:bg-[#F7E4E2] rounded-md disabled:opacity-40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
                   aria-label="Diminuir quantidade"
                 >
                   <Minus className="w-4 h-4" />
@@ -399,7 +399,7 @@ export default function ProductDetail() {
                 <button
                   onClick={() => setQuantity(Math.min(10, quantity + 1))}
                   disabled={quantity >= 10}
-                  className="p-2 text-[#1C1B1A] hover:bg-[#F7E4E2] rounded disabled:opacity-40 transition-colors"
+                  className="p-2.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-[#1C1B1A] hover:bg-[#F7E4E2] rounded-md disabled:opacity-40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
                   aria-label="Aumentar quantidade"
                 >
                   <Plus className="w-4 h-4" />
@@ -409,7 +409,7 @@ export default function ProductDetail() {
               <Button
                 onClick={handleAddToCart}
                 disabled={isAdding}
-                className="flex-1 h-12 bg-[#C1272D] hover:bg-[#A01E23] text-white font-semibold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="flex-1 h-12 bg-[#C1272D] hover:bg-[#A01E23] text-white font-semibold text-sm shadow-md transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2"
               >
                 <ShoppingBag className="w-5 h-5" />
                 Adicionar ao Carrinho •{' '}
@@ -420,7 +420,7 @@ export default function ProductDetail() {
 
           {/* Fixed Information badges */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] flex items-center gap-2.5">
+            <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] shadow-xs flex items-center gap-2.5 transition-shadow duration-200 hover:shadow-sm">
               <MapPin className="w-4 h-4 text-[#C1272D] shrink-0" />
               <div className="text-[11px] leading-tight text-[#1C1B1A]">
                 <strong>Retirada na academia</strong>
@@ -428,7 +428,7 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] flex items-center gap-2.5">
+            <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] shadow-xs flex items-center gap-2.5 transition-shadow duration-200 hover:shadow-sm">
               <CreditCard className="w-4 h-4 text-[#C9A227] shrink-0" />
               <div className="text-[11px] leading-tight text-[#1C1B1A]">
                 <strong>Pagamento Seguro</strong>
@@ -436,7 +436,7 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] flex items-center gap-2.5">
+            <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] shadow-xs flex items-center gap-2.5 transition-shadow duration-200 hover:shadow-sm">
               <HelpCircle className="w-4 h-4 text-[#2E7D4F] shrink-0" />
               <div className="text-[11px] leading-tight text-[#1C1B1A]">
                 <strong>Dúvidas de Tamanho?</strong>

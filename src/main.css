@@ -116,6 +116,22 @@
     }
   }
 
+  /* Selo do carrinho: "pop" curto quando um item é adicionado (HeaderFooter) */
+  @keyframes badge-pop {
+    0% {
+      transform: scale(0.4);
+    }
+    60% {
+      transform: scale(1.25);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .animate-badge-pop {
+    animation: badge-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
   @keyframes fade-rise {
     from {
       opacity: 0;

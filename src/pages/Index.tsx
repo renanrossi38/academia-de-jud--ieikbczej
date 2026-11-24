@@ -171,7 +171,7 @@ export default function Index() {
   })
 
   const tabClass = (tab: HomeTab) =>
-    `flex-1 sm:flex-none sm:min-w-[220px] px-4 sm:px-6 py-3.5 text-sm sm:text-base font-semibold font-brush font-serif transition-all flex items-center justify-center gap-2 select-none ${
+    `flex-1 sm:flex-none sm:min-w-[220px] px-4 sm:px-6 py-3.5 text-sm sm:text-base font-semibold font-brush font-serif transition-all duration-200 flex items-center justify-center gap-2 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 active:scale-[0.98] ${
       activeTab === tab
         ? 'bg-[#C1272D] text-white shadow-sm ring-2 ring-[#C1272D]/25 [clip-path:polygon(2%_18%,97%_8%,100%_55%,98%_88%,3%_96%,0_60%)]'
         : 'bg-white text-[#1C1B1A] border border-[#E8E0D5] hover:border-[#C1272D]/50 hover:bg-[#F7E4E2]/40 rounded-xl'
@@ -238,6 +238,25 @@ export default function Index() {
                 <CheckCircle2 className="w-4 h-4 text-[#A31B21]" /> {site.hero_chip2}
               </span>
             </div>
+
+            {/* CTAs do hero: primário vermelho (mesma linguagem do botão das
+                turmas) + secundário que rola até as turmas. Altura ≥ 44px no
+                mobile (alvo de toque), foco visível e feedback de toque. */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3">
+              <Link
+                to="/criar-conta"
+                className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-8 py-3 bg-[#C1272D] text-white text-sm font-bold rounded-lg shadow-sm hover:bg-[#A01E23] hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0] transition-all duration-200"
+              >
+                Quero me matricular
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={() => scrollToSection('turmas')}
+                className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/80 border border-[#1C1B1A]/15 text-[#1C1B1A] text-sm font-semibold rounded-lg hover:border-[#C1272D]/50 hover:bg-[#F7E4E2]/50 hover:text-[#A31B21] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0] transition-all duration-200"
+              >
+                Ver turmas
+              </button>
+            </div>
           </div>
 
           <div className="shrink-0 hidden md:flex items-center justify-center relative z-10">
@@ -292,7 +311,7 @@ export default function Index() {
               {classes.map((c) => (
                 <div
                   key={c.id}
-                  className="group relative bg-white rounded-2xl border border-[#E8E0D5] shadow-xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden"
+                  className="group relative bg-white rounded-2xl border border-[#E8E0D5] shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden"
                 >
                   {/* Capa da turma quando houver foto; senão, cabeçalho washi com sol + hanko */}
                   {coverUrlOf(c) ? (
@@ -350,7 +369,7 @@ export default function Index() {
 
                     <Link
                       to="/criar-conta"
-                      className="mt-5 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-white text-sm font-semibold transition-all mt-auto bg-[#C1272D] hover:bg-[#A01E23] [clip-path:polygon(2%_18%,97%_8%,100%_55%,98%_88%,3%_96%,0_60%)] hover:[clip-path:polygon(1%_12%,98%_14%,100%_60%,97%_92%,2%_90%,0_55%)]"
+                      className="mt-5 inline-flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-white text-sm font-semibold transition-all duration-200 mt-auto bg-[#C1272D] hover:bg-[#A01E23] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 [clip-path:polygon(2%_18%,97%_8%,100%_55%,98%_88%,3%_96%,0_60%)] hover:[clip-path:polygon(1%_12%,98%_14%,100%_60%,97%_92%,2%_90%,0_55%)]"
                     >
                       Quero me matricular
                       <ArrowRight className="w-4 h-4" />
@@ -374,7 +393,7 @@ export default function Index() {
                 <button
                   key={cat.value}
                   onClick={() => setSelectedCategory(cat.value)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all select-none ${
+                  className={`px-4 py-2 min-h-[40px] rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 active:scale-[0.97] ${
                     isSelected
                       ? 'bg-[#C1272D] text-white shadow-sm ring-2 ring-[#C1272D]/30'
                       : 'bg-white text-[#1C1B1A] border border-[#E8E0D5] hover:border-[#C1272D]/50 hover:bg-[#F7E4E2]/40'
@@ -419,7 +438,7 @@ export default function Index() {
                   <Link
                     key={product.id}
                     to={`/produto/${product.slug}`}
-                    className="group bg-white rounded-xl border border-[#E8E0D5] overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col"
+                    className="group bg-white rounded-2xl border border-[#E8E0D5] overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2"
                   >
                     {/* Imagem / marcador gráfico */}
                     <div className="relative aspect-4/3 w-full bg-[#FAF6F0] overflow-hidden">
@@ -488,13 +507,14 @@ export default function Index() {
       <section id="como-funciona" className="bg-white border-y border-[#E8E0D5] py-14 scroll-mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="text-xs font-bold text-[#C1272D] uppercase tracking-widest font-serif">
+            <span className="text-xs font-bold text-[#A31B21] uppercase tracking-widest font-serif">
               {site.how_tag}
             </span>
             <h2 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
               {site.how_title}
             </h2>
             <p className="text-sm text-[#4A443F] mt-2">{site.how_subtitle}</p>
+            <BrushDivider className="w-40 mx-auto mt-4 text-[#C1272D]" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
