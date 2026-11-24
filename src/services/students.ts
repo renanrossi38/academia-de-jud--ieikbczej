@@ -9,6 +9,9 @@ export interface CreateStudentInput {
   belt?: Belt
   address?: string
   birth_date?: string
+  guardian_name?: string
+  guardian_phone?: string
+  guardian_email?: string
 }
 
 export interface UpdateStudentInput {
@@ -19,6 +22,18 @@ export interface UpdateStudentInput {
   active?: boolean
   address?: string
   birth_date?: string
+  guardian_name?: string
+  guardian_phone?: string
+  guardian_email?: string
+}
+
+/** Validação leve de telefone (pt-BR): 10 a 11 dígitos com DDD, ou vazios. */
+export function guardianPhoneError(phone: string): string | null {
+  const digits = (phone || '').replace(/\D/g, '')
+  if (!digits) return null // opcional
+  if (digits.length < 10 || digits.length > 11)
+    return 'Informe o telefone com DDD — ex.: (11) 90000-0000.'
+  return null
 }
 
 // Senha inicial gerada para o aluno (exibida uma única vez)
@@ -180,6 +195,9 @@ export const studentsService = {
       belt: input.belt || '',
       address: input.address?.trim() || '',
       birth_date: input.birth_date?.trim() || '',
+      guardian_name: input.guardian_name?.trim() || '',
+      guardian_phone: input.guardian_phone?.trim() || '',
+      guardian_email: input.guardian_email?.trim() || '',
       active: true,
     })
   },
@@ -194,6 +212,12 @@ export const studentsService = {
     if (typeof payload.name === 'string') payload.name = payload.name.trim()
     if (typeof payload.email === 'string') payload.email = payload.email.trim()
     if (typeof payload.phone === 'string') payload.phone = payload.phone.trim()
+    if (typeof payload.guardian_name === 'string')
+      payload.guardian_name = payload.guardian_name.trim()
+    if (typeof payload.guardian_phone === 'string')
+      payload.guardian_phone = payload.guardian_phone.trim()
+    if (typeof payload.guardian_email === 'string')
+      payload.guardian_email = payload.guardian_email.trim()
     return pb.collection('students').update<Student>(id, payload)
   },
 

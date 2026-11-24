@@ -49,6 +49,7 @@ import {
   Calendar,
   CalendarDays,
   MapPin,
+  Contact,
   Phone,
   UserCheck,
   UserX,
@@ -621,6 +622,7 @@ export default function AdminStudents() {
                   <th className="py-3 px-4">E-mail</th>
                   <th className="py-3 px-4">Nascimento</th>
                   <th className="py-3 px-4">Endereço</th>
+                  <th className="py-3 px-4">Responsável</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Mensalidade</th>
                   <th className="py-3 px-4">Cadastro</th>
@@ -669,6 +671,20 @@ export default function AdminStudents() {
                       </td>
                       <td className="py-3.5 px-4 text-[#6B6560] max-w-[220px] truncate">
                         {student.address || '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-[#6B6560]">
+                        {student.guardian_name ? (
+                          <span>
+                            <span className="font-semibold text-[#1C1B1A]">
+                              {student.guardian_name}
+                            </span>
+                            {student.guardian_phone && (
+                              <span className="block text-[10px]">{student.guardian_phone}</span>
+                            )}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge
@@ -831,6 +847,15 @@ export default function AdminStudents() {
                       <p className="flex items-center gap-1.5">
                         <MapPin className="w-3 h-3" />
                         {student.address}
+                      </p>
+                    )}
+                    {student.guardian_name && (
+                      <p className="flex items-center gap-1.5">
+                        <Contact className="w-3 h-3" />
+                        <span>
+                          Resp.: {student.guardian_name}
+                          {student.guardian_phone ? ` · ${student.guardian_phone}` : ''}
+                        </span>
                       </p>
                     )}
                   </div>

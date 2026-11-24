@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T05:28:25.607Z",
+  "generatedAt": "2026-11-24T05:38:59.707Z",
   "collections": [
     {
       "name": "users",
@@ -554,6 +554,24 @@
         {
           "name": "birth_date",
           "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "guardian_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "guardian_phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "guardian_email",
+          "type": "text",
           "required": false,
           "system": false
         }

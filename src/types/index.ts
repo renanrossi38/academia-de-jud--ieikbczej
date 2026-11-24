@@ -47,6 +47,10 @@ export interface Student {
   email?: string
   address?: string
   birth_date?: string
+  /** Responsável (aluno menor de idade) — só contato, sem conta própria no app. */
+  guardian_name?: string
+  guardian_phone?: string
+  guardian_email?: string
   active: boolean
   /** Conta de acesso ao site (users), quando já criada. */
   user?: string

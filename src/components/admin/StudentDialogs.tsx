@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { studentsService } from '@/services/students'
+import { studentsService, guardianPhoneError } from '@/services/students'
 import { Loader2 } from 'lucide-react'
 
 const BELT_LABELS: Record<Belt, string> = {
@@ -100,6 +100,9 @@ interface StudentFormState {
   belt: Belt | ''
   address: string
   birth_date: string
+  guardian_name: string
+  guardian_phone: string
+  guardian_email: string
 }
 
 const emptyForm: StudentFormState = {
@@ -109,6 +112,9 @@ const emptyForm: StudentFormState = {
   belt: '',
   address: '',
   birth_date: '',
+  guardian_name: '',
+  guardian_phone: '',
+  guardian_email: '',
 }
 
 /** Data (YYYY-MM-DD) a partir do campo date do PocketBase, sem deslocar o dia. */
@@ -120,6 +126,79 @@ export const birthDateLabel = (value?: string): string => {
   if (!key || key.length !== 10) return '—'
   const [y, m, d] = key.split('-')
   return `${d}/${m}/${y}`
+}
+
+/** Seção "Responsável" — contato do responsável de aluno menor de idade.
+ * Todos os campos são opcionais e disponíveis para qualquer aluno. */
+export const GuardianSection: React.FC<{
+  form: StudentFormState
+  setForm: React.Dispatch<React.SetStateAction<StudentFormState>>
+  phoneError: string | null
+  idPrefix: string
+}> = ({ form, setForm, phoneError, idPrefix }) => {
+  const [y, m] = form.birth_date ? form.birth_date.slice(0, 10).split('-') : ['', '']
+  // Menor de idade: derive da data de nascimento quando ela existir.
+  const isMinor = !!y && !!m && new Date().getFullYear() - Number(y) < 18
+
+  return (
+    <div className="space-y-3 rounded-xl border border-[#E8E0D5] bg-[#FAF6F0]/60 p-3">
+      <div>
+        <p className="text-xs font-semibold text-[#1C1B1A] font-serif">Responsável</p>
+        <p className="text-[11px] text-[#6B6560]">
+          {isMinor
+            ? 'Aluno menor de idade — cadastre o contato do responsável.'
+            : 'Opcional — use para o responsável de um aluno menor de idade.'}{' '}
+          O responsável não recebe conta de acesso ao site.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-guardian-name`} className="text-xs text-[#1C1B1A] font-medium">
+          Nome do responsável
+        </Label>
+        <Input
+          id={`${idPrefix}-guardian-name`}
+          value={form.guardian_name}
+          onChange={(e) => setForm({ ...form, guardian_name: e.target.value })}
+          placeholder="Ex.: Kenji Suzuki"
+          className="bg-white border-[#E8E0D5]"
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label
+            htmlFor={`${idPrefix}-guardian-phone`}
+            className="text-xs text-[#1C1B1A] font-medium"
+          >
+            Telefone do responsável
+          </Label>
+          <Input
+            id={`${idPrefix}-guardian-phone`}
+            value={form.guardian_phone}
+            onChange={(e) => setForm({ ...form, guardian_phone: e.target.value })}
+            placeholder="(11) 90000-0000"
+            className="bg-white border-[#E8E0D5]"
+          />
+          {phoneError && <p className="text-[11px] text-[#C1272D]">{phoneError}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label
+            htmlFor={`${idPrefix}-guardian-email`}
+            className="text-xs text-[#1C1B1A] font-medium"
+          >
+            E-mail do responsável
+          </Label>
+          <Input
+            id={`${idPrefix}-guardian-email`}
+            type="email"
+            value={form.guardian_email}
+            onChange={(e) => setForm({ ...form, guardian_email: e.target.value })}
+            placeholder="Opcional — responsavel@email.com"
+            className="bg-white border-[#E8E0D5]"
+          />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 interface CreateStudentDialogProps {
@@ -137,6 +216,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   const beltOptions = useBeltOptions()
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [creating, setCreating] = useState(false)
+  const guardianPhoneErr = guardianPhoneError(form.guardian_phone)
 
   const resetAndClose = () => {
     setForm(emptyForm)
@@ -153,6 +233,15 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
       })
       return
     }
+    const gPhoneErr = guardianPhoneError(form.guardian_phone)
+    if (gPhoneErr) {
+      toast({
+        title: 'Telefone do responsável inválido',
+        description: gPhoneErr,
+        variant: 'destructive',
+      })
+      return
+    }
 
     setCreating(true)
     try {
@@ -163,6 +252,9 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
         belt: (form.belt || undefined) as Belt | undefined,
         address: form.address,
         birth_date: form.birth_date,
+        guardian_name: form.guardian_name,
+        guardian_phone: form.guardian_phone,
+        guardian_email: form.guardian_email,
       })
       onCreated(student)
       toast({
@@ -280,6 +372,13 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
                 className="bg-white border-[#E8E0D5]"
               />
             </div>
+
+            <GuardianSection
+              form={form}
+              setForm={setForm}
+              phoneError={guardianPhoneErr}
+              idPrefix="student"
+            />
           </div>
 
           <DialogFooter className="gap-2">
@@ -329,6 +428,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
   const [active, setActive] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const guardianPhoneErr = guardianPhoneError(form.guardian_phone)
 
   // Preenche o formulário sempre que um aluno diferente é aberto
   if (student && loadedFor !== student.id) {
@@ -339,6 +439,9 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       belt: (student.belt as Belt) || '',
       address: student.address || '',
       birth_date: toBirthDateInput(student.birth_date),
+      guardian_name: student.guardian_name || '',
+      guardian_phone: student.guardian_phone || '',
+      guardian_email: student.guardian_email || '',
     })
     setActive(student.active !== false)
     setLoadedFor(student.id)
@@ -353,6 +456,15 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       toast({ title: 'O nome é obrigatório', variant: 'destructive' })
       return
     }
+    const gPhoneErr = guardianPhoneError(form.guardian_phone)
+    if (gPhoneErr) {
+      toast({
+        title: 'Telefone do responsável inválido',
+        description: gPhoneErr,
+        variant: 'destructive',
+      })
+      return
+    }
 
     setSaving(true)
     try {
@@ -363,6 +475,9 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
         belt: form.belt,
         address: form.address.trim(),
         birth_date: form.birth_date,
+        guardian_name: form.guardian_name.trim(),
+        guardian_phone: form.guardian_phone.trim(),
+        guardian_email: form.guardian_email.trim(),
         active,
       })
 
@@ -467,6 +582,13 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
                 className="bg-white border-[#E8E0D5]"
               />
             </div>
+
+            <GuardianSection
+              form={form}
+              setForm={setForm}
+              phoneError={guardianPhoneErr}
+              idPrefix="edit"
+            />
 
             <div className="space-y-1.5">
               <Label htmlFor="edit-belt" className="text-xs text-[#1C1B1A] font-medium">
