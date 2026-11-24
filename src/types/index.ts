@@ -355,6 +355,27 @@ export interface BeltPromotion {
   /** Data da promoção (exame) — meio-dia UTC para não deslocar em Brasília. */
   promoted_at: string
   notes?: string
+  /** Nota do exame (0–10, opcional — migration 0035). */
+  exam_score?: number | null
+  created: string
+  updated: string
+  expand?: {
+    student?: Student
+  }
+}
+
+/** Medalha mensal de turma infantil (class_medals, migration 0035). */
+export type MedalKind = 'dorme_dorme' | 'fica_fica'
+
+export interface ClassMedal {
+  collectionId: string
+  collectionName: string
+  id: string
+  class: string
+  student: string
+  /** Mês de referência no formato "YYYY-MM". */
+  month: string
+  kind: MedalKind
   created: string
   updated: string
   expand?: {
