@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import pb from '@/lib/pocketbase/client'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -22,9 +23,19 @@ import {
   yearBalance,
   yearTotal,
 } from '@/services/finance'
-import { currentYearBrasilia, monthLabel } from '@/services/monthlyFees'
+import {
+  currentYearBrasilia,
+  isOverdue,
+  monthLabel,
+  paymentMethodLabel,
+} from '@/services/monthlyFees'
 import { fmtBRL, fmtDate } from '@/pages/admin/StudentDetailPanels'
-import { Expense } from '@/types'
+import {
+  openFinanceReport,
+  type FinanceExpenseRow,
+  type FinanceFeeRow,
+} from '@/services/pdfReports'
+import { Expense, MonthlyFee, PaymentMethod } from '@/types'
 import { Button } from '@/components/ui/button'
 import {
   ArchiveReportDialog,
@@ -64,6 +75,7 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
+  FileDown,
 } from 'lucide-react'
 
 /**
@@ -111,6 +123,8 @@ export default function AdminFinance() {
   const [createOpen, setCreateOpen] = useState(false)
   const [deleting, setDeleting] = useState<Expense | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  // Relatório PDF do período — Hook no topo: sempre chamado (antes dos returns).
+  const [isPdfLoading, setIsPdfLoading] = useState(false)
 
   // Relatórios anuais arquivados (migration 0022): lista, o aberto e o diálogo.
   const [reports, setReports] = useState<AnnualReport[]>([])
@@ -214,6 +228,66 @@ export default function AdminFinance() {
   const viewedMonth = data?.months.find((m) => m.key === viewedMonthKey)
   const monthName = monthLabel(viewedMonthKey)
 
+  // Relatório PDF do período em exibição (mês navegado no painel): mensalidades
+  // lançadas para o mês de referência, despesas e os totais dos chips. Só
+  // leitura — nada é alterado.
+  const handleDownloadPdf = async () => {
+    setIsPdfLoading(true)
+    try {
+      const feeRows = await pb.collection('monthly_fees').getFullList<MonthlyFee>({
+        filter: `reference_month = "${viewedMonthKey}"`,
+        expand: 'student',
+        sort: 'student',
+      })
+      const fees: FinanceFeeRow[] = feeRows.map((f) => ({
+        student: f.expand?.student?.name || 'Aluno removido',
+        referenceMonth: monthLabel(f.reference_month),
+        amount: f.amount ?? 0,
+        status: f.status === 'pago' ? 'Pago' : isOverdue(f) ? 'Atrasado' : 'Pendente',
+        method: f.payment_method
+          ? (paymentMethodLabel[f.payment_method as PaymentMethod] ?? f.payment_method)
+          : 'Não informado',
+      }))
+      const expensesRows: FinanceExpenseRow[] = expenses
+        .filter((e) => e.date.slice(0, 7) === viewedMonthKey)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((e) => ({
+          description: e.description,
+          date: fmtDate(e.date),
+          category: e.category ? (expenseCategoryLabel[e.category] ?? e.category) : '',
+          amount: e.amount ?? 0,
+        }))
+      const received = fees.filter((f) => f.status === 'Pago').reduce((s, f) => s + f.amount, 0)
+      const pending = fees.filter((f) => f.status === 'Pendente').reduce((s, f) => s + f.amount, 0)
+      const overdue = fees.filter((f) => f.status === 'Atrasado').reduce((s, f) => s + f.amount, 0)
+      const products = viewedMonth?.products ?? 0
+      const expensesTotal = viewedMonth?.expenses ?? 0
+      openFinanceReport({
+        monthLabel: `${monthName} de ${year}`,
+        fees,
+        expenses: expensesRows,
+        totals: {
+          received,
+          pending,
+          overdue,
+          expenses: expensesTotal,
+          products,
+          balance: received + products - expensesTotal,
+        },
+      })
+    } catch (err: any) {
+      console.error('Erro ao gerar PDF financeiro:', err)
+      toast({
+        title: 'Erro ao gerar o PDF',
+        description:
+          err?.message || 'Não foi possível montar o relatório. Tente novamente mais tarde.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsPdfLoading(false)
+    }
+  }
+
   const summary = [
     summaryStat(
       `Mensalidades — ${monthName}`,
@@ -282,13 +356,29 @@ export default function AdminFinance() {
         icon={<Wallet className="w-6 h-6" />}
         description="Ganhos de mensalidades e produtos, despesas e saldo — mês a mês (horário de Brasília)."
         action={
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Nova despesa
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleDownloadPdf}
+              disabled={isPdfLoading}
+              variant="outline"
+              className="h-10 border-[#E8E0D5] text-[#1C1B1A] hover:bg-[#FAF6F0] text-sm font-semibold"
+              title="Gerar relatório em PDF do período em exibição"
+            >
+              {isPdfLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <FileDown className="w-4 h-4 mr-2" />
+              )}
+              {isPdfLoading ? 'Gerando PDF...' : 'Baixar PDF'}
+            </Button>
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Nova despesa
+            </Button>
+          </div>
         }
       />
 

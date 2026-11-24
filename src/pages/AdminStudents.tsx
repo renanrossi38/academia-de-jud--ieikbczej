@@ -13,6 +13,7 @@ import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { GuardianContactButtons } from '@/components/admin/GuardianContactButtons'
 import { studentsService } from '@/services/students'
 import { iniciaisDoNome } from '@/services/highlights'
+import pb from '@/lib/pocketbase/client'
 import React from 'react'
 import {
   feeStanding,
@@ -30,8 +31,9 @@ import {
 } from '@/services/whatsapp'
 import { appSettingsService } from '@/services/appSettings'
 import { DEFAULT_FEE_WHATSAPP_TEMPLATE } from '@/services/whatsapp'
+import { openStudentsReport, type StudentReportRow } from '@/services/pdfReports'
 import { Mail, Send, MessageCircle } from 'lucide-react'
-import { Belt, MonthlyFee, Student } from '@/types'
+import { Belt, ClassStudent, MonthlyFee, Student } from '@/types'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -69,6 +71,7 @@ import {
   UserX,
   KeyRound,
   Trash2,
+  FileDown,
   Users,
   Wallet,
   Settings,
@@ -82,6 +85,23 @@ const upsert = (list: Student[], record: Student): Student[] =>
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+/** Turma(s) do aluno para o PDF: mapa aluno → nomes das turmas (class_students + expand). */
+async function loadClassNamesByStudent(): Promise<Map<string, string[]>> {
+  const links = await pb.collection('class_students').getFullList<ClassStudent>({
+    filter: 'student != ""',
+    expand: 'class',
+  })
+  const map = new Map<string, string[]>()
+  for (const l of links) {
+    const name = l.expand?.class?.name
+    if (!l.student || !name) continue
+    const list = map.get(l.student) || []
+    list.push(name)
+    map.set(l.student, list)
+  }
+  return map
+}
 
 /** Avatar do aluno na listagem: foto (quando enviada na ficha) ou iniciais. */
 const StudentAvatar: React.FC<{ student: Student }> = ({ student }) => {
@@ -491,6 +511,59 @@ export default function AdminStudents() {
     }
   }
 
+  // Relatório PDF da listagem: reflete EXATAMENTE o que a tela mostra agora —
+  // mesmos alunos (filtro de busca aplicado), mesma situação de mensalidade
+  // (feeStanding) e as turmas de cada um (buscadas na hora, com expand).
+  const [isPdfLoading, setIsPdfLoading] = useState(false)
+  const handleDownloadPdf = async () => {
+    setIsPdfLoading(true)
+    try {
+      const classMap = await loadClassNamesByStudent().catch(() => new Map<string, string[]>())
+      const rows: StudentReportRow[] = filteredStudents.map((s) => {
+        const fees = feesByStudent[s.id] || []
+        const standing = standingOf(s, fees)
+        return {
+          name: s.name || '—',
+          belt: beltLabel(beltOf(s) ?? '') || 'Sem faixa',
+          classes: (classMap.get(s.id) || []).join(', ') || '—',
+          active: !!s.active,
+          feeStatus:
+            standing === 'inadimplente'
+              ? 'Inadimplente'
+              : standing === 'em_dia'
+                ? 'Em dia'
+                : 'sem lançamentos',
+          phone: s.phone || '',
+          guardian: [s.guardian_name, s.guardian_phone].filter(Boolean).join(' · '),
+          email: s.email || '',
+        }
+      })
+      const totals = {
+        active: rows.filter((r) => r.active).length,
+        inactive: rows.filter((r) => !r.active).length,
+        emDia: rows.filter((r) => r.feeStatus === 'Em dia').length,
+        atrasados: rows.filter((r) => r.feeStatus === 'Inadimplente').length,
+      }
+      openStudentsReport({
+        rows,
+        filterNote: search.trim()
+          ? `Filtro: busca por “${search.trim()}” (${rows.length} ${rows.length === 1 ? 'aluno' : 'alunos'})`
+          : 'Listagem completa do cadastro da academia',
+        totals,
+      })
+    } catch (err: any) {
+      console.error('Erro ao gerar PDF de alunos:', err)
+      toast({
+        title: 'Erro ao gerar o PDF',
+        description:
+          err?.message || 'Não foi possível montar o relatório. Tente novamente mais tarde.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsPdfLoading(false)
+    }
+  }
+
   const handleToggleActive = async (student: Student) => {
     setTogglingId(student.id)
     try {
@@ -578,6 +651,20 @@ export default function AdminStudents() {
             >
               <Mail className="w-4 h-4 mr-2" />
               Notificar atrasados
+            </Button>
+            <Button
+              onClick={handleDownloadPdf}
+              disabled={isPdfLoading}
+              variant="outline"
+              className="h-10 border-[#E8E0D5] text-[#1C1B1A] hover:bg-[#FAF6F0] text-sm font-semibold"
+              title="Gerar relatório em PDF da listagem exibida (com os filtros ativos)"
+            >
+              {isPdfLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <FileDown className="w-4 h-4 mr-2" />
+              )}
+              {isPdfLoading ? 'Gerando PDF...' : 'Baixar PDF'}
             </Button>
             <Button
               onClick={() => setCreateOpen(true)}
