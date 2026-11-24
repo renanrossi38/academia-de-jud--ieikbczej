@@ -52,9 +52,9 @@ export default function WhatsAppFloat() {
       rel="noopener noreferrer"
       aria-label="Fale conosco no WhatsApp"
       title="Fale conosco no WhatsApp"
-      className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-transform hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
+      className="fixed bottom-4 right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-transform hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6 sm:h-12 sm:w-12"
     >
-      <WhatsAppIcon className="h-7 w-7 sm:h-8 sm:w-8" />
+      <WhatsAppIcon className="h-6 w-6 sm:h-7 sm:w-7" />
     </a>
   )
 }
