@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSiteContent } from '@/services/siteSettings'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { scrollToSection } from '@/components/homeAnchors'
 import pb from '@/lib/pocketbase/client'
 import { productsService } from '@/services/products'
 import { classLevelLabel, classLevelBadgeClass, classesService } from '@/services/classes'
@@ -71,6 +72,7 @@ const upsertClass = (list: Class[], record: Class): Class[] =>
 
 export default function Index() {
   const site = useSiteContent()
+  const location = useLocation()
   const [activeTab, setActiveTab] = useState<HomeTab>('turmas')
 
   const [classes, setClasses] = useState<Class[]>([])
@@ -85,6 +87,19 @@ export default function Index() {
     // A aba de turmas é a inicial: produtos carregam só quando ela abre.
     loadClasses()
   }, [])
+
+  // Âncoras do menu (#turmas / #kimonos): não existem como seção com id —
+  // são o estado das abas da home. O menu navega para "/#kimonos" etc.
+  // (homeAnchors.tsx) e aqui a aba certa é ativada + rola até a barra de abas.
+  useEffect(() => {
+    const hash = location.hash.replace(/^#/, '')
+    if (hash !== 'turmas' && hash !== 'kimonos') return
+    setActiveTab(hash as HomeTab)
+    // Espera o paint (e o conteúdo da aba trocar) antes de medir a posição.
+    const timer = window.setTimeout(() => scrollToSection('turmas'), 80)
+    return () => window.clearTimeout(timer)
+    // location.key muda também em cliques repetidos na mesma âncora.
+  }, [location.key, location.hash])
 
   // Realtime: capa nova na turma (ou turma criada/removida no painel) reflete na home na hora.
   useRealtime<Class>('classes', (e) => {

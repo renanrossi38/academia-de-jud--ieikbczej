@@ -1,20 +1,35 @@
-import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 /**
- * Links de âncora internos à home ("/#secao" e "#secao"):
+ * Links de âncora internos à home ("/#secao" e "#secao").
  *
- * - Em "/#secao": sem JS o browser rola instantâneo e SEM descontar o header
- *   fixo — cobre o começo do bloco. Aqui interceptamos e rolamos suave até a
- *   seção menos a altura do header (sticky, 72px).
- * - Em outra rota (ex. footer de /produto): navega para a home com o hash e
- *   deixa o ScrollToTop da App cuidar do scroll após o paint.
+ * Dois casos distintos:
  *
- * Mesmo offset do ScrollToTop (88px = header 72px + respiro).
+ * 1. Seções com id próprio (#instagram, #como-funciona): dentro da home o
+ *    clique rola direto (funciona em cliques repetidos); fora da home,
+ *    navega para "/#secao" e o ScrollToTop da App resolve.
+ *
+ * 2. Abas da home (#turmas e #kimonos): NÃO são seções com id próprio —
+ *    "kimonos" é o estado activeTab da Index. Rolando direto o clique não
+ *    encontraria elemento ("o botão não faz nada"). Então sempre navegam via
+ *    router para "/#secao": a Index reage ao hash, ativa a aba certa e rola
+ *    até a barra de abas (inclusive trocando de volta p/ "Turmas").
  */
-const HEADER_OFFSET_PX = 88
+export const HEADER_OFFSET_PX = 88
 
-/** Intercepta cliques em âncoras da home dentro da própria home. */
+/** Âncoras que selecionam uma aba da Index (não existem como id no DOM). */
+const TAB_ANCHORS = ['turmas', 'kimonos']
+
+/** Rolamento suave até um id, descontando o header fixo (mesmo offset do ScrollToTop). */
+export function scrollToSection(id: string) {
+  const el = document.getElementById(id)
+  if (!el) return false
+  const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET_PX
+  window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' })
+  return true
+}
+
+/** Intercepta cliques em âncoras da home. */
 export function useHomeAnchorScroll() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -24,15 +39,22 @@ export function useHomeAnchorScroll() {
     const id = raw.slice(1)
     if (!id) return
 
-    // Fora da home: deixa o <Link> navegar para /#secao (ScrollToTop resolve).
-    if (pathname !== '/') return
-
-    event.preventDefault()
-    const el = document.getElementById(id)
-    if (el) {
-      const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET_PX
-      window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' })
+    // Fora da home: navega para "/#secao" (ScrollToTop/Index resolvem).
+    if (pathname !== '/') {
+      event.preventDefault()
+      navigate(`/#${id}`)
+      return
     }
+
+    // Abas da home: sempre via router, a Index reage ao hash (location.key).
+    if (TAB_ANCHORS.includes(id)) {
+      event.preventDefault()
+      navigate(`/#${id}`, { replace: true })
+      return
+    }
+
+    // Seção comum: rola direto (funciona em cliques repetidos).
+    if (scrollToSection(id)) event.preventDefault()
     // Atualiza o hash sem pular (feedback de "onde estou" na barra do browser).
     window.history.replaceState(null, '', `#${id}`)
   }
