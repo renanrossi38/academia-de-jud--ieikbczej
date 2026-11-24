@@ -560,58 +560,54 @@ export default function AdminClassDetail() {
 
       {/* Calendário do histórico + seleção de data + resumo — aba Chamada */}
       {(!isKidsClass || activeTab === 'chamada') && (
-      <div className="grid gap-4 lg:grid-cols-[auto_1fr] mb-4 items-start">
-        <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-3 sm:p-4 w-full max-w-xs mx-auto lg:mx-0">
-          <div className="flex items-center gap-2 mb-2">
-            <CalendarDays className="w-4 h-4 text-[#C1272D]" />
-            <span className="text-xs font-bold text-[#1C1B1A] font-serif">
-              Histórico de presenças
-            </span>
-          </div>
-          <AttendanceCalendar
-            value={dateKey}
-            onChange={handleCalendarPick}
-            daysWithMarkings={calendarDays}
-            onMonthChange={handleMonthChange}
-          />
-        </div>
-
-        <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="roll-date" className="text-xs font-bold text-[#1C1B1A] shrink-0">
-              Data da chamada
-            </Label>
-            <input
-              id="roll-date"
-              type="date"
+        <div className="grid gap-4 lg:grid-cols-[auto_1fr] mb-4 items-start">
+          <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-3 sm:p-4 w-full max-w-xs mx-auto lg:mx-0">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarDays className="w-4 h-4 text-[#C1272D]" />
+              <span className="text-xs font-bold text-[#1C1B1A] font-serif">
+                Histórico de presenças
+              </span>
+            </div>
+            <AttendanceCalendar
               value={dateKey}
-              onChange={(e) => e.target.value && setDateKey(e.target.value)}
-              className="h-9 text-sm rounded-md border border-[#E8E0D5] bg-white px-2.5 text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]"
+              onChange={handleCalendarPick}
+              daysWithMarkings={calendarDays}
+              onMonthChange={handleMonthChange}
             />
           </div>
-          <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
-            <Badge className="bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20 text-xs font-semibold">
-              Presentes: {daySummary.presente}
-            </Badge>
-            <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-xs font-semibold">
-              Ausentes: {daySummary.ausente}
-            </Badge>
-            <Badge className="bg-[#FAF6F0] text-[#6B6560] border-[#E8E0D5] text-xs font-semibold">
-              Justificados: {daySummary.justificado}
-            </Badge>
-            {isLoadingCalendar && (
-              <Loader2
-                className="w-3.5 h-3.5 animate-spin text-[#C1272D]/60"
-                aria-label="Atualizando calendário"
-              />
-            )}
-          </div>
-        </div>
-      </div>
 
+          <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-xs p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="roll-date" className="text-xs font-bold text-[#1C1B1A] shrink-0">
+                Data da chamada
+              </Label>
+              <input
+                id="roll-date"
+                type="date"
+                value={dateKey}
+                onChange={(e) => e.target.value && setDateKey(e.target.value)}
+                className="h-9 text-sm rounded-md border border-[#E8E0D5] bg-white px-2.5 text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
+              <Badge className="bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20 text-xs font-semibold">
+                Presentes: {daySummary.presente}
+              </Badge>
+              <Badge className="bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/20 text-xs font-semibold">
+                Ausentes: {daySummary.ausente}
+              </Badge>
+              <Badge className="bg-[#FAF6F0] text-[#6B6560] border-[#E8E0D5] text-xs font-semibold">
+                Justificados: {daySummary.justificado}
+              </Badge>
+              {isLoadingCalendar && (
+                <Loader2
+                  className="w-3.5 h-3.5 animate-spin text-[#C1272D]/60"
+                  aria-label="Atualizando calendário"
+                />
+              )}
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Medalhas — aba própria, só em turma infantil */}
