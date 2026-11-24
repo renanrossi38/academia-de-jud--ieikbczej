@@ -54,10 +54,17 @@ export class PixUnavailableError extends Error {
 }
 
 /**
- * Configuração Pix lida do app_settings (uso do painel admin, que tem acesso).
- * As chaves são as mesmas que o hook pix_payload.js consome no servidor.
+ * Pares de chaves de app_settings que o hook pix_payload.js consome no
+ * servidor, por tipo de cobrança (mensalidade usa a chave de antes da
+ * separação — quem já tinha cadastrado não precisa recadastrar).
  */
 export const PIX_SETTINGS_KEYS = {
-  key: 'pix_key',
-  receiverName: 'pix_receiver_name',
+  mensalidade: {
+    key: 'pix_key',
+    receiverName: 'pix_receiver_name',
+  },
+  pedido: {
+    key: 'pix_key_produtos',
+    receiverName: 'pix_receiver_name_produtos',
+  },
 } as const

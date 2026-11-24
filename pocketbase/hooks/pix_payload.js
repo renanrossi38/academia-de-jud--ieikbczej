@@ -4,7 +4,13 @@
 //   POST /backend/v1/pix-payload
 //   body: { kind: 'mensalidade' | 'pedido', id: <recordId> }
 //   → { payload, value, txid, qrAvailable: true }
-//   → 409 { qrAvailable: false, message } quando a chave Pix não está cadastrada.
+//   → 409 { qrAvailable: false, message } quando a chave Pix do TIPO não está cadastrada.
+//
+// Cada tipo usa um par INDEPENDENTE de chaves em app_settings:
+//   mensalidade → pix_key / pix_receiver_name           (Mensalidades)
+//   pedido      → pix_key_produtos / pix_receiver_name_produtos (Produtos/Pedidos)
+// A chave de mensalidades é a mesma de antes da separação — quem já tinha
+// cadastrado não precisa recadastrar nada.
 //
 // O Nubank (e qualquer banco) não tem API de confirmação: o QR é o padrão EMV
 // "copia e cola" gerado da CHAVE PIX da academia, com valor e txid. O aluno
@@ -41,8 +47,12 @@ routerAdd(
         var rows = $app.findRecordsByFilter('app_settings', 'key = {:k}', '', 1, 0, { k: chave })
         return rows.length > 0 ? String(rows[0].getString('value') || '') : ''
       }
-      var pixKey = lerSetting('pix_key').trim()
-      var receiverName = lerSetting('pix_receiver_name').trim()
+      // Cada tipo de cobrança usa um par INDEPENDENTE de chaves:
+      //   mensalidade → pix_key / pix_receiver_name (a chave de antes da separação)
+      //   pedido      → pix_key_produtos / pix_receiver_name_produtos
+      var sufixo = kind === 'mensalidade' ? '' : '_produtos'
+      var pixKey = lerSetting('pix_key' + sufixo).trim()
+      var receiverName = lerSetting('pix_receiver_name' + sufixo).trim()
       // Cidade do recebedor: opcional; usa o endereço cadastrado nas configurações
       // do site se houver, senão "SAO PAULO".
       var site = {}
@@ -58,10 +68,13 @@ routerAdd(
       if (city === '') city = 'SAO PAULO'
 
       if (pixKey === '' || receiverName === '') {
+        var tipoTxt = kind === 'mensalidade' ? 'mensalidades' : 'pedidos de produtos'
         return e.json(409, {
           qrAvailable: false,
           message:
-            'O pagamento via Pix ainda não está configurado pela academia — combine o pagamento presencialmente.',
+            'O Pix para ' +
+            tipoTxt +
+            ' ainda não está configurado pela academia — combine o pagamento presencialmente.',
         })
       }
 

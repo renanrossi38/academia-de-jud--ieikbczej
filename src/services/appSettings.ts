@@ -36,9 +36,11 @@ const KEY_SUBJECT = 'fee_overdue_subject'
 const KEY_TEMPLATE = 'fee_overdue_template'
 const KEY_WHATSAPP_TEMPLATE = 'fee_whatsapp_template'
 
-/** As duas chaves de app_settings que o hook pix_payload.js consome no servidor. */
-const KEY_PIX_KEY = 'pix_key'
-const KEY_PIX_RECEIVER_NAME = 'pix_receiver_name'
+/** Pares de chaves Pix por tipo de cobrança (mesmas do hook pix_payload.js e de PIX_SETTINGS_KEYS em services/pix.ts). */
+const KEY_PIX_KEY_MENS = 'pix_key'
+const KEY_PIX_NAME_MENS = 'pix_receiver_name'
+const KEY_PIX_KEY_PROD = 'pix_key_produtos'
+const KEY_PIX_NAME_PROD = 'pix_receiver_name_produtos'
 /** Limite do BR Code para o campo 59 (nome do recebedor). */
 export const PIX_RECEIVER_NAME_MAX = 25
 
@@ -125,24 +127,40 @@ export const appSettingsService = {
     }
   },
 
-  /** Lê a configuração Pix da academia (chaves pix_key / pix_receiver_name). */
-  async getPixConfig(): Promise<{ pixKey: string; receiverName: string; configured: boolean }> {
+  /** Lê a configuração Pix do TIPO (mensalidades ou produtos) em app_settings. */
+  async getPixConfig(
+    tipo: 'mensalidades' | 'produtos',
+  ): Promise<{ pixKey: string; receiverName: string; configured: boolean }> {
     const records = await pb
       .collection('app_settings')
       .getFullList<AppSetting>({ filter: `key ~ "pix_"` })
     const map: Record<string, string> = {}
     for (const r of records) map[r.key] = r.value
-    const pixKey = map[KEY_PIX_KEY]?.trim() || ''
-    const receiverName = map[KEY_PIX_RECEIVER_NAME]?.trim() || ''
+    const [kKey, kName] =
+      tipo === 'mensalidades'
+        ? [KEY_PIX_KEY_MENS, KEY_PIX_NAME_MENS]
+        : [KEY_PIX_KEY_PROD, KEY_PIX_NAME_PROD]
+    const pixKey = map[kKey]?.trim() || ''
+    const receiverName = map[kName]?.trim() || ''
     return { pixKey, receiverName, configured: pixKey !== '' && receiverName !== '' }
   },
 
-  /** Salva a chave Pix e o nome do recebedor (upsert por chave, como os templates). */
-  async savePixConfig(pixKey: string, receiverName: string): Promise<void> {
-    const entries: Array<{ key: string; value: string }> = [
-      { key: KEY_PIX_KEY, value: pixKey },
-      { key: KEY_PIX_RECEIVER_NAME, value: receiverName },
-    ]
+  /** Salva a chave Pix e o nome do recebedor do TIPO (upsert por chave, como os templates). */
+  async savePixConfig(
+    tipo: 'mensalidades' | 'produtos',
+    pixKey: string,
+    receiverName: string,
+  ): Promise<void> {
+    const entries: Array<{ key: string; value: string }> =
+      tipo === 'mensalidades'
+        ? [
+            { key: KEY_PIX_KEY_MENS, value: pixKey },
+            { key: KEY_PIX_NAME_MENS, value: receiverName },
+          ]
+        : [
+            { key: KEY_PIX_KEY_PROD, value: pixKey },
+            { key: KEY_PIX_NAME_PROD, value: receiverName },
+          ]
     for (const entry of entries) {
       const existing = await pb.collection('app_settings').getList<AppSetting>(1, 1, {
         filter: `key = "${entry.key}"`,

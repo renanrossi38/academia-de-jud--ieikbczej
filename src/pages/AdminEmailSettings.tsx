@@ -51,24 +51,30 @@ export default function AdminEmailSettings() {
   const { toast } = useToast()
 
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState<'email' | 'whatsapp' | 'pix' | null>(null)
+  const [isSaving, setIsSaving] = useState<'email' | 'whatsapp' | 'pix' | 'pix-produtos' | null>(
+    null,
+  )
   // E-mail
   const [subject, setSubject] = useState('')
   const [template, setTemplate] = useState('')
   // WhatsApp
   const [waTemplate, setWaTemplate] = useState('')
-  // Pix
+  // Pix — dois pares independentes: mensalidades (chave 1) e produtos/pedidos (chave 2)
   const [pixKey, setPixKey] = useState('')
   const [receiverName, setReceiverName] = useState('')
   const [savedPix, setSavedPix] = useState({ pixKey: '', receiverName: '' })
+  const [pixKeyProd, setPixKeyProd] = useState('')
+  const [receiverNameProd, setReceiverNameProd] = useState('')
+  const [savedPixProd, setSavedPixProd] = useState({ pixKey: '', receiverName: '' })
 
   const load = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [tpl, waTpl, pix] = await Promise.all([
+      const [tpl, waTpl, pix, pixProd] = await Promise.all([
         appSettingsService.getFeeOverdueTemplate(),
         appSettingsService.getFeeWhatsappTemplate(),
-        appSettingsService.getPixConfig(),
+        appSettingsService.getPixConfig('mensalidades'),
+        appSettingsService.getPixConfig('produtos'),
       ])
       setSubject(tpl.subject)
       setTemplate(tpl.body)
@@ -76,6 +82,9 @@ export default function AdminEmailSettings() {
       setPixKey(pix.pixKey)
       setReceiverName(pix.receiverName)
       setSavedPix({ pixKey: pix.pixKey, receiverName: pix.receiverName })
+      setPixKeyProd(pixProd.pixKey)
+      setReceiverNameProd(pixProd.receiverName)
+      setSavedPixProd({ pixKey: pixProd.pixKey, receiverName: pixProd.receiverName })
     } catch (err) {
       console.error('Erro ao carregar configurações de cobrança:', err)
       toast({
@@ -111,6 +120,9 @@ export default function AdminEmailSettings() {
   const waDirty = waTemplate.trim() !== ''
   const pixDirty =
     pixKey.trim() !== savedPix.pixKey || receiverName.trim() !== savedPix.receiverName
+  const pixProdDirty =
+    pixKeyProd.trim() !== savedPixProd.pixKey ||
+    receiverNameProd.trim() !== savedPixProd.receiverName
 
   const handleSaveEmail = async () => {
     if (subject.trim() === '') {
@@ -198,15 +210,52 @@ export default function AdminEmailSettings() {
     }
     setIsSaving('pix')
     try {
-      await appSettingsService.savePixConfig(pixKey.trim(), receiverName.trim())
+      await appSettingsService.savePixConfig('mensalidades', pixKey.trim(), receiverName.trim())
       setSavedPix({ pixKey: pixKey.trim(), receiverName: receiverName.trim() })
       toast({
-        title: 'Pix configurado',
-        description:
-          'Os QR Codes da Área do aluno e da confirmação de pedido passam a usar esta chave.',
+        title: 'Pix de mensalidades configurado',
+        description: 'O QR Code Pix da Área do aluno passa a usar esta chave.',
       })
     } catch (err: any) {
       console.error('Erro ao salvar configuração Pix:', err)
+      toast({
+        title: 'Erro ao salvar',
+        description: err?.message || 'Falha ao salvar no servidor. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(null)
+    }
+  }
+
+  const handleSavePixProd = async () => {
+    if (pixKeyProd.trim() === '') {
+      toast({
+        title: 'Chave Pix obrigatória',
+        description:
+          'Informe a chave Pix para pedidos de produtos (CPF/CNPJ, celular, e-mail ou chave aleatória) — é dela que o QR é gerado.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (receiverNameProd.trim() === '') {
+      toast({
+        title: 'Nome do recebedor obrigatório',
+        description: 'É o nome que aparece para o aluno no app do banco (máx. 25 caracteres).',
+        variant: 'destructive',
+      })
+      return
+    }
+    setIsSaving('pix-produtos')
+    try {
+      await appSettingsService.savePixConfig('produtos', pixKeyProd.trim(), receiverNameProd.trim())
+      setSavedPixProd({ pixKey: pixKeyProd.trim(), receiverName: receiverNameProd.trim() })
+      toast({
+        title: 'Pix de produtos configurado',
+        description: 'O QR Code Pix dos pedidos (checkout e confirmação) passa a usar esta chave.',
+      })
+    } catch (err: any) {
+      console.error('Erro ao salvar configuração Pix de produtos:', err)
       toast({
         title: 'Erro ao salvar',
         description: err?.message || 'Falha ao salvar no servidor. Tente novamente.',
@@ -420,13 +469,15 @@ export default function AdminEmailSettings() {
             <div className="text-xs text-[#6B6560] leading-relaxed">
               <p className="font-semibold text-[#1C1B1A] mb-1">Como funciona</p>
               <p>
-                A chave abaixo gera o QR Code Pix (copia e cola) da{' '}
-                <strong className="text-[#1C1B1A]">Área do aluno</strong> e da{' '}
-                <strong className="text-[#1C1B1A]">confirmação de pedido</strong> — o valor cai
-                direto na conta da academia. A{' '}
+                São <strong className="text-[#1C1B1A]">duas chaves Pix independentes</strong>: a
+                chave 1 recebe as <strong className="text-[#1C1B1A]">mensalidades</strong> (Área do
+                aluno) e a chave 2 recebe os{' '}
+                <strong className="text-[#1C1B1A]">pedidos de produtos</strong> (checkout e
+                confirmação de pedido). O valor cai direto na conta de cada chave. A{' '}
                 <strong className="text-[#1C1B1A]">confirmação é manual</strong>: após o aluno
                 pagar, marque a mensalidade como paga no painel ou avance o status do pedido — os
-                bancos (incluindo o Nubank) não avisam automaticamente.
+                bancos (incluindo o Nubank) não avisam automaticamente. Se um dos tipos não tiver
+                chave cadastrada, os blocos Pix daquele tipo mostram apenas um aviso.
               </p>
               <p className="mt-2">
                 O restante do site (textos, horários e contato da home) se edita na página{' '}
@@ -442,67 +493,160 @@ export default function AdminEmailSettings() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="pix-key"
-              className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
-            >
-              Chave Pix
-            </Label>
-            <Input
-              id="pix-key"
-              value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
-              placeholder="CPF/CNPJ, celular, e-mail ou chave aleatória"
-              className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="pix-receiver-name"
-              className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
-            >
-              Nome do recebedor
-              <span className="ml-2 font-sans font-medium normal-case tracking-normal text-[#6B6560]">
-                ({receiverName.trim().length}/{PIX_RECEIVER_NAME_MAX} caracteres — limite do BR
-                Code)
+          {/* ── Pix 1: mensalidades ── */}
+          <div className="rounded-xl border border-[#E8E0D5] p-4 space-y-4 bg-[#FAF6F0]/40">
+            <p className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#C1272D] text-white text-[10px] font-bold">
+                1
               </span>
-            </Label>
-            <Input
-              id="pix-receiver-name"
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value.slice(0, PIX_RECEIVER_NAME_MAX))}
-              placeholder="ex.: Academia Judô Tatsu"
-              maxLength={PIX_RECEIVER_NAME_MAX}
-              className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
-            />
+              Pix para mensalidades
+              {savedPix.pixKey && savedPix.receiverName ? (
+                <span className="ml-auto font-sans font-semibold normal-case tracking-normal text-[#2E7D4F]">
+                  configurado
+                </span>
+              ) : (
+                <span className="ml-auto font-sans font-semibold normal-case tracking-normal text-[#6B6560]">
+                  não configurado
+                </span>
+              )}
+            </p>
+            <div className="space-y-2">
+              <Label
+                htmlFor="pix-key"
+                className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
+              >
+                Chave Pix (mensalidades)
+              </Label>
+              <Input
+                id="pix-key"
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="CPF/CNPJ, celular, e-mail ou chave aleatória"
+                className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="pix-receiver-name"
+                className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
+              >
+                Nome do recebedor
+                <span className="ml-2 font-sans font-medium normal-case tracking-normal text-[#6B6560]">
+                  ({receiverName.trim().length}/{PIX_RECEIVER_NAME_MAX} caracteres — limite do BR
+                  Code)
+                </span>
+              </Label>
+              <Input
+                id="pix-receiver-name"
+                value={receiverName}
+                onChange={(e) => setReceiverName(e.target.value.slice(0, PIX_RECEIVER_NAME_MAX))}
+                placeholder="ex.: Academia Judô Tatsu"
+                maxLength={PIX_RECEIVER_NAME_MAX}
+                className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <Button
+                onClick={handleSavePix}
+                disabled={isSaving !== null || !pixDirty}
+                className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+              >
+                {isSaving === 'pix' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Salvar Pix de mensalidades
+                  </>
+                )}
+              </Button>
+              <span className="sm:ml-auto inline-flex items-center gap-1.5 text-[11px] text-[#6B6560]">
+                <QrCode className="w-3.5 h-3.5" />
+                Usada no QR da Área do aluno (mensalidades)
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
-            <Button
-              onClick={handleSavePix}
-              disabled={isSaving !== null || !pixDirty}
-              className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
-            >
-              {isSaving === 'pix' ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
+          {/* ── Pix 2: produtos/pedidos ── */}
+          <div className="rounded-xl border border-[#E8E0D5] p-4 space-y-4 bg-[#FAF6F0]/40">
+            <p className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#1C1B1A] text-white text-[10px] font-bold">
+                2
+              </span>
+              Pix para produtos/pedidos
+              {savedPixProd.pixKey && savedPixProd.receiverName ? (
+                <span className="ml-auto font-sans font-semibold normal-case tracking-normal text-[#2E7D4F]">
+                  configurado
+                </span>
               ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Salvar Pix
-                </>
+                <span className="ml-auto font-sans font-semibold normal-case tracking-normal text-[#6B6560]">
+                  não configurado
+                </span>
               )}
-            </Button>
-            <span className="sm:ml-auto inline-flex items-center gap-1.5 text-[11px] text-[#6B6560]">
-              <QrCode className="w-3.5 h-3.5" />
-              {savedPix.pixKey && savedPix.receiverName
-                ? 'Configurado — os blocos Pix já exibem o QR Code'
-                : 'Sem chave cadastrada, os blocos Pix mostram apenas um aviso'}
-            </span>
+            </p>
+            <div className="space-y-2">
+              <Label
+                htmlFor="pix-key-produtos"
+                className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
+              >
+                Chave Pix (produtos)
+              </Label>
+              <Input
+                id="pix-key-produtos"
+                value={pixKeyProd}
+                onChange={(e) => setPixKeyProd(e.target.value)}
+                placeholder="CPF/CNPJ, celular, e-mail ou chave aleatória"
+                className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="pix-receiver-name-produtos"
+                className="text-xs font-bold text-[#1C1B1A] uppercase tracking-wider"
+              >
+                Nome do recebedor
+                <span className="ml-2 font-sans font-medium normal-case tracking-normal text-[#6B6560]">
+                  ({receiverNameProd.trim().length}/{PIX_RECEIVER_NAME_MAX} caracteres — limite do
+                  BR Code)
+                </span>
+              </Label>
+              <Input
+                id="pix-receiver-name-produtos"
+                value={receiverNameProd}
+                onChange={(e) =>
+                  setReceiverNameProd(e.target.value.slice(0, PIX_RECEIVER_NAME_MAX))
+                }
+                placeholder="ex.: Academia Judô Tatsu"
+                maxLength={PIX_RECEIVER_NAME_MAX}
+                className="h-10 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D]"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <Button
+                onClick={handleSavePixProd}
+                disabled={isSaving !== null || !pixProdDirty}
+                className="bg-[#1C1B1A] hover:bg-[#3A3835] text-white text-xs font-semibold"
+              >
+                {isSaving === 'pix-produtos' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Salvar Pix de produtos
+                  </>
+                )}
+              </Button>
+              <span className="sm:ml-auto inline-flex items-center gap-1.5 text-[11px] text-[#6B6560]">
+                <QrCode className="w-3.5 h-3.5" />
+                Usada no QR do checkout e da confirmação de pedido
+              </span>
+            </div>
           </div>
         </section>
 
