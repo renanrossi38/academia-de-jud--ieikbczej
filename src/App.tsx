@@ -18,6 +18,7 @@ import { AdminRoles } from './pages/AdminRoles'
 import AdminRanking from './pages/AdminRanking'
 import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
+import AdminAttendance from './pages/AdminAttendance'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminEmailSettings from './pages/AdminEmailSettings'
 import AdminSiteSettings from './pages/AdminSiteSettings'
@@ -176,6 +177,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/painel/presenca"
+                element={
+                  <RequireArea area="presencas">
+                    <AdminAttendance />
+                  </RequireArea>
+                }
+              />
+              <Route
                 path="/painel/financeiro"
                 element={
                   <RequireArea area="financeiro">
@@ -207,6 +216,7 @@ const App = () => (
                   </RequireOwner>
                 }
               />
+              <Route path="/painel" element={<Navigate to="/painel/alunos" replace />} />
               <Route path="/minha-presenca" element={<Navigate to="/area-do-aluno" replace />} />
               <Route path="/area-do-aluno" element={<StudentArea />} />
               <Route

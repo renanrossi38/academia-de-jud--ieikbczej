@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   Wallet,
   CalendarCheck,
+  Trophy,
 } from 'lucide-react'
 import { useSiteContent } from '@/services/siteSettings'
 import { hasArea, AdminArea } from '@/lib/adminAreas'
@@ -55,8 +56,20 @@ const PANEL_NAV: { area: AdminArea; to: string; icon: React.ReactNode; label: st
   {
     area: 'presencas',
     to: '/painel/turmas',
+    icon: <Users className="w-4 h-4" />,
+    label: 'Turmas',
+  },
+  {
+    area: 'presencas',
+    to: '/painel/ranking',
+    icon: <Trophy className="w-4 h-4" />,
+    label: 'Ranking',
+  },
+  {
+    area: 'presencas',
+    to: '/painel/presenca',
     icon: <CalendarCheck className="w-4 h-4" />,
-    label: 'Presenças e Ranking',
+    label: 'Presenças',
   },
   {
     area: 'produtos',
