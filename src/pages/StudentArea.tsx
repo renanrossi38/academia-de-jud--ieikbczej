@@ -19,7 +19,7 @@ import { OrderTrackingTimeline } from '@/components/orderTrackingTimeline/OrderT
 import { PixPaymentBlock } from '@/components/PixPaymentBlock'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Wallet, ShoppingBag, CalendarCheck, Trophy, Award, KeyRound } from 'lucide-react'
+import { Wallet, ShoppingBag, CalendarCheck, Trophy, Award, KeyRound, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const fmtBRL = (v: number) =>
@@ -251,6 +251,15 @@ export default function StudentArea() {
                 <strong className="text-sm font-bold text-[#2E7D4F] font-mono">
                   {fmtBRL(fee.amount)}
                 </strong>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-2 h-7 px-2 text-[11px] font-semibold border-[#C1272D]/30 text-[#C1272D] hover:bg-[#F7E4E2] shrink-0 print:hidden"
+                  onClick={() => navigate(`/comprovante/mensalidade/${fee.id}`)}
+                >
+                  <Receipt className="w-3.5 h-3.5 mr-1" />
+                  Ver comprovante
+                </Button>
               </div>
             ))}
           </div>

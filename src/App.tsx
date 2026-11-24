@@ -37,9 +37,18 @@ import ResetPassword from './pages/ResetPassword'
 import ConfirmEmailChange from './pages/ConfirmEmailChange'
 import Account from './pages/Account'
 import ChangePassword from './pages/ChangePassword'
+import FeeReceiptPage from './pages/FeeReceiptPage'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { useAuth } from './context/AuthContext'
+
+/** Comprovante: precisa estar logado (dono do registro ou admin — o servidor valida). */
+function RequireAuth({ children }: { children: React.ReactElement }) {
+  const { user, isLoading } = useAuth()
+  if (isLoading) return null
+  if (!user) return <Navigate to="/entrar" replace />
+  return children
+}
 
 /** Painel: qualquer admin (principal ou secundário) acessa. */
 function RequireAdmin({ children }: { children: React.ReactElement }) {
@@ -200,6 +209,14 @@ const App = () => (
               />
               <Route path="/minha-presenca" element={<Navigate to="/area-do-aluno" replace />} />
               <Route path="/area-do-aluno" element={<StudentArea />} />
+              <Route
+                path="/comprovante/mensalidade/:id"
+                element={
+                  <RequireAuth>
+                    <FeeReceiptPage />
+                  </RequireAuth>
+                }
+              />
               <Route path="/entrar" element={<Login />} />
               <Route path="/criar-conta" element={<Register />} />
               <Route path="/verificar-email" element={<VerifyEmail />} />

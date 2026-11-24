@@ -39,6 +39,8 @@ import {
 import { Class } from '@/types'
 import { MessageCircle, PhoneOff } from 'lucide-react'
 import { FeeWhatsappDialog } from '@/components/admin/FeeWhatsappDialog'
+import { useNavigate } from 'react-router-dom'
+import { FileText } from 'lucide-react'
 
 const cardCls = 'bg-white rounded-2xl border border-[#E8E0D5] shadow-xs'
 
@@ -94,6 +96,7 @@ export const MonthlyFeesPanel: React.FC<{
   studentPhone = '',
 }) => {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [fees, setFees] = useState<MonthlyFee[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
@@ -315,6 +318,17 @@ export const MonthlyFeesPanel: React.FC<{
                                 sem celular cadastrado
                               </span>
                             ))}
+                          {fee.status === 'pago' && (
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/comprovante/mensalidade/${fee.id}`)}
+                              className="text-[#C1272D] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                              title="Abrir comprovante de pagamento"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              Comprovante
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => setDeletingFee(fee)}
@@ -377,6 +391,17 @@ export const MonthlyFeesPanel: React.FC<{
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Marcar como paga
+                      </button>
+                    )}
+                    {fee.status === 'pago' && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/comprovante/mensalidade/${fee.id}`)}
+                        className="text-[#C1272D] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                        title="Abrir comprovante de pagamento"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Comprovante
                       </button>
                     )}
                     {fee.status === 'pendente' &&
