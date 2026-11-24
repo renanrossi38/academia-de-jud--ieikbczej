@@ -332,7 +332,7 @@ export const Header: React.FC = () => {
             {/* Carrinho (todas as telas) */}
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="relative p-2 rounded-full text-[#1C1B1A] hover:text-[#C1272D] hover:bg-[#F7E4E2]/60 transition-colors"
+              className="relative p-2 rounded-full text-[#1C1B1A] hover:text-[#C1272D] hover:bg-[#F7E4E2]/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0]"
               aria-label={`Abrir carrinho (${itemCount} ${itemCount === 1 ? 'item' : 'itens'})`}
             >
               <ShoppingBag className="w-5 h-5" />
@@ -350,7 +350,7 @@ export const Header: React.FC = () => {
             {/* Hambúrguer (mobile) */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden p-2 rounded-full text-[#1C1B1A] hover:bg-[#F7E4E2]/60 transition-colors"
+              className="md:hidden p-2 rounded-full text-[#1C1B1A] hover:bg-[#F7E4E2]/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0]"
               aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
               aria-expanded={mobileOpen}
             >

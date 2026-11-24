@@ -40,7 +40,7 @@ export const CartDrawer: React.FC = () => {
           </div>
           <button
             onClick={() => setIsDrawerOpen(false)}
-            className="p-1 rounded-full text-[#6B6560] hover:text-[#1C1B1A] hover:bg-[#E8E0D5]/50 transition-colors"
+            className="p-1 rounded-full text-[#6B6560] hover:text-[#1C1B1A] hover:bg-[#E8E0D5]/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2"
             aria-label="Fechar"
           >
             <X className="w-5 h-5" />
