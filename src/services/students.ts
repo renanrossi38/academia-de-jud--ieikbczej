@@ -229,5 +229,15 @@ export const studentsService = {
     return pb.collection('students').update<Student>(id, fd)
   },
 
+  /** URL (thumb) da foto gravada do aluno — '' quando ele não tem foto.
+   * O tamanho segue a convenção de thumbs do projeto: 'sm' → 100x100. */
+  getPhotoUrl(student: Pick<Student, 'collectionId' | 'id' | 'photo'>, size?: 'sm' | 'md'): string {
+    const photo = Array.isArray(student.photo) ? student.photo[0] : student.photo
+    if (!photo) return ''
+    return pb.files.getURL({ collectionId: student.collectionId, id: student.id }, photo, {
+      thumb: size === 'md' ? '400x400' : '100x100',
+    })
+  },
+
   createAccess,
 }
