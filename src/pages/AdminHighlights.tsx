@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { pb } from '@/lib/pocketbase/client'
+import pb from '@/lib/pocketbase/client'
 import { Student } from '@/types'
 import { highlightsService, iniciaisDoNome } from '@/services/highlights'
 import { studentsService } from '@/services/students'
