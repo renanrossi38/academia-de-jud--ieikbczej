@@ -368,11 +368,13 @@ routerAdd(
       )
       for (var b = 0; b < promos.length; b++) {
         var pr = promos[b]
+        var score = pr.get('exam_score')
         beltHistory.push({
           id: pr.id,
           belt: pr.getString('belt'),
           promoted_at: String(pr.getDateTime('promoted_at')),
           notes: pr.getString('notes'),
+          exam_score: score === null || score === undefined || score === '' ? null : Number(score),
         })
       }
 
