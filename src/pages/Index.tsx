@@ -164,17 +164,21 @@ export default function Index() {
   return (
     <div className="min-h-screen">
       {/* Hero Section — inspirado no folder: papel branco, sol vermelho texturizado, kanji vertical */}
-      <section className="relative bg-[#FAF6F0] text-[#1C1B1A] py-14 sm:py-20 overflow-hidden">
-        {/* Sol vermelho texturizado (sem imagem externa) */}
-        <HeroSun className="absolute right-[-14%] top-1/2 -translate-y-1/2 w-[420px] h-[420px] sm:w-[520px] sm:h-[520px] md:right-[4%] md:w-[460px] md:h-[460px] pointer-events-none" />
+      <section
+        id="hero"
+        className="relative bg-[#FAF6F0] text-[#1C1B1A] py-14 sm:py-20 overflow-hidden"
+      >
+        {/* Sol vermelho texturizado (sem imagem externa).
+            MOBILE: sobe para o topo/direita e fica MENOR e mais transparente,
+            longe do bloco de texto central — era ele que "apagava" o texto. */}
+        <HeroSun className="absolute -right-16 -top-10 w-[260px] h-[260px] opacity-50 pointer-events-none sm:opacity-100 sm:top-1/2 sm:-translate-y-1/2 sm:right-[-10%] sm:w-[420px] sm:h-[420px] md:opacity-100 md:right-[4%] md:top-1/2 md:w-[460px] md:h-[460px]" />
 
         {/* Ondas sumi-e na base (tinta preta) */}
         <HeroWaves className="absolute bottom-0 left-0 right-0 w-full pointer-events-none" />
 
-        {/* Kanji em coluna vertical realocado para DENTRO do sol vermelho (desktop):
-            antes ficava absoluto à esquerda e encostava/sobrepunha o título do
-            hero em telas largas. A cor branca vem do seletor do pai ([&>span]),
-            mantendo o caractere original intacto. */}
+        {/* Kanji em coluna vertical DENTRO do sol vermelho — desktop/tablet.
+            No celular o sol sobe para o topo (fora do texto), então o kanji
+            some junto (era escondido no mobile antes e continua). */}
         <div className="absolute right-[2%] md:right-[6.5%] top-1/2 -translate-y-1/2 hidden sm:flex flex-col items-center pointer-events-none z-[5] [&>span]:text-white/95 [&>span]:drop-shadow-[0_1px_2px_rgba(28,27,26,0.35)]">
           <span className="text-[#1C1B1A] font-serif font-black leading-[1.05] text-5xl md:text-6xl [writing-mode:vertical-rl] tracking-widest">
             柔道
@@ -185,28 +189,32 @@ export default function Index() {
         <HeroPetals />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="max-w-2xl text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] mb-5 border border-[#C1272D]/25 text-[#C1272D] [clip-path:polygon(3%_20%,97%_10%,100%_55%,97%_90%,3%_96%,0_50%)]">
+          <div className="relative z-10 max-w-2xl text-center md:text-left">
+            {/* Chip do topo: fundo sólido (não mais translúcido) para o texto
+                não "apagar" sobre o sol/papel em telas pequenas. */}
+            <div className="inline-flex items-center gap-2 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] mb-5 border border-[#C1272D]/40 text-[#A31B21] shadow-xs [clip-path:polygon(3%_20%,97%_10%,100%_55%,97%_90%,3%_96%,0_50%)]">
               <Sparkles className="w-3.5 h-3.5" />
               {site.hero_badge}
             </div>
-            <h1 className="font-brush text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.08] text-[#1C1B1A]">
+            {/* Título/subtítulo ganham text-shadow branco suave: recorte do
+                texto contra o papel washi e contra o vermelho do sol. */}
+            <h1 className="font-brush text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.08] text-[#1C1B1A] [text-shadow:0_1px_0_rgba(250,246,240,0.9),0_0_18px_rgba(250,246,240,0.85)]">
               {site.hero_title}{' '}
-              <span className="relative inline-block text-[#C1272D]">
+              <span className="relative inline-block text-[#C1272D] [text-shadow:0_1px_0_rgba(250,246,240,0.9),0_0_18px_rgba(250,246,240,0.85)]">
                 {site.hero_highlight}
                 <HeroUnderline className="absolute left-0 right-0 -bottom-2 sm:-bottom-3 w-full h-3 sm:h-4" />
               </span>
               .
             </h1>
-            <p className="mt-5 text-base sm:text-lg text-[#6B6560] leading-relaxed font-sans max-w-xl">
+            <p className="mt-5 text-base sm:text-lg text-[#3E3A36] leading-relaxed font-sans max-w-xl [text-shadow:0_1px_0_rgba(250,246,240,0.9)]">
               {site.hero_subtitle}
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-[#1C1B1A]/80">
+            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-semibold text-[#1C1B1A]">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> {site.hero_chip1}
+                <CheckCircle2 className="w-4 h-4 text-[#A31B21]" /> {site.hero_chip1}
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#C1272D]" /> {site.hero_chip2}
+                <CheckCircle2 className="w-4 h-4 text-[#A31B21]" /> {site.hero_chip2}
               </span>
             </div>
           </div>
@@ -225,7 +233,10 @@ export default function Index() {
       </section>
 
       {/* Abas: Turmas | Kimonos e Acessórios */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10">
+      <section
+        id="turmas"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 scroll-mt-24"
+      >
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-2xl mx-auto">
           <button onClick={() => setActiveTab('turmas')} className={tabClass('turmas')}>
             <Users className="w-4 h-4" />
@@ -242,7 +253,7 @@ export default function Index() {
       {activeTab === 'turmas' && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
           {classesLoading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-[#6B6560]">
+            <div className="py-20 flex flex-col items-center justify-center text-[#4A443F]">
               <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
               <p className="font-serif text-sm">Carregando turmas do Judô Tatsu...</p>
             </div>
@@ -252,7 +263,7 @@ export default function Index() {
               <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
                 Nenhuma turma ativa no momento
               </h3>
-              <p className="text-sm text-[#6B6560] mt-1">
+              <p className="text-sm text-[#4A443F] mt-1">
                 Fale com a recepção para conhecer os horários disponíveis.
               </p>
             </div>
@@ -357,7 +368,7 @@ export default function Index() {
 
           {/* Carregando */}
           {productsLoading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-[#6B6560]">
+            <div className="py-20 flex flex-col items-center justify-center text-[#4A443F]">
               <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
               <p className="font-serif text-sm">Carregando catálogo da loja...</p>
             </div>
@@ -368,7 +379,7 @@ export default function Index() {
               <h3 className="font-serif font-bold text-lg text-[#1C1B1A]">
                 Nenhum produto nesta categoria
               </h3>
-              <p className="text-sm text-[#6B6560] mt-1 mb-4">
+              <p className="text-sm text-[#4A443F] mt-1 mb-4">
                 Explore outras categorias ou volte para ver todos os itens disponíveis.
               </p>
               <button
@@ -446,10 +457,12 @@ export default function Index() {
       )}
 
       {/* Instagram: post mais recente em destaque + grade (some sozinho se falhar) */}
-      <InstagramSection />
+      <div id="instagram" className="scroll-mt-24">
+        <InstagramSection />
+      </div>
 
       {/* Como funciona */}
-      <section className="bg-white border-y border-[#E8E0D5] py-14">
+      <section id="como-funciona" className="bg-white border-y border-[#E8E0D5] py-14 scroll-mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-xs font-bold text-[#C1272D] uppercase tracking-widest font-serif">
@@ -458,7 +471,7 @@ export default function Index() {
             <h2 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
               {site.how_title}
             </h2>
-            <p className="text-sm text-[#6B6560] mt-2">{site.how_subtitle}</p>
+            <p className="text-sm text-[#4A443F] mt-2">{site.how_subtitle}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -468,14 +481,14 @@ export default function Index() {
                   {i + 1}
                 </div>
                 <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-1">{step.title}</h3>
-                <p className="text-xs text-[#6B6560] leading-relaxed max-w-xs">
+                <p className="text-xs text-[#4A443F] leading-relaxed max-w-xs sm:text-sm">
                   {step.description}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 p-4 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] max-w-2xl mx-auto flex items-center gap-3 text-xs text-[#6B6560]">
+          <div className="mt-8 p-4 rounded-xl bg-[#FAF6F0] border border-[#E8E0D5] max-w-2xl mx-auto flex items-center gap-3 text-xs text-[#4A443F]">
             <Shield className="w-5 h-5 shrink-0" />
             <span>
               <strong>{site.how_guarantee_label}</strong> {site.how_guarantee_text}

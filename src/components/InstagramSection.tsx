@@ -40,7 +40,7 @@ export default function InstagramSection() {
   if (loading) {
     return (
       <section className="bg-[#FAF6F0] border-y border-[#E8E0D5] py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-[#6B6560]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-[#4A443F]">
           <Loader2 className="w-7 h-7 animate-spin text-[#C1272D] mb-3" />
           <p className="font-serif text-sm">Carregando novidades do Instagram...</p>
         </div>
@@ -56,20 +56,21 @@ export default function InstagramSection() {
 
   return (
     <section className="relative bg-[#FAF6F0] border-y border-[#E8E0D5] py-14 overflow-hidden">
-      {/* Sol vermelho ao fundo, discreto, ecoando o hero */}
-      <HeroSun className="absolute -left-24 -top-28 w-72 h-72 opacity-15 pointer-events-none" />
+      {/* Sol vermelho ao fundo, discreto, ecoando o hero.
+          MOBILE: ainda mais discreto (opacity-5) para o cabeçalho não apagar. */}
+      <HeroSun className="absolute -left-24 -top-28 w-72 h-72 opacity-5 sm:opacity-15 pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Cabeçalho no padrão das outras seções */}
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#C1272D] uppercase tracking-widest font-serif">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#A31B21] uppercase tracking-widest font-serif">
             <InstagramIcon className="w-3.5 h-3.5" />
             Novidades do Dojo
           </span>
           <h2 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
-            Instagram do <span className="text-[#C1272D]">Judô Tatsu</span>
+            Instagram do <span className="text-[#A31B21]">Judô Tatsu</span>
           </h2>
-          <p className="text-sm text-[#6B6560] mt-2">
+          <p className="text-sm text-[#4A443F] mt-2">
             Acompanhe competições, graduações e o dia a dia da academia direto do nosso feed.
           </p>
           <BrushDivider className="w-40 mx-auto mt-4 text-[#C1272D]" />
@@ -105,7 +106,7 @@ export default function InstagramSection() {
                 {legendaCurta(destaque.caption, 220) || 'Veja esta publicação no Instagram'}
               </p>
               <div className="mt-auto pt-4 flex items-center justify-between gap-3">
-                <span className="text-xs text-[#6B6560] flex items-center gap-1.5">
+                <span className="text-xs text-[#4A443F] flex items-center gap-1.5">
                   <CalendarDays className="w-3.5 h-3.5" />
                   {dataCurta(destaque.timestamp)}
                 </span>
@@ -141,10 +142,10 @@ export default function InstagramSection() {
                   )}
                 </div>
                 <div className="p-3 flex-1 flex flex-col justify-between">
-                  <p className="text-xs text-[#1C1B1A] leading-snug line-clamp-2">
+                  <p className="text-xs text-[#1C1B1A] font-medium leading-snug line-clamp-2">
                     {legendaCurta(post.caption, 70) || 'Ver publicação no Instagram'}
                   </p>
-                  <span className="mt-2 text-[10px] font-semibold text-[#C1272D] flex items-center gap-1">
+                  <span className="mt-2 text-[10px] font-semibold text-[#A31B21] flex items-center gap-1">
                     <InstagramIcon className="w-3 h-3 shrink-0" />
                     {dataCurta(post.timestamp)}
                   </span>

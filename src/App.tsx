@@ -26,6 +26,7 @@ import React from 'react'
 import { Navigate, Link } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { AdminArea, ADMIN_AREA_LABELS } from './lib/adminAreas'
+import ScrollToTop from './components/ScrollToTop'
 import StudentArea from './pages/StudentArea'
 import MyAttendance from './pages/MyAttendance'
 import Login from './pages/Login'
@@ -101,6 +102,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <ScrollToTop />
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
