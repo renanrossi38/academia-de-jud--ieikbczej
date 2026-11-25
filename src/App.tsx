@@ -45,6 +45,7 @@ import FeeReceiptPage from './pages/FeeReceiptPage'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { useAuth } from './context/AuthContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 /** Comprovante: precisa estar logado (dono do registro ou admin — o servidor valida). */
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -116,148 +117,150 @@ const App = () => (
           <Toaster />
           <Sonner />
           <ScrollToTop />
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/produto/:slug" element={<ProductDetail />} />
-              <Route path="/carrinho" element={<CartCheckout />} />
-              <Route path="/pedido/:id/confirmacao" element={<OrderConfirmation />} />
-              <Route path="/meus-pedidos" element={<MyOrders />} />
-              <Route
-                path="/painel/pedidos"
-                element={
-                  <RequireArea area="pedidos">
-                    <AdminOrders />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/experimentais"
-                element={
-                  <RequireArea area="experimentais">
-                    <AdminTrialBookings />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/destaques"
-                element={
-                  <RequireArea area="destaques">
-                    <AdminHighlights />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/produtos"
-                element={
-                  <RequireArea area="produtos">
-                    <AdminProducts />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/alunos"
-                element={
-                  <RequireArea area="alunos">
-                    <AdminStudents />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/alunos/:id"
-                element={
-                  <RequireArea area="alunos">
-                    <AdminStudentDetail />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/ranking"
-                element={
-                  <RequireArea area="presencas">
-                    <AdminRanking />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/turmas"
-                element={
-                  <RequireArea area="presencas">
-                    <AdminClasses />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/turmas/:classId"
-                element={
-                  <RequireArea area="presencas">
-                    <AdminClassDetail />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/presenca"
-                element={
-                  <RequireArea area="presencas">
-                    <AdminAttendance />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/financeiro"
-                element={
-                  <RequireArea area="financeiro">
-                    <AdminFinance />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/configuracoes"
-                element={
-                  <RequireArea area="site">
-                    <AdminEmailSettings />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/site"
-                element={
-                  <RequireArea area="site">
-                    <AdminSiteSettings />
-                  </RequireArea>
-                }
-              />
-              <Route
-                path="/painel/admins"
-                element={
-                  <RequireOwner>
-                    <AdminRoles />
-                  </RequireOwner>
-                }
-              />
-              <Route path="/painel" element={<Navigate to="/painel/alunos" replace />} />
-              <Route path="/minha-presenca" element={<Navigate to="/area-do-aluno" replace />} />
-              <Route path="/area-do-aluno" element={<StudentArea />} />
-              <Route
-                path="/comprovante/mensalidade/:id"
-                element={
-                  <RequireAuth>
-                    <FeeReceiptPage />
-                  </RequireAuth>
-                }
-              />
-              <Route path="/aula-experimental" element={<TrialClassPage />} />
-              <Route path="/entrar" element={<Login />} />
-              <Route path="/criar-conta" element={<Register />} />
-              <Route path="/verificar-email" element={<VerifyEmail />} />
-              <Route path="/recuperar-senha" element={<ForgotPassword />} />
-              <Route path="/redefinir-senha" element={<ResetPassword />} />
-              <Route path="/confirmar-troca-email" element={<ConfirmEmailChange />} />
-              <Route path="/conta" element={<Account />} />
-              <Route path="/alterar-senha" element={<ChangePassword />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/produto/:slug" element={<ProductDetail />} />
+                <Route path="/carrinho" element={<CartCheckout />} />
+                <Route path="/pedido/:id/confirmacao" element={<OrderConfirmation />} />
+                <Route path="/meus-pedidos" element={<MyOrders />} />
+                <Route
+                  path="/painel/pedidos"
+                  element={
+                    <RequireArea area="pedidos">
+                      <AdminOrders />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/experimentais"
+                  element={
+                    <RequireArea area="experimentais">
+                      <AdminTrialBookings />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/destaques"
+                  element={
+                    <RequireArea area="destaques">
+                      <AdminHighlights />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/produtos"
+                  element={
+                    <RequireArea area="produtos">
+                      <AdminProducts />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/alunos"
+                  element={
+                    <RequireArea area="alunos">
+                      <AdminStudents />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/alunos/:id"
+                  element={
+                    <RequireArea area="alunos">
+                      <AdminStudentDetail />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/ranking"
+                  element={
+                    <RequireArea area="presencas">
+                      <AdminRanking />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/turmas"
+                  element={
+                    <RequireArea area="presencas">
+                      <AdminClasses />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/turmas/:classId"
+                  element={
+                    <RequireArea area="presencas">
+                      <AdminClassDetail />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/presenca"
+                  element={
+                    <RequireArea area="presencas">
+                      <AdminAttendance />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/financeiro"
+                  element={
+                    <RequireArea area="financeiro">
+                      <AdminFinance />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/configuracoes"
+                  element={
+                    <RequireArea area="site">
+                      <AdminEmailSettings />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/site"
+                  element={
+                    <RequireArea area="site">
+                      <AdminSiteSettings />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/admins"
+                  element={
+                    <RequireOwner>
+                      <AdminRoles />
+                    </RequireOwner>
+                  }
+                />
+                <Route path="/painel" element={<Navigate to="/painel/alunos" replace />} />
+                <Route path="/minha-presenca" element={<Navigate to="/area-do-aluno" replace />} />
+                <Route path="/area-do-aluno" element={<StudentArea />} />
+                <Route
+                  path="/comprovante/mensalidade/:id"
+                  element={
+                    <RequireAuth>
+                      <FeeReceiptPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route path="/aula-experimental" element={<TrialClassPage />} />
+                <Route path="/entrar" element={<Login />} />
+                <Route path="/criar-conta" element={<Register />} />
+                <Route path="/verificar-email" element={<VerifyEmail />} />
+                <Route path="/recuperar-senha" element={<ForgotPassword />} />
+                <Route path="/redefinir-senha" element={<ResetPassword />} />
+                <Route path="/confirmar-troca-email" element={<ConfirmEmailChange />} />
+                <Route path="/conta" element={<Account />} />
+                <Route path="/alterar-senha" element={<ChangePassword />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </TooltipProvider>
       </CartProvider>
     </AuthProvider>
