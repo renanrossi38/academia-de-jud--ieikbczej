@@ -65,6 +65,54 @@ export function generateInitialPassword(): string {
   return password
 }
 
+/** Rótulos dos campos da ficha do aluno, para mensagens de erro específicas. */
+const STUDENT_FIELD_LABELS: Record<string, string> = {
+  name: 'O nome',
+  email: 'O e-mail',
+  phone: 'O telefone',
+  belt: 'A faixa',
+  address: 'O endereço',
+  birth_date: 'A data de nascimento',
+  guardian_name: 'O nome do responsável',
+  guardian_phone: 'O telefone do responsável',
+  guardian_email: 'O e-mail do responsável',
+}
+
+/** Traduz a recusa do servidor ao salvar a ficha (create/update de students)
+ * em mensagem específica por campo. O PocketBase responde 400 "Failed to
+ * create record." genérico, mas os fieldErrors da resposta dizem qual campo
+ * e motivo — a tela precisa disso em vez do erro bruto. */
+export function friendlyStudentSaveError(err: unknown): string {
+  const fieldErrors = extractFieldErrors(err)
+  const raw = getErrorMessage(err)
+  const lower = raw.toLowerCase()
+
+  const parts: string[] = []
+  for (const [field, msg] of Object.entries(fieldErrors)) {
+    const label = STUDENT_FIELD_LABELS[field] || `O campo ${field}`
+    const m = (msg || '').toLowerCase()
+    if (m.includes('not unique')) parts.push(`${label} já está em uso.`)
+    else if (m.includes('cannot be blank') || m.includes('required'))
+      parts.push(`${label} é obrigatório.`)
+    else if (m.includes('mismatch') || m.includes("don't match") || m.includes('invalid value'))
+      parts.push(`${label} informado não é aceito pelo servidor.`)
+    else if (m.includes('invalid') || m.includes('date')) parts.push(`${label} é inválido.`)
+    else if (m.includes('must be') || m.includes('length'))
+      parts.push(`${label} está fora do tamanho permitido.`)
+    else parts.push(`${label}: ${msg}.`)
+  }
+  if (parts.length) return parts.join(' ')
+
+  if (
+    lower.startsWith('failed to create record') ||
+    lower.startsWith('failed to update record') ||
+    !lower
+  ) {
+    return 'O servidor recusou o cadastro sem detalhes. Verifique os campos (especialmente a data de nascimento e a faixa) e tente novamente.'
+  }
+  return raw
+}
+
 /** Traduz erros de validação do PocketBase para mensagens claras em português. */
 function friendlyCreateAccessError(err: unknown, email: string): string {
   const fieldErrors = extractFieldErrors(err)
@@ -182,18 +230,27 @@ export const studentsService = {
   },
 
   async createStudent(input: CreateStudentInput): Promise<Student> {
-    return pb.collection('students').create<Student>({
+    const payload: Record<string, unknown> = {
       name: input.name.trim(),
       email: input.email?.trim() || '',
       phone: input.phone?.trim() || '',
       belt: input.belt || '',
       address: input.address?.trim() || '',
-      birth_date: input.birth_date?.trim() || '',
       guardian_name: input.guardian_name?.trim() || '',
       guardian_phone: input.guardian_phone?.trim() || '',
       guardian_email: input.guardian_email?.trim() || '',
       active: true,
-    })
+    }
+    // DateField não aceita string vazia (400 "Failed to create record."):
+    // omitir o campo quando a data não foi informada. Foi a causa do erro ao
+    // cadastrar o primeiro aluno — com ou sem data de nascimento preenchida,
+    // o payload anterior sempre enviava birth_date: ''.
+    if (input.birth_date?.trim()) payload.birth_date = input.birth_date.trim()
+    try {
+      return await pb.collection('students').create<Student>(payload)
+    } catch (err) {
+      throw new Error(friendlyStudentSaveError(err))
+    }
   },
 
   /** Exclui o aluno de vez (as presenças dele saem junto, por cascata). */
@@ -212,7 +269,14 @@ export const studentsService = {
       payload.guardian_phone = payload.guardian_phone.trim()
     if (typeof payload.guardian_email === 'string')
       payload.guardian_email = payload.guardian_email.trim()
-    return pb.collection('students').update<Student>(id, payload)
+    // Mesma regra do create: DateField recusa string vazia — omitir quando vazia.
+    if (typeof payload.birth_date === 'string' && !payload.birth_date.trim())
+      delete payload.birth_date
+    try {
+      return await pb.collection('students').update<Student>(id, payload)
+    } catch (err) {
+      throw new Error(friendlyStudentSaveError(err))
+    }
   },
 
   /** Salva (File) ou remove (null) a foto do aluno — multipart/form-data.

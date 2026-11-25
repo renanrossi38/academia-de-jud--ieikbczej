@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { studentsService, guardianPhoneError } from '@/services/students'
+import { studentsService, guardianPhoneError, friendlyStudentSaveError } from '@/services/students'
 import { iniciaisDoNome } from '@/services/highlights'
 import { Loader2, X } from 'lucide-react'
 
@@ -368,7 +368,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
       console.error('Erro ao cadastrar aluno:', err)
       toast({
         title: 'Falha ao cadastrar aluno',
-        description: err?.message || 'Tente novamente em instantes.',
+        description: friendlyStudentSaveError(err),
         variant: 'destructive',
       })
     } finally {
@@ -638,7 +638,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       console.error('Erro ao atualizar aluno:', err)
       toast({
         title: 'Erro ao atualizar aluno',
-        description: err?.message || 'Falha ao salvar no servidor.',
+        description: friendlyStudentSaveError(err),
         variant: 'destructive',
       })
     } finally {
