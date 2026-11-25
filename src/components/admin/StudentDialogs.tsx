@@ -660,7 +660,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
           <div className="space-y-4 py-2">
             <StudentPhotoField
               previewUrl={
-                photoPreview || (photoRemoval ? '' : studentsService.getPhotoUrl(student, 'sm'))
+                photoPreview ||
+                (photoRemoval || !student ? '' : studentsService.getPhotoUrl(student, 'sm'))
               }
               name={form.name}
               hasExistingPhoto={!!student?.photo}
