@@ -37,6 +37,8 @@ routerAdd(
       'pedidos',
       'financeiro',
       'site',
+      'destaques',
+      'experimentais',
     ]
 
     var auth = e.auth
@@ -89,6 +91,8 @@ routerAdd(
       'pedidos',
       'financeiro',
       'site',
+      'destaques',
+      'experimentais',
     ]
 
     var auth = e.auth
@@ -248,6 +252,8 @@ routerAdd(
       'pedidos',
       'financeiro',
       'site',
+      'destaques',
+      'experimentais',
     ]
 
     var auth = e.auth

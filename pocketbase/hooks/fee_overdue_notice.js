@@ -482,7 +482,12 @@ routerAdd(
   '/backend/v1/judo/fees/notify-overdue',
   (e) => {
     var auth = e.auth
-    if (!auth || auth.getString('role') !== 'admin') {
+    // is_owner OU role='admin' — o dono é reconhecido mesmo sem a role exata.
+    if (
+      !auth ||
+      auth.id === '' ||
+      (auth.getString('role') !== 'admin' && !auth.getBool('is_owner'))
+    ) {
       throw new ForbiddenError('Somente administradores podem enviar avisos de atraso.')
     }
 
