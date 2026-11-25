@@ -130,19 +130,6 @@ export default function Login() {
             Criar conta de aluno
           </Link>
         </div>
-
-        {/* Demo hints */}
-        <div className="mt-6 p-3 bg-[#FAF6F0] rounded-xl border border-[#E8E0D5] text-[11px] text-[#6B6560] space-y-1">
-          <p className="font-bold text-[#1C1B1A]">Credenciais de Demonstração:</p>
-          <p>
-            • Admin: <span className="font-mono text-[#C1272D]">renanrossi38@gmail.com</span> /{' '}
-            <span className="font-mono text-[#C1272D]">Skip@Pass</span>
-          </p>
-          <p>
-            • Aluno: <span className="font-mono text-[#C1272D]">aluno@dojo.com</span> /{' '}
-            <span className="font-mono text-[#C1272D]">Skip@Pass</span>
-          </p>
-        </div>
       </div>
     </div>
   )
