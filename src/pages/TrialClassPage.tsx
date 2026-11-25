@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarCheck, CheckCircle2, Clock, Users } from 'lucide-react'
 import { HankoStamp } from '@/components/HankoStamp'
-import { BrushDivider } from '@/components/hero/HeroDecor'
+import { BrushDivider, HeroPetals, HeroSun } from '@/components/hero/HeroDecor'
 import { TrialCalendar } from '@/components/TrialCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,12 @@ import { ClassWeekday } from '@/services/classes'
 /** Domingo = 0 … Sábado = 6 (getDay) → chave da migration 0041. */
 const DOW_KEY = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'] as const
 
+const PASSOS = ['Conte sobre o aluno', 'Escolha o dia', 'Confirme pelo contato']
+
 const inputClass = 'h-11 text-sm bg-white border-[#E8E0D5] focus-visible:ring-[#C1272D] rounded-lg'
+const labelClass = 'text-[11px] font-bold uppercase tracking-wider text-[#C1272D]'
+const cardClass =
+  'relative rounded-2xl border border-[#E8E0D5] bg-white p-5 shadow-[0_1px_2px_rgba(28,27,26,0.05),0_10px_28px_rgba(28,27,26,0.07)] sm:p-7'
 
 function hojeKey(): string {
   const now = new Date()
@@ -33,6 +38,26 @@ function hojeKey(): string {
 
 function diasLegiveis(weekdays: string[]): string {
   return weekdayListText(weekdays)
+}
+
+/** Cabeçalho de cada cartão: selo vermelho com o número + título + pincelada. */
+function StepHeader({ n, titulo, id }: { n: number; titulo: string; id?: string }) {
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#C1272D] font-serif text-base font-bold text-white shadow-sm"
+        >
+          {n}
+        </span>
+        <h2 id={id} className="font-serif text-xl font-bold text-[#1C1B1A]">
+          {titulo}
+        </h2>
+      </div>
+      <BrushDivider className="mt-3 h-2.5 w-20 text-[#C1272D]" />
+    </div>
+  )
 }
 
 export default function TrialClassPage() {
@@ -233,11 +258,13 @@ export default function TrialClassPage() {
   // ---- Confirmação ---------------------------------------------------------
   if (done) {
     return (
-      <div className="min-h-[70dvh] bg-[#FAF6F0] px-4 py-12 sm:py-16">
-        <div className="mx-auto flex max-w-md flex-col items-center rounded-2xl border border-[#E8E0D5] bg-white p-6 text-center shadow-sm sm:p-8">
-          <CheckCircle2 className="h-12 w-12 text-green-600 sm:h-14 sm:w-14" />
+      <div className="flex min-h-[70dvh] items-center bg-[#FAF6F0] px-4 py-12 sm:py-16">
+        <div className={cn(cardClass, 'mx-auto flex max-w-md flex-col items-center text-center')}>
+          <HankoStamp className="mb-4 h-14 w-14" />
+          <CheckCircle2 className="h-10 w-10 text-green-600" aria-hidden />
           <h1 className="mt-4 font-serif text-2xl font-bold text-[#1C1B1A]">Aula agendada!</h1>
-          <p className="mt-2 text-sm leading-relaxed text-[#6B6560]">
+          <BrushDivider className="mt-3 h-2.5 w-20 text-[#C1272D]" />
+          <p className="mt-4 text-sm leading-relaxed text-[#6B6560]">
             Recebemos seu pedido de aula experimental na turma{' '}
             <strong className="text-[#1C1B1A]">{selected?.klass.name}</strong> para{' '}
             <strong className="text-[#1C1B1A]">
@@ -262,7 +289,7 @@ export default function TrialClassPage() {
                 notes: '',
               })
             }}
-            className="mt-6 h-11 w-full bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold sm:w-auto"
+            className="mt-6 h-12 w-full rounded-xl bg-[#C1272D] text-sm font-semibold text-white hover:bg-[#A01E23] sm:w-auto"
           >
             Agendar outra aula
           </Button>
@@ -272,33 +299,71 @@ export default function TrialClassPage() {
   }
 
   // ---- Formulário -----------------------------------------------------------
+  const dataResumo = form.date
+    ? new Date(form.date + 'T12:00:00').toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : 'Escolha um dia no calendário'
+
   return (
     <div className="min-h-dvh bg-[#FAF6F0]">
-      {/* Cabeçalho com a identidade da casa */}
-      <div className="relative overflow-hidden bg-[#1C1B1A] py-10 text-center text-white sm:py-14">
-        <div className="absolute inset-0 opacity-15" aria-hidden>
-          <BrushDivider className="h-full w-full" preserveAspectRatio="none" />
+      {/* Hero escuro: convite ao dojo, com sakura, sol e pincelada da marca */}
+      <header className="relative overflow-hidden bg-[#1C1B1A] text-white">
+        <HeroPetals className="opacity-60" />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-12 sm:pt-16 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-16">
+          <div>
+            <HankoStamp className="mb-4 h-12 w-12 lg:hidden" />
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#E4636A]">
+              Academia Tatsu · Judô
+            </p>
+            <h1 className="mt-2 font-serif text-4xl font-bold leading-tight sm:text-5xl">
+              Aula experimental
+            </h1>
+            <BrushDivider className="mt-3 h-3 w-28 text-[#C1272D]" />
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/75">
+              Conheça o judô na Academia Tatsu: escolha a turma, o dia e deixe seu contato. A
+              primeira aula é por nossa conta — sem compromisso.
+            </p>
+            <ol className="mt-8 grid gap-3 sm:grid-cols-3" aria-label="Como agendar">
+              {PASSOS.map((passo, i) => (
+                <li
+                  key={passo}
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
+                >
+                  <span
+                    aria-hidden
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#C1272D] text-sm font-bold text-white shadow-sm"
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="text-sm font-semibold leading-snug text-white/90">{passo}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div aria-hidden className="relative hidden h-72 items-center justify-center lg:flex">
+            <HeroSun className="absolute h-72 w-72 opacity-90" />
+            <HankoStamp className="relative h-24 w-24" />
+          </div>
         </div>
-        <div className="relative mx-auto max-w-xl px-4">
-          <HankoStamp className="mx-auto mb-3 h-14 w-14 sm:mb-4 sm:h-16 sm:w-16" />
-          <h1 className="font-serif text-2xl font-bold sm:text-4xl">Aula experimental</h1>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-white/70">
-            Conheça o judô na Academia Tatsu: escolha a turma, o dia e deixe seu contato. A primeira
-            aula é por nossa conta — sem compromisso.
-          </p>
-        </div>
-      </div>
+        <BrushDivider className="absolute bottom-0 left-0 h-2.5 w-full text-[#C1272D]" />
+      </header>
 
       {/* Duas colunas no PC (formulário | calendário); empilhado no mobile na
-          MESMA ordem de leitura: dados → turma → calendário → contato → envio. */}
+          MESMA ordem de leitura: aluno → dia → contato → resumo → envio. */}
       <form
         onSubmit={handleSubmit}
-        className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:items-start lg:gap-x-12"
+        className="mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:items-start lg:gap-x-10"
       >
-        {/* Coluna 1 (PC) / topo (mobile): dados do aluno + turma */}
-        <div className="grid gap-5 rounded-2xl border border-[#E8E0D5] bg-white p-5 shadow-sm sm:p-6 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+        {/* Cartão 1 (PC: coluna esquerda) — aluno + turma */}
+        <div className={cn(cardClass, 'grid gap-5 lg:col-start-1 lg:row-start-1 lg:row-span-2')}>
+          <StepHeader n={1} titulo="Sobre o aluno" />
+
           <div className="space-y-1.5">
-            <Label htmlFor="trial-name" className="text-xs font-bold text-[#1C1B1A]">
+            <Label htmlFor="trial-name" className={labelClass}>
               Nome do aluno *
             </Label>
             <Input
@@ -313,7 +378,7 @@ export default function TrialClassPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="trial-birth" className="text-xs font-bold text-[#1C1B1A]">
+            <Label htmlFor="trial-birth" className={labelClass}>
               Data de nascimento do aluno *
             </Label>
             <Input
@@ -325,13 +390,13 @@ export default function TrialClassPage() {
               autoComplete="bday"
               className={inputClass}
             />
-            <p className="text-[11px] text-[#6B6560]">
+            <p className="text-xs text-[#6B6560]">
               Usamos a idade para encaixar o aluno na turma certa.
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="trial-class" className="text-xs font-bold text-[#1C1B1A]">
+            <Label htmlFor="trial-class" className={labelClass}>
               Turma *
             </Label>
             {isLoadingClasses ? (
@@ -339,7 +404,8 @@ export default function TrialClassPage() {
                 Carregando turmas...
               </div>
             ) : classes.length === 0 ? (
-              <div className="rounded-lg border border-[#E8E0D5] bg-[#FAF6F0] px-3 py-3 text-sm text-[#6B6560]">
+              <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-[#C1272D]/40 bg-[#FAF6F0] p-4 text-sm leading-relaxed text-[#4A443F]">
+                <HankoStamp className="h-10 w-10 opacity-70" />
                 Nenhuma turma com vaga disponível no momento. Fale conosco pelo WhatsApp para entrar
                 na lista de espera.
               </div>
@@ -361,7 +427,7 @@ export default function TrialClassPage() {
               </select>
             )}
             {selected && weekdaysOfSelected.length > 0 && (
-              <p className="text-[11px] text-[#6B6560]">
+              <p className="text-xs leading-relaxed text-[#6B6560]">
                 Esta turma funciona às{' '}
                 <strong className="text-[#1C1B1A]">{diasLegiveis(weekdaysOfSelected)}</strong>
                 {faixaTexto ? ` — para alunos ${faixaTexto}` : ''}
@@ -373,16 +439,22 @@ export default function TrialClassPage() {
           </div>
         </div>
 
-        {/* Coluna 2 (PC) / meio (mobile): calendário de dias disponíveis */}
-        <div className="rounded-2xl border border-[#E8E0D5] bg-white p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start">
-          <div className="space-y-1.5">
-            <span className="text-xs font-bold text-[#1C1B1A]">Data desejada da aula *</span>
+        {/* Cartão 2 (PC: coluna direita, sticky) — calendário de dias disponíveis */}
+        <div
+          className={cn(
+            cardClass,
+            'lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start',
+          )}
+        >
+          <StepHeader n={2} titulo="Escolha o dia" />
+          <div className="space-y-2">
+            <span className={cn(labelClass, 'block')}>Data desejada da aula *</span>
             {!form.classId ? (
-              <p className="text-xs text-[#6B6560]">
+              <p className="rounded-xl border border-dashed border-[#E8E0D5] bg-[#FAF6F0] p-4 text-sm leading-relaxed text-[#6B6560]">
                 Selecione a turma para ver no calendário os dias disponíveis para agendar.
               </p>
             ) : isLoadingDates ? (
-              <div className="h-[280px] animate-pulse rounded-xl border border-[#E8E0D5] bg-[#FAF6F0]" />
+              <div className="h-[320px] animate-pulse rounded-xl border border-[#E8E0D5] bg-[#FAF6F0]" />
             ) : (
               <TrialCalendar
                 weekdays={weekdaysOfSelected}
@@ -396,7 +468,7 @@ export default function TrialClassPage() {
             {form.date && weekdaysOfSelected.length > 0 && (
               <p
                 className={cn(
-                  'text-[11px]',
+                  'text-xs leading-relaxed',
                   diaInvalido ? 'font-semibold text-[#C1272D]' : 'text-[#6B6560]',
                 )}
               >
@@ -411,23 +483,26 @@ export default function TrialClassPage() {
             )}
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[#E8E0D5] pt-3 text-[11px] font-medium text-[#4A443F] sm:gap-x-5">
-            <span className="inline-flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> Sem compromisso
+          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#E8E0D5] pt-4 text-xs font-medium text-[#4A443F] sm:gap-x-5">
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-[#C1272D]" aria-hidden /> Sem compromisso
             </span>
-            <span className="inline-flex items-center gap-1">
-              <CalendarCheck className="h-3.5 w-3.5" /> Confirmação por contato
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarCheck className="h-3.5 w-3.5 text-[#C1272D]" aria-hidden /> Confirmação por
+              contato
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" /> Resposta rápida
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-[#C1272D]" aria-hidden /> Resposta rápida
             </span>
           </div>
         </div>
 
-        {/* Coluna 1 (PC) / depois do calendário (mobile): contato, observação, alertas */}
-        <div className="grid gap-5 rounded-2xl border border-[#E8E0D5] bg-white p-5 shadow-sm sm:p-6 lg:col-start-1 lg:row-start-3">
+        {/* Cartão 3 (PC: coluna esquerda, abaixo) — contato, observação, alertas */}
+        <div className={cn(cardClass, 'grid gap-5 lg:col-start-1 lg:row-start-3')}>
+          <StepHeader n={3} titulo="Contato" />
+
           <div className="space-y-1.5">
-            <Label htmlFor="trial-contact" className="text-xs font-bold text-[#1C1B1A]">
+            <Label htmlFor="trial-contact" className={labelClass}>
               Telefone ou e-mail para contato *
             </Label>
             <Input
@@ -438,13 +513,13 @@ export default function TrialClassPage() {
               maxLength={160}
               className={inputClass}
             />
-            <p className="text-[11px] text-[#6B6560]">
+            <p className="text-xs text-[#6B6560]">
               A academia usa este contato para confirmar sua vaga.
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="trial-notes" className="text-xs font-bold text-[#1C1B1A]">
+            <Label htmlFor="trial-notes" className={labelClass}>
               Observação (opcional)
             </Label>
             <Textarea
@@ -459,21 +534,69 @@ export default function TrialClassPage() {
           </div>
 
           {idadeInvalida && (
-            <div className="rounded-lg border border-[#C1272D]/30 bg-[#F7E4E2] px-3 py-2 text-xs font-semibold text-[#C1272D]">
+            <div
+              role="alert"
+              className="rounded-lg border border-[#C1272D]/30 bg-[#F7E4E2] px-3 py-2.5 text-xs font-semibold leading-relaxed text-[#C1272D]"
+            >
               Pela data de nascimento, o aluno terá {idadeNaAula} ano(s) na data da aula — esta
               turma é para alunos {faixaTexto}. Escolha outra turma ou fale com a academia.
             </div>
           )}
         </div>
 
+        {/* Resumo antes da confirmação */}
+        <section
+          aria-labelledby="trial-summary-title"
+          className="relative overflow-hidden rounded-2xl bg-[#1C1B1A] p-5 text-white shadow-md sm:p-7 lg:col-span-2"
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#E4636A]">
+            Confira antes de enviar
+          </p>
+          <h2 id="trial-summary-title" className="mt-1 font-serif text-xl font-bold">
+            Resumo do agendamento
+          </h2>
+          <BrushDivider className="mt-3 h-2.5 w-20 text-[#C1272D]" />
+          <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-[11px] font-bold uppercase tracking-wider text-white/55">
+                Aluno
+              </dt>
+              <dd className="mt-1 text-base font-semibold">{form.student_name.trim() || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold uppercase tracking-wider text-white/55">
+                Turma
+              </dt>
+              <dd className="mt-1 text-base font-semibold">{selected?.klass.name ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold uppercase tracking-wider text-white/55">Data</dt>
+              <dd
+                className={cn(
+                  'mt-1 text-base font-semibold capitalize',
+                  !form.date && 'text-white/60',
+                )}
+              >
+                {dataResumo}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-bold uppercase tracking-wider text-white/55">
+                Horário
+              </dt>
+              <dd className="mt-1 text-base font-semibold">{selected?.klass.schedule || '—'}</dd>
+            </div>
+          </dl>
+        </section>
+
         {/* Envio: largura total, embaixo de tudo */}
         <div className="lg:col-span-2">
           <Button
             type="submit"
             disabled={submitting || isLoadingClasses || classes.length === 0}
-            className="h-12 w-full bg-[#C1272D] text-base font-bold text-white hover:bg-[#A01E23]"
+            className="h-14 w-full rounded-xl bg-[#C1272D] text-base font-bold text-white shadow-md hover:bg-[#A01E23] focus-visible:ring-[#C1272D]"
           >
-            {submitting ? 'Agendando...' : 'Agendar aula experimental'}
+            {submitting ? 'Agendando...' : 'Confirmar agendamento'}
           </Button>
         </div>
       </form>

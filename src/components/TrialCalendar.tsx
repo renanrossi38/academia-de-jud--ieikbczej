@@ -117,7 +117,7 @@ export function TrialCalendar({
   }
 
   return (
-    <div className="rounded-xl border border-[#E8E0D5] bg-[#FAF6F0] p-3 sm:p-4">
+    <div className="rounded-xl border border-[#E8E0D5] bg-[#FAF6F0] p-3 sm:p-5">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -148,7 +148,7 @@ export function TrialCalendar({
         aria-label="Calendário de dias disponíveis para agendar"
       >
         {SEMANA_CURTA.map((s) => (
-          <span key={s} aria-hidden className="text-[10px] font-bold uppercase text-[#6B6560]">
+          <span key={s} aria-hidden className="text-[11px] font-bold uppercase text-[#6B6560]">
             {s}
           </span>
         ))}
@@ -177,7 +177,7 @@ export function TrialCalendar({
                     : undefined
               }
               className={cn(
-                'flex h-10 w-full items-center justify-center rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40',
+                'flex h-11 w-full items-center justify-center rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 sm:h-12 sm:text-base',
                 cell.state === 'available' &&
                   'border border-[#C1272D]/40 bg-[#F7E4E2] text-[#1C1B1A] hover:bg-[#C1272D] hover:text-white',
                 cell.state === 'occupied' &&
@@ -185,6 +185,9 @@ export function TrialCalendar({
                 (cell.state === 'offday' || cell.state === 'out') &&
                   'cursor-not-allowed text-[#C4BCB2]',
                 value === cell.key && 'bg-[#C1272D] text-white hover:bg-[#A01E23]',
+                cell.key === minChave &&
+                  value !== cell.key &&
+                  'ring-1 ring-inset ring-[#1C1B1A]/60',
                 disabled && 'opacity-50',
               )}
             >
@@ -215,6 +218,13 @@ export function TrialCalendar({
             className="inline-block h-2.5 w-2.5 rounded-sm bg-white text-[#C4BCB2]"
           />
           Sem aula da turma / fora do período
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block h-2.5 w-2.5 rounded-sm bg-white ring-1 ring-inset ring-[#1C1B1A]/60"
+          />
+          Hoje
         </span>
       </div>
     </div>
