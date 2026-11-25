@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { classesService, classLevelLabel, classLevelBadgeClass } from '@/services/classes'
+import {
+  classesService,
+  classLevelLabel,
+  classLevelBadgeClass,
+  CLASS_WEEKDAYS,
+  ClassWeekday,
+} from '@/services/classes'
+import { WEEKDAY_LABELS } from '@/services/trialBookings'
 import { BrushDivider } from '@/components/hero/HeroDecor'
 import {
   AdminPageHeader,
@@ -54,6 +61,9 @@ interface ClassFormState {
   vagas: string
   active: boolean
   isKids: boolean
+  weekdays: ClassWeekday[]
+  min_age: string
+  max_age: string
   cover: File | null
   removeCover: boolean
 }
@@ -66,6 +76,9 @@ const emptyForm: ClassFormState = {
   vagas: '20',
   active: true,
   isKids: false,
+  weekdays: [],
+  min_age: '',
+  max_age: '',
   cover: null,
   removeCover: false,
 }
@@ -103,6 +116,9 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               vagas: String(editing.vagas ?? ''),
               active: editing.active !== false,
               isKids: editing.is_kids === true,
+              weekdays: (editing.weekdays ?? []) as ClassWeekday[],
+              min_age: editing.min_age ? String(editing.min_age) : '',
+              max_age: editing.max_age ? String(editing.max_age) : '',
               cover: null,
               removeCover: false,
             }
@@ -130,6 +146,29 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
       })
       return
     }
+    const idadeValida = (raw: string): number | null => {
+      if (raw.trim() === '') return 0
+      const n = Number(raw)
+      return Number.isInteger(n) && n >= 0 && n <= 120 ? n : null
+    }
+    const minAge = idadeValida(form.min_age)
+    const maxAge = idadeValida(form.max_age)
+    if (minAge == null || maxAge == null) {
+      toast({
+        title: 'Idade inválida',
+        description: 'A idade mínima e máxima devem ser números inteiros entre 0 e 120.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (minAge > 0 && maxAge > 0 && minAge > maxAge) {
+      toast({
+        title: 'Faixa de idade invertida',
+        description: 'A idade mínima não pode ser maior que a idade máxima.',
+        variant: 'destructive',
+      })
+      return
+    }
     setSaving(true)
     try {
       const basePayload = {
@@ -140,6 +179,9 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
         vagas: Math.round(vagasNum),
         active: form.active,
         isKids: form.isKids,
+        weekdays: form.weekdays,
+        minAge,
+        maxAge,
       }
       const saved = editing
         ? await classesService.updateClass(editing.id, {
@@ -255,6 +297,70 @@ const ClassFormDialog: React.FC<ClassFormDialogProps> = ({
               ))}
             </select>
           </div>
+          {/* Dias da semana: usados no agendamento de aula experimental */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-[#1C1B1A]">Dias da semana</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {CLASS_WEEKDAYS.map((d) => {
+                const selected = form.weekdays.includes(d)
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        weekdays: selected ? f.weekdays.filter((x) => x !== d) : [...f.weekdays, d],
+                      }))
+                    }
+                    className={`h-8 px-2.5 rounded-md text-xs font-semibold border transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-[#C1272D] ${
+                      selected
+                        ? 'bg-[#C1272D] text-white border-[#C1272D]'
+                        : 'bg-white text-[#6B6560] border-[#E8E0D5] hover:border-[#C1272D]/40'
+                    }`}
+                  >
+                    {WEEKDAY_LABELS[d]}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[11px] text-[#6B6560]">
+              Usado no agendamento de aula experimental. Deixe vazio para aceitar agendamento em
+              qualquer dia.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="class-min-age" className="text-xs font-bold text-[#1C1B1A]">
+                Idade mínima
+              </Label>
+              <Input
+                id="class-min-age"
+                value={form.min_age}
+                onChange={(e) => setForm((f) => ({ ...f, min_age: e.target.value }))}
+                inputMode="numeric"
+                placeholder="Ex.: 6"
+                className="h-9 text-sm bg-white border-[#E8E0D5]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="class-max-age" className="text-xs font-bold text-[#1C1B1A]">
+                Idade máxima
+              </Label>
+              <Input
+                id="class-max-age"
+                value={form.max_age}
+                onChange={(e) => setForm((f) => ({ ...f, max_age: e.target.value }))}
+                inputMode="numeric"
+                placeholder="Ex.: 12"
+                className="h-9 text-sm bg-white border-[#E8E0D5]"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-[#6B6560] -mt-2">
+            Faixa de idade aceita no agendamento experimental. Vazio = sem limite de idade.
+          </p>
           {/* Capa da turma: aparece no card do painel e na home */}
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-[#1C1B1A]">Foto de capa</Label>

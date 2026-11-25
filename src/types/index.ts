@@ -244,6 +244,12 @@ export interface Class {
   cover?: string
   /** Turma infantil (habilita medalhas dorme dorme / fica fica, migration 0035). */
   is_kids?: boolean
+  /** Dias da semana em que a turma funciona (migration 0041; vazio = qualquer dia). */
+  weekdays?: ('seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom')[]
+  /** Idade mínima para a turma (migration 0041; ausente/0 = sem mínimo). */
+  min_age?: number
+  /** Idade máxima para a turma (migration 0041; ausente/0 = sem máximo). */
+  max_age?: number
   created: string
   updated: string
 }

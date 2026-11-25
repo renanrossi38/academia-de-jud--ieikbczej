@@ -13,6 +13,7 @@ export type AdminArea =
   | 'destaques'
   | 'produtos'
   | 'pedidos'
+  | 'experimentais'
   | 'financeiro'
   | 'site'
 
@@ -23,6 +24,7 @@ export const ADMIN_AREAS: AdminArea[] = [
   'destaques',
   'produtos',
   'pedidos',
+  'experimentais',
   'financeiro',
   'site',
 ]
@@ -34,6 +36,7 @@ export const ADMIN_AREA_LABELS: Record<AdminArea, string> = {
   destaques: 'Destaques da página inicial',
   produtos: 'Loja (Produtos)',
   pedidos: 'Pedidos',
+  experimentais: 'Aulas experimentais',
   financeiro: 'Financeiro',
   // A permissão "site" abre DUAS páginas separadas no menu, com propósito
   // claro: "Página inicial" (/painel/site, conteúdo da home) e
@@ -48,6 +51,7 @@ export const ADMIN_AREA_DESCRIPTIONS: Record<AdminArea, string> = {
   destaques: 'Destaques de competição exibidos na home',
   produtos: 'Produtos, variações e estoque da loja',
   pedidos: 'Pedidos da loja e status de entrega',
+  experimentais: 'Agendamentos de aulas experimentais do site',
   financeiro: 'Receitas, despesas e relatórios anuais',
   site: 'Conteúdo da página inicial e configurações de cobrança/Pix (duas páginas)',
 }

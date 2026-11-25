@@ -12,6 +12,7 @@ import CartCheckout from './pages/CartCheckout'
 import OrderConfirmation from './pages/OrderConfirmation'
 import MyOrders from './pages/MyOrders'
 import AdminOrders from './pages/AdminOrders'
+import AdminTrialBookings from './pages/AdminTrialBookings'
 import AdminProducts from './pages/AdminProducts'
 import AdminStudents from './pages/AdminStudents'
 import { AdminRoles } from './pages/AdminRoles'
@@ -32,6 +33,7 @@ import ScrollToTop from './components/ScrollToTop'
 import StudentArea from './pages/StudentArea'
 import MyAttendance from './pages/MyAttendance'
 import Login from './pages/Login'
+import TrialClassPage from './pages/TrialClassPage'
 import Register from './pages/Register'
 import VerifyEmail from './pages/VerifyEmail'
 import ForgotPassword from './pages/ForgotPassword'
@@ -126,6 +128,14 @@ const App = () => (
                 element={
                   <RequireArea area="pedidos">
                     <AdminOrders />
+                  </RequireArea>
+                }
+              />
+              <Route
+                path="/painel/experimentais"
+                element={
+                  <RequireArea area="experimentais">
+                    <AdminTrialBookings />
                   </RequireArea>
                 }
               />
@@ -236,6 +246,7 @@ const App = () => (
                   </RequireAuth>
                 }
               />
+              <Route path="/aula-experimental" element={<TrialClassPage />} />
               <Route path="/entrar" element={<Login />} />
               <Route path="/criar-conta" element={<Register />} />
               <Route path="/verificar-email" element={<VerifyEmail />} />

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T01:18:19.076Z",
+  "generatedAt": "2026-11-25T02:02:25.321Z",
   "collections": [
     {
       "name": "users",
@@ -93,7 +93,8 @@
             "pedidos",
             "financeiro",
             "site",
-            "destaques"
+            "destaques",
+            "experimentais"
           ]
         }
       ],
@@ -656,6 +657,25 @@
         {
           "name": "is_kids",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "weekdays",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["seg", "ter", "qua", "qui", "sex", "sab", "dom"]
+        },
+        {
+          "name": "min_age",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "max_age",
+          "type": "number",
           "required": false,
           "system": false
         }
@@ -1495,6 +1515,19 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_student_highlights_active ON student_highlights (active)"]
+    },
+    {
+      "name": "trial_bookings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')",
+        "view": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')",
+        "create": null,
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')"
+      },
+      "fields": [],
+      "indexes": []
     }
   ]
 }

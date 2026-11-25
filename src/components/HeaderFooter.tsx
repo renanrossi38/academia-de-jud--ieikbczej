@@ -174,6 +174,13 @@ export const Header: React.FC = () => {
                 {s.label}
               </HomeAnchor>
             ))}
+            <Link
+              to="/aula-experimental"
+              className="ml-1 inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-[#C1272D] hover:bg-[#F7E4E2]/60 rounded-md transition-colors select-none"
+            >
+              <CalendarCheck className="w-4 h-4" />
+              Aula experimental
+            </Link>
           </nav>
 
           {/* ===== Ações (conta + carrinho + hambúrguer) ===== */}
@@ -364,6 +371,15 @@ export const Header: React.FC = () => {
                 {s.label}
               </HomeAnchor>
             ))}
+
+            <Link
+              to="/aula-experimental"
+              className="flex items-center gap-2 px-3 py-2.5 text-base font-semibold text-[#C1272D] hover:bg-[#F7E4E2]/60 rounded-lg transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              <CalendarCheck className="w-4 h-4" />
+              Aula experimental
+            </Link>
 
             {isAdmin && (
               <div className="pt-2 border-t border-[#E8E0D5] mt-2">
@@ -559,7 +575,10 @@ export const Footer: React.FC = () => {
           <p className="text-xs text-[#9A948C] text-center sm:text-left">
             © {new Date().getFullYear()} {site.footer_about_title}. {site.footer_rights}
           </p>
-          <nav className="flex items-center gap-4" aria-label="Seções da home">
+          <nav
+            className="flex flex-wrap items-center justify-center gap-4"
+            aria-label="Links do site"
+          >
             {HOME_SECTIONS.map((s) => (
               <HomeAnchor
                 key={s.href}
@@ -569,6 +588,12 @@ export const Footer: React.FC = () => {
                 {s.label}
               </HomeAnchor>
             ))}
+            <Link
+              to="/aula-experimental"
+              className="text-xs font-semibold text-[#D8434A] hover:text-[#FAF6F0] transition-colors select-none"
+            >
+              Aula experimental
+            </Link>
           </nav>
         </div>
       </div>

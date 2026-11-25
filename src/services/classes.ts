@@ -2,6 +2,10 @@ import pb from '@/lib/pocketbase/client'
 import { attendanceService, toLocalDateKey } from '@/services/attendance'
 import { Attendance, AttendanceStatus, Class, ClassLevel, ClassStudent, Student } from '@/types'
 
+/** Chaves dos dias da semana (migration 0041), em ordem seg→dom. */
+export const CLASS_WEEKDAYS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'] as const
+export type ClassWeekday = (typeof CLASS_WEEKDAYS)[number]
+
 export interface CreateClassInput {
   name: string
   level?: ClassLevel | ''
@@ -12,6 +16,12 @@ export interface CreateClassInput {
   active?: boolean
   /** Turma infantil (habilita medalhas dorme dorme / fica fica). */
   isKids?: boolean
+  /** Dias da semana em que a turma funciona (migration 0041; vazio = qualquer dia). */
+  weekdays?: ClassWeekday[]
+  /** Idade mínima do aluno (migration 0041; ausente/0 = sem mínimo). */
+  minAge?: number | null
+  /** Idade máxima do aluno (migration 0041; ausente/0 = sem máximo). */
+  maxAge?: number | null
   /** Foto de capa (upload na criação). */
   cover?: File | null
 }
@@ -25,6 +35,12 @@ export interface UpdateClassInput {
   active?: boolean
   /** Turma infantil (habilita medalhas dorme dorme / fica fica). */
   isKids?: boolean
+  /** Dias da semana em que a turma funciona (migration 0041; vazio = qualquer dia). */
+  weekdays?: ClassWeekday[]
+  /** Idade mínima do aluno (migration 0041; ausente/0 = sem mínimo). */
+  minAge?: number | null
+  /** Idade máxima do aluno (migration 0041; ausente/0 = sem máximo). */
+  maxAge?: number | null
   /** Novo arquivo de capa (upload). */
   cover?: File | null
   /** Sinaliza remoção da capa atual (PocketBase: campo "cover-"). */
@@ -89,6 +105,9 @@ export const classesService = {
       vagas: input.vagas,
       active: input.active ?? true,
       is_kids: input.isKids ?? false,
+      weekdays: input.weekdays ?? [],
+      min_age: input.minAge ?? 0,
+      max_age: input.maxAge ?? 0,
     }
     if (input.cover) {
       const payload = new FormData()
@@ -106,12 +125,14 @@ export const classesService = {
     const { cover, removeCover, ...rest } = input
     const needsForm = !!cover || !!removeCover
     if (!needsForm) {
-      const { isKids, ...payloadRest } = rest
+      const { isKids, minAge, maxAge, ...payloadRest } = rest
       const payload: Record<string, unknown> = { ...payloadRest }
       if (typeof payload.name === 'string') payload.name = (payload.name as string).trim()
       if (typeof payload.schedule === 'string')
         payload.schedule = (payload.schedule as string).trim()
       if (isKids !== undefined) payload.is_kids = isKids
+      if (minAge !== undefined) payload.min_age = minAge ?? 0
+      if (maxAge !== undefined) payload.max_age = maxAge ?? 0
       return pb.collection('classes').update<Class>(id, payload)
     }
 
@@ -124,6 +145,9 @@ export const classesService = {
     if (input.vagas !== undefined) payload.append('vagas', String(input.vagas))
     if (input.active !== undefined) payload.append('active', String(input.active))
     if (input.isKids !== undefined) payload.append('is_kids', String(input.isKids))
+    if (input.weekdays !== undefined) input.weekdays.forEach((d) => payload.append('weekdays', d))
+    if (input.minAge !== undefined) payload.append('min_age', String(input.minAge ?? 0))
+    if (input.maxAge !== undefined) payload.append('max_age', String(input.maxAge ?? 0))
     if (input.cover) payload.append('cover', input.cover)
     if (input.removeCover) payload.append('cover-', '')
     return pb.collection('classes').update<Class>(id, payload)
