@@ -329,11 +329,9 @@ export default function TrialClassPage() {
               Conheça o judô na Academia Judô Tatsu: escolha a turma, o dia e deixe seu contato. A
               primeira aula é por nossa conta — sem compromisso.
             </p>
-            {/* Etapas sempre empilhadas (1 → 2 → 3, de cima para baixo),
-                também no PC, onde antes ficavam lado a lado e o passo 2
-                se deslocava pela página. max-w-md evita que o selo estique
-                por toda a coluna larga do hero. */}
-            <ol className="mt-8 grid max-w-md gap-3" aria-label="Como agendar">
+            {/* Caminho dos passos: empilhado no celular, LADO A LADO no PC
+                (sm:grid-cols-3), como sempre foi neste hero. */}
+            <ol className="mt-8 grid gap-3 sm:grid-cols-3" aria-label="Como agendar">
               {PASSOS.map((passo, i) => (
                 <li
                   key={passo}
@@ -360,14 +358,12 @@ export default function TrialClassPage() {
         <BrushDivider className="absolute bottom-0 left-0 h-2.5 w-full text-[#C1272D]" />
       </header>
 
-      {/* Duas colunas no PC (formulário | calendário); empilhado no mobile na
-          MESMA ordem de leitura: aluno → dia → contato → resumo → envio. */}
-      <form
-        onSubmit={handleSubmit}
-        className="mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:items-start lg:gap-x-10"
-      >
-        {/* Cartão 1 (PC: coluna esquerda) — aluno + turma */}
-        <div className={cn(cardClass, 'grid gap-5 lg:col-start-1 lg:row-start-1 lg:row-span-2')}>
+      {/* Etapas do formulário SEMPRE empilhadas, uma logo abaixo da outra,
+          na ordem 1 → 2 → 3 (aluno → dia → contato), em qualquer largura:
+          nada corre para a lateral, nem no PC. Resumo e envio em seguida. */}
+      <form onSubmit={handleSubmit} className="mx-auto grid max-w-3xl gap-6 px-4 py-10 sm:py-14">
+        {/* Cartão 1 — aluno + turma */}
+        <div className={cn(cardClass, 'grid gap-5')}>
           <StepHeader n={1} titulo="Sobre o aluno" />
 
           <div className="space-y-1.5">
@@ -447,13 +443,8 @@ export default function TrialClassPage() {
           </div>
         </div>
 
-        {/* Cartão 2 (PC: coluna direita, sticky) — calendário de dias disponíveis */}
-        <div
-          className={cn(
-            cardClass,
-            'lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start',
-          )}
-        >
+        {/* Cartão 2 — calendário de dias disponíveis */}
+        <div className={cn(cardClass)}>
           <StepHeader n={2} titulo="Escolha o dia" />
           <div className="space-y-2">
             <span className={cn(labelClass, 'block')}>Data desejada da aula *</span>
@@ -505,8 +496,8 @@ export default function TrialClassPage() {
           </div>
         </div>
 
-        {/* Cartão 3 (PC: coluna esquerda, abaixo) — contato, observação, alertas */}
-        <div className={cn(cardClass, 'grid gap-5 lg:col-start-1 lg:row-start-3')}>
+        {/* Cartão 3 — contato, observação, alertas */}
+        <div className={cn(cardClass, 'grid gap-5')}>
           <StepHeader n={3} titulo="Contato" />
 
           <div className="space-y-1.5">
@@ -555,7 +546,7 @@ export default function TrialClassPage() {
         {/* Resumo antes da confirmação */}
         <section
           aria-labelledby="trial-summary-title"
-          className="relative overflow-hidden rounded-2xl bg-[#1C1B1A] p-5 text-white shadow-md sm:p-7 lg:col-span-2"
+          className="relative overflow-hidden rounded-2xl bg-[#1C1B1A] p-5 text-white shadow-md sm:p-7"
         >
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#E4636A]">
             Confira antes de enviar
@@ -598,7 +589,7 @@ export default function TrialClassPage() {
         </section>
 
         {/* Envio: largura total, embaixo de tudo */}
-        <div className="lg:col-span-2">
+        <div>
           <Button
             type="submit"
             disabled={submitting || isLoadingClasses || classes.length === 0}
