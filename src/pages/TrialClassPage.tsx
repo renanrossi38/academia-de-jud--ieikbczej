@@ -315,16 +315,18 @@ export default function TrialClassPage() {
         <HeroPetals className="opacity-60" />
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-12 sm:pt-16 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-16">
           <div>
-            <HankoStamp className="mb-4 h-12 w-12 lg:hidden" />
+            {/* Hero escuro: dragão em silhueta branca (mesmo tratamento do
+                rodapé) — o logo colorido some contra o preto/vermelho. */}
+            <HankoStamp className="mb-4 h-12 w-12 brightness-0 invert lg:hidden" />
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#E4636A]">
-              Academia Tatsu · Judô
+              Judô Tatsu
             </p>
             <h1 className="mt-2 font-serif text-4xl font-bold leading-tight sm:text-5xl">
               Aula experimental
             </h1>
             <BrushDivider className="mt-3 h-3 w-28 text-[#C1272D]" />
             <p className="mt-5 max-w-xl text-base leading-relaxed text-white/75">
-              Conheça o judô na Academia Tatsu: escolha a turma, o dia e deixe seu contato. A
+              Conheça o judô na Academia Judô Tatsu: escolha a turma, o dia e deixe seu contato. A
               primeira aula é por nossa conta — sem compromisso.
             </p>
             <ol className="mt-8 grid gap-3 sm:grid-cols-3" aria-label="Como agendar">
@@ -346,7 +348,9 @@ export default function TrialClassPage() {
           </div>
           <div aria-hidden className="relative hidden h-72 items-center justify-center lg:flex">
             <HeroSun className="absolute h-72 w-72 opacity-90" />
-            <HankoStamp className="relative h-24 w-24" />
+            {/* Dragão em silhueta branca dentro do disco vermelho (hanko):
+                o tom original do logo conflitava com o vermelho do sol. */}
+            <HankoStamp className="relative h-24 w-24 brightness-0 invert" />
           </div>
         </div>
         <BrushDivider className="absolute bottom-0 left-0 h-2.5 w-full text-[#C1272D]" />
