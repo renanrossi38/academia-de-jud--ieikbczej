@@ -384,15 +384,17 @@ export const Header: React.FC = () => {
               </HomeAnchor>
             ))}
 
-            {/* Destaque de descoberta: botão sólido vermelho (identidade da
+            {/* Destaque de descoberta: item com fundo vermelho (identidade da
                 academia) em vez de item de texto — quem chega quer experimentar
-                uma aula e não deve depender do rodapé para achar o agendamento. */}
+                uma aula e não deve depender do rodapé para achar o agendamento.
+                Mesma proporção dos demais itens (padding/fonte/raio), destaque
+                só pela cor de fundo e pelo ícone. */}
             <Link
               to="/aula-experimental"
-              className="flex items-center justify-center gap-2 px-3 py-3 bg-[#C1272D] text-white text-base font-bold rounded-xl shadow-sm hover:bg-[#A01E23] active:bg-[#A01E23] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0]"
+              className="flex items-center gap-2 px-3 py-2.5 bg-[#C1272D] text-white text-base font-semibold rounded-lg hover:bg-[#A01E23] active:bg-[#A01E23] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF6F0]"
               onClick={() => setMobileOpen(false)}
             >
-              <CalendarPlus className="w-5 h-5" aria-hidden="true" />
+              <CalendarPlus className="w-4 h-4" aria-hidden="true" />
               Aula experimental
             </Link>
 
