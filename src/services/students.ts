@@ -65,12 +65,6 @@ export function generateInitialPassword(): string {
   return password
 }
 
-/** users.belt só aceita as 9 faixas base — valores "ponta" viram a faixa base. */
-function baseBeltForUser(belt?: Belt | ''): Belt | '' {
-  if (!belt) return ''
-  return belt.endsWith('_ponta') ? ((belt.split('_')[0] as Belt) ?? '') : belt
-}
-
 /** Traduz erros de validação do PocketBase para mensagens claras em português. */
 function friendlyCreateAccessError(err: unknown, email: string): string {
   const fieldErrors = extractFieldErrors(err)
@@ -123,8 +117,8 @@ export async function createAccess(
       passwordConfirm: initialPassword,
       name: student.name,
       phone: student.phone || '',
-      // users.belt não tem os valores "ponta" — envia apenas o valor base
-      belt: baseBeltForUser(student.belt),
+      // users.belt aceita as 13 faixas (migration 0044) — envia a faixa exata
+      belt: student.belt || '',
       role: 'aluno',
       active: true,
       // verified NÃO é enviado: só superusuário pode definir esse campo
