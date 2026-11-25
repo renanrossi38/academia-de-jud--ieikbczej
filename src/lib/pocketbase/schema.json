@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T02:18:33.660Z",
+  "generatedAt": "2026-11-25T02:23:41.306Z",
   "collections": [
     {
       "name": "users",
@@ -1567,7 +1567,7 @@
         {
           "name": "status",
           "type": "select",
-          "required": true,
+          "required": false,
           "system": false,
           "selectValues": ["novo", "confirmado", "realizado", "cancelado"]
         },

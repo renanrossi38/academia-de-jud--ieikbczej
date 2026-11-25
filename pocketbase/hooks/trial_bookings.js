@@ -33,6 +33,12 @@ onRecordCreateRequest((e) => {
     return m ? m[1] + '-' + m[2] + '-' + m[3] : ''
   }
 
+  // Status nunca vem do público: sempre nasce 'novo' (campo agora opcional —
+  // migration 0043 — para o create anônimo não bater na validação de campo).
+  if (!e.record.getString('status')) {
+    e.record.set('status', 'novo')
+  }
+
   const classId = e.record.getString('class')
   const dateStr = dataDe(e.record.get('date'))
   const birthStr = dataDe(e.record.get('birth_date'))

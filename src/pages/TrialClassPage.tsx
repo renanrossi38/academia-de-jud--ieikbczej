@@ -172,10 +172,21 @@ export default function TrialClassPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err: any) {
       console.error('Erro ao agendar aula experimental:', err)
+      // PocketBase: erros de campo chegam em response.data.{campo}.message
+      // (ex.: campo required vazio) — mostre o mais específico, nunca o
+      // "Failed to create record" genérico sozinho.
+      const fieldMsgs = err?.response?.data
+        ? Object.values(err.response.data)
+            .map((d: any) => (d && typeof d === 'object' ? d.message : ''))
+            .filter(Boolean)
+        : []
       toast({
         title: 'Não foi possível agendar',
         description:
-          err?.response?.data?.message || err?.message || 'Verifique os dados e tente novamente.',
+          fieldMsgs[0] ||
+          err?.response?.data?.message ||
+          err?.message ||
+          'Verifique os dados e tente novamente.',
         variant: 'destructive',
       })
     } finally {
