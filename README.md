@@ -2,6 +2,8 @@
 
 Este projeto foi criado de ponta a ponta com o [Skip](https://goskip.dev).
 
+> Nota: a linha inválida `list_secrets=read done`, colada por engano no `.env`, foi removida via `set_env` (2026-11-25). Nenhuma variável de ambiente real foi alterada.
+
 ## 🚀 Stack Tecnológica
 
 - **React 19** - Biblioteca JavaScript para construção de interfaces
