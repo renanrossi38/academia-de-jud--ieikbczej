@@ -1,13 +1,15 @@
 import React from 'react'
 import { useCart } from '@/context/CartContext'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { BrushDivider } from '@/components/hero/HeroDecor'
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react'
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Package } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 export const CartDrawer: React.FC = () => {
   const { isDrawerOpen, setIsDrawerOpen, items, updateQuantity, removeItem, total, itemCount } =
     useCart()
+  const { user } = useAuth()
   const navigate = useNavigate()
 
   if (!isDrawerOpen) return null
@@ -177,6 +179,18 @@ export const CartDrawer: React.FC = () => {
             <div className="text-xs text-[#6B6560]">
               * Pagamento combinado na retirada ou entrega (dinheiro, Pix ou cartão presencial).
             </div>
+
+            {/* "Meus pedidos" vive APENAS aqui no carrinho para o visitante
+                deslogado (o header só mostra o link para quem está logado).
+                Sem sessão, o link leva ao login e volta para os pedidos. */}
+            <Link
+              to={user ? '/meus-pedidos' : '/entrar?redirect=/meus-pedidos'}
+              className="flex items-center justify-center gap-1.5 text-xs font-semibold text-[#6B6560] hover:text-[#C1272D] transition-colors"
+              onClick={() => setIsDrawerOpen(false)}
+            >
+              <Package className="w-3.5 h-3.5" />
+              {user ? 'Ver meus pedidos' : 'Entrar para ver meus pedidos'}
+            </Link>
 
             <div className="grid grid-cols-2 gap-2 pt-1">
               <Button

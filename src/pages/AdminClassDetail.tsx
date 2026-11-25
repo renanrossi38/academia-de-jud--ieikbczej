@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { HankoStamp } from '@/components/HankoStamp'
@@ -45,7 +45,18 @@ import {
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, ArrowLeft, UserPlus, Save, Search, CalendarDays, Users, Ban } from 'lucide-react'
+import {
+  Loader2,
+  ArrowLeft,
+  UserPlus,
+  Save,
+  Search,
+  CalendarDays,
+  Users,
+  Ban,
+  ImageIcon,
+} from 'lucide-react'
+import { ClassCoverFallback } from '@/components/ClassCoverFallback'
 
 // Mês "YYYY-MM" seguinte: destaque "fica fica" concedido em M vale durante M+1.
 export function nextMonthKey(k: string): string {
@@ -89,6 +100,57 @@ export default function AdminClassDetail() {
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingRoll, setIsSavingRoll] = useState(false)
+
+  // Capa da turma: upload direto na ficha (mesma regra do diálogo de turmas:
+  // JPG/PNG/WebP até 5 MB).
+  const [isUploadingCover, setIsUploadingCover] = useState(false)
+  const handleCoverChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !classId) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Arquivo muito grande',
+        description: 'A foto da turma deve ter até 5 MB (JPG, PNG ou WebP).',
+        variant: 'destructive',
+      })
+      return
+    }
+    setIsUploadingCover(true)
+    try {
+      const updated = await classesService.updateClass(classId, { cover: file })
+      setTurma(updated)
+      toast({ title: 'Foto da turma atualizada!' })
+    } catch (err: any) {
+      console.error('Erro ao enviar foto da turma:', err)
+      toast({
+        title: 'Erro ao enviar a foto',
+        description: err?.message || 'Tente novamente com uma imagem JPG, PNG ou WebP.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsUploadingCover(false)
+    }
+  }
+
+  const handleRemoveCover = async () => {
+    if (!classId) return
+    setIsUploadingCover(true)
+    try {
+      const updated = await classesService.updateClass(classId, { removeCover: true })
+      setTurma(updated)
+      toast({ title: 'Foto da turma removida.' })
+    } catch (err: any) {
+      console.error('Erro ao remover foto da turma:', err)
+      toast({
+        title: 'Erro ao remover a foto',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsUploadingCover(false)
+    }
+  }
 
   // matrícula
   const [addOpen, setAddOpen] = useState(false)
@@ -459,6 +521,59 @@ export default function AdminClassDetail() {
               ? ' — use as abas para a chamada e para atribuir as medalhas do mês.'
               : ' — faça a chamada do dia abaixo.'}
           </p>
+        </div>
+        {/* Foto da turma: preview + troca/remoção direto na ficha */}
+        <div className="shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-24 h-16 rounded-xl overflow-hidden border border-[#E8E0D5] bg-[#FAF6F0]">
+              {classesService.getCoverUrl(turma) ? (
+                <img
+                  src={classesService.getCoverUrl(turma) as string}
+                  alt={`Foto da turma ${turma.name}`}
+                  width={96}
+                  height={64}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#C1272D]/60">
+                  <ImageIcon className="w-5 h-5" />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="turma-cover-input"
+                className="text-xs font-semibold text-[#1C1B1A] cursor-pointer"
+              >
+                {isUploadingCover ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Enviando...
+                  </span>
+                ) : (
+                  'Alterar foto'
+                )}
+              </Label>
+              <input
+                id="turma-cover-input"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={handleCoverChange}
+                disabled={isUploadingCover}
+              />
+              {classesService.getCoverUrl(turma) && (
+                <button
+                  type="button"
+                  className="text-[11px] text-[#6B6560] hover:text-[#B3261E] transition-colors text-left"
+                  onClick={handleRemoveCover}
+                  disabled={isUploadingCover}
+                >
+                  Remover foto
+                </button>
+              )}
+            </div>
+          </div>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <Button

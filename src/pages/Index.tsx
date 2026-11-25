@@ -8,6 +8,7 @@ import { classLevelLabel, classLevelBadgeClass, classesService } from '@/service
 import { useRealtime } from '@/hooks/use-realtime'
 import { Product, ProductCategory, Class } from '@/types'
 import { HankoStamp, ProductPlaceholder, OfficialLogo } from '@/components/HankoStamp'
+import { ClassCoverFallback } from '@/components/ClassCoverFallback'
 import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero/HeroDecor'
 import { BrushDivider } from '@/components/hero/HeroDecor'
 import InstagramSection from '@/components/InstagramSection'
@@ -305,13 +306,7 @@ export default function Index() {
                       <BrushDivider className="absolute bottom-0 left-0 right-0 w-full text-[#C1272D]" />
                     </div>
                   ) : (
-                    <div className="relative bg-[#FAF6F0] h-24 flex items-center justify-center overflow-hidden">
-                      <HeroSun className="absolute -right-8 -top-10 w-40 h-40 opacity-90" />
-                      <div className="relative z-10">
-                        <HankoStamp size="lg" />
-                      </div>
-                      <BrushDivider className="absolute bottom-0 left-0 right-0 w-full text-[#C1272D]" />
-                    </div>
+                    <ClassCoverFallback className="transition-transform duration-300 group-hover:scale-105" />
                   )}
 
                   <div className="p-5 flex-1 flex flex-col">

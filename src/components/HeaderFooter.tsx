@@ -275,38 +275,28 @@ export const Header: React.FC = () => {
                         <UserCog className="w-4 h-4 text-[#6B6560]" />
                         Minha conta
                       </Link>
-                      {isAdmin ? (
-                        <Link
-                          to="/area-do-aluno"
-                          role="menuitem"
-                          className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
-                          onClick={() => setAccountOpen(false)}
-                        >
-                          <GraduationCap className="w-4 h-4 text-[#6B6560]" />
-                          Área do aluno
-                        </Link>
-                      ) : (
-                        <>
-                          <Link
-                            to="/meus-pedidos"
-                            role="menuitem"
-                            className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
-                            onClick={() => setAccountOpen(false)}
-                          >
-                            <Package className="w-4 h-4 text-[#6B6560]" />
-                            Meus pedidos
-                          </Link>
-                          <Link
-                            to="/area-do-aluno"
-                            role="menuitem"
-                            className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
-                            onClick={() => setAccountOpen(false)}
-                          >
-                            <GraduationCap className="w-4 h-4 text-[#6B6560]" />
-                            Área do aluno
-                          </Link>
-                        </>
-                      )}
+                      {/* "Meus pedidos" para QUALQUER usuário logado (admin
+                          inclusive) — mesma visibilidade do menu mobile. Para
+                          visitante deslogado o acesso aos pedidos fica só no
+                          fluxo do carrinho (finalizar exige login). */}
+                      <Link
+                        to="/meus-pedidos"
+                        role="menuitem"
+                        className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        <Package className="w-4 h-4 text-[#6B6560]" />
+                        Meus pedidos
+                      </Link>
+                      <Link
+                        to="/area-do-aluno"
+                        role="menuitem"
+                        className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        <GraduationCap className="w-4 h-4 text-[#6B6560]" />
+                        Área do aluno
+                      </Link>
                       <button
                         onClick={handleLogout}
                         role="menuitem"
