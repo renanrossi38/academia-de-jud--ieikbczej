@@ -75,7 +75,7 @@ export default function AdminOrders() {
 
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'todos' | 'aguardando'>(
-    'aguardando',
+    'todos',
   )
   const [isLoading, setIsLoading] = useState(true)
 
