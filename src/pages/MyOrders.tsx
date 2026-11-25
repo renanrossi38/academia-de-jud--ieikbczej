@@ -5,13 +5,17 @@ import { ordersService } from '@/services/orders'
 import { Order, OrderItem } from '@/types'
 import { OrderStatusChip } from '@/components/OrderStatusChip'
 import { HankoStamp } from '@/components/HankoStamp'
+import { PixPaymentBlock } from '@/components/PixPaymentBlock'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronUp, ShoppingBag, MapPin, Building, Loader2 } from 'lucide-react'
-import pb from '@/lib/pocketbase/client'
+import { ChevronDown, ChevronUp, ShoppingBag, Loader2 } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
 import { formatCustomAnswers } from '@/lib/customAnswers'
 
+/** Statuses em que o pedido ainda oferece pagamento via Pix (confirmação manual). */
+const PENDING_PIX_STATUSES = ['novo', 'confirmado', 'em_preparacao', 'pronto']
+
 export default function MyOrders() {
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isAdmin, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   const [orders, setOrders] = useState<Order[]>([])
@@ -27,25 +31,28 @@ export default function MyOrders() {
 
     if (user) {
       loadOrders()
-
-      // Subscribe to realtime changes on orders collection
-      pb.collection('orders').subscribe('*', (e) => {
-        if (e.action === 'create' && (e.record as unknown as Order).user === user.id) {
-          setOrders((prev) => [e.record as unknown as Order, ...prev])
-        } else if (e.action === 'update' && (e.record as unknown as Order).user === user.id) {
-          setOrders((prev) =>
-            prev.map((o) => (o.id === e.record.id ? (e.record as unknown as Order) : o)),
-          )
-        } else if (e.action === 'delete') {
-          setOrders((prev) => prev.filter((o) => o.id !== e.record.id))
-        }
-      })
     }
-
-    return () => {
-      pb.collection('orders').unsubscribe('*')
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading])
+
+  // Realtime: SOMENTE eventos de pedidos do próprio usuário (um admin assinando
+  // "orders" recebe eventos de TODOS os alunos — filtra pelo comprador).
+  useRealtime<Order>(
+    'orders',
+    (e) => {
+      const record = e.record as unknown as Order
+      if (record.user !== user?.id) return
+
+      if (e.action === 'create') {
+        setOrders((prev) => (prev.some((o) => o.id === record.id) ? prev : [record, ...prev]))
+      } else if (e.action === 'update') {
+        setOrders((prev) => prev.map((o) => (o.id === record.id ? record : o)))
+      } else if (e.action === 'delete') {
+        setOrders((prev) => prev.filter((o) => o.id !== e.record.id))
+      }
+    },
+    !!user && !authLoading,
+  )
 
   const loadOrders = async () => {
     setIsLoading(true)
@@ -93,6 +100,13 @@ export default function MyOrders() {
         <p className="text-xs text-[#6B6560] mt-1">
           Acompanhe o andamento dos seus pedidos em tempo real.
         </p>
+        {isAdmin && (
+          <p className="text-[11px] text-[#6B6560] mt-2 rounded-lg border border-[#E8E0D5] bg-[#FAF6F0] px-3 py-2 inline-block">
+            Você está logado como administrador: esta página mostra apenas as{' '}
+            <strong className="text-[#1C1B1A]">suas próprias compras</strong>. A visão de todos os
+            pedidos dos alunos fica no Painel → Pedidos.
+          </p>
+        )}
       </div>
 
       {orders.length === 0 ? (
@@ -240,6 +254,13 @@ export default function MyOrders() {
                     {order.notes && (
                       <div className="p-3 bg-white rounded-xl border border-[#E8E0D5] text-xs text-[#6B6560]">
                         <strong className="text-[#1C1B1A]">Obs:</strong> {order.notes}
+                      </div>
+                    )}
+
+                    {/* Pix pendente: pedido aguardando confirmação manual pela academia */}
+                    {PENDING_PIX_STATUSES.includes(order.status) && (
+                      <div className="mt-1">
+                        <PixPaymentBlock kind="pedido" id={order.id} title="Pagar pedido com Pix" />
                       </div>
                     )}
                   </div>

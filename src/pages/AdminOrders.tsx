@@ -21,16 +21,20 @@ import {
   X,
   MessageSquare,
   ShoppingBag,
-  Filter,
   CheckCircle2,
   Plus,
   Package,
   QrCode,
+  Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const STATUS_FILTERS: { label: string; value: OrderStatus | 'todos' }[] = [
+/** Statuses que ainda dependem de avaliação/conclusão do admin. */
+const PENDING_ACTION_STATUSES: OrderStatus[] = ['novo', 'confirmado', 'em_preparacao', 'pronto']
+
+const STATUS_FILTERS: { label: string; value: OrderStatus | 'todos' | 'aguardando' }[] = [
   { label: 'Todos', value: 'todos' },
+  { label: 'Aguardando ação', value: 'aguardando' },
   { label: 'Novo', value: 'novo' },
   { label: 'Confirmado', value: 'confirmado' },
   { label: 'Em preparação', value: 'em_preparacao' },
@@ -70,7 +74,9 @@ export default function AdminOrders() {
   const { toast } = useToast()
 
   const [orders, setOrders] = useState<Order[]>([])
-  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'todos'>('todos')
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'todos' | 'aguardando'>(
+    'aguardando',
+  )
   const [isLoading, setIsLoading] = useState(true)
 
   // Drawer for order detail
@@ -122,19 +128,31 @@ export default function AdminOrders() {
     'orders',
     (e) => {
       if (e.action === 'create') {
-        setOrders((prev) => [{ ...e.record } as Order, ...prev])
+        // Mantém a ordenação do painel: aguardando ação primeiro, mais recente no topo.
+        setOrders((prev) => {
+          const next = [{ ...e.record } as Order, ...prev]
+          return [
+            ...next.filter((o) => PENDING_ACTION_STATUSES.includes(o.status)),
+            ...next.filter((o) => !PENDING_ACTION_STATUSES.includes(o.status)),
+          ]
+        })
         toast({
           title: 'Novo pedido recebido!',
           description: `Cliente: ${e.record.customer_name}`,
         })
       } else if (e.action === 'update') {
         // O registro do realtime não vem com expand — preserva o expand=user
-        // (nome/e-mail do comprador) que a listagem já carregou.
-        setOrders((prev) =>
-          prev.map((o) =>
+        // (nome/e-mail do comprador) que a listagem já carregou. Reordena para
+        // manter "aguardando ação" no topo (ex.: pedido voltou a ficar pendente).
+        setOrders((prev) => {
+          const next = prev.map((o) =>
             o.id === e.record.id ? ({ ...e.record, expand: o.expand } as Order) : o,
-          ),
-        )
+          )
+          const touched = next.find((o) => o.id === e.record.id)
+          if (!touched || PENDING_ACTION_STATUSES.includes(touched.status)) return next
+          // Saiu do fluxo (entregue/cancelado): move para o fim, com o grupo concluído.
+          return [...next.filter((o) => o.id !== touched.id), touched]
+        })
         setActiveOrder((cur) =>
           cur && cur.id === e.record.id ? ({ ...e.record, expand: cur.expand } as Order) : cur,
         )
@@ -295,11 +313,23 @@ export default function AdminOrders() {
     return <AdminPageLoader label="Carregando pedidos..." />
   }
 
-  // Filtered list
-  const filteredOrders = orders.filter((o) => {
-    if (selectedStatus === 'todos') return true
-    return o.status === selectedStatus
-  })
+  // Filtered list. O filtro "aguardando" junta os status em fluxo; os demais
+  // filtram por um status específico. Pedidos aguardando ação vêm primeiro.
+  const filteredOrders = orders
+    .filter((o) => {
+      if (selectedStatus === 'todos') return true
+      if (selectedStatus === 'aguardando') return PENDING_ACTION_STATUSES.includes(o.status)
+      return o.status === selectedStatus
+    })
+    .sort((a, b) => {
+      const aPending = PENDING_ACTION_STATUSES.includes(a.status) ? 0 : 1
+      const bPending = PENDING_ACTION_STATUSES.includes(b.status) ? 0 : 1
+      if (aPending !== bPending) return aPending - bPending
+      return b.created.localeCompare(a.created) // mais recente primeiro
+    })
+
+  // Contador de pedidos aguardando avaliação/conclusão do admin
+  const pendingActionCount = orders.filter((o) => PENDING_ACTION_STATUSES.includes(o.status)).length
 
   // Status counts
   const countsByStatus = orders.reduce(
@@ -322,15 +352,15 @@ export default function AdminOrders() {
       <AdminSummary
         stats={[
           {
+            label: 'Aguardando ação',
+            value: pendingActionCount,
+            icon: <Clock className="w-4 h-4" />,
+            tone: 'red',
+          },
+          {
             label: 'Total de pedidos',
             value: orders.length,
             icon: <ShoppingBag className="w-4 h-4" />,
-          },
-          {
-            label: 'Novos (aguardando)',
-            value: countsByStatus['novo'] || 0,
-            icon: <Filter className="w-4 h-4" />,
-            tone: 'red',
           },
           {
             label: 'Em preparação',
@@ -350,7 +380,12 @@ export default function AdminOrders() {
       <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none">
         {STATUS_FILTERS.map((f) => {
           const isSelected = selectedStatus === f.value
-          const count = f.value === 'todos' ? orders.length : countsByStatus[f.value] || 0
+          const count =
+            f.value === 'todos'
+              ? orders.length
+              : f.value === 'aguardando'
+                ? pendingActionCount
+                : countsByStatus[f.value] || 0
 
           return (
             <button
@@ -359,7 +394,9 @@ export default function AdminOrders() {
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 border select-none ${
                 isSelected
                   ? 'bg-[#C1272D] text-white border-[#C1272D] shadow-xs'
-                  : 'bg-white text-[#1C1B1A] border-[#E8E0D5] hover:border-[#C1272D]/40'
+                  : f.value === 'aguardando' && count > 0
+                    ? 'bg-white text-[#C1272D] border-[#C1272D]/50 hover:bg-[#F7E4E2]'
+                    : 'bg-white text-[#1C1B1A] border-[#E8E0D5] hover:border-[#C1272D]/40'
               }`}
             >
               <span>{f.label}</span>
@@ -419,6 +456,13 @@ export default function AdminOrders() {
                     >
                       <td className="py-3.5 px-4 font-mono font-bold text-[#1C1B1A]">
                         #{order.id.substring(0, 8)}
+                        {PENDING_ACTION_STATUSES.includes(order.status) && (
+                          <span
+                            className="ml-1.5 inline-block w-2 h-2 rounded-full bg-[#C1272D] align-middle"
+                            title="Aguardando avaliação/conclusão"
+                            aria-hidden="true"
+                          />
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         {buyer.removed ? (
@@ -503,8 +547,15 @@ export default function AdminOrders() {
                   className="p-4 space-y-3 hover:bg-[#FAF6F0]/40 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-xs text-[#1C1B1A]">
+                    <span className="font-mono font-bold text-xs text-[#1C1B1A] inline-flex items-center gap-1.5">
                       #{order.id.substring(0, 8)}
+                      {PENDING_ACTION_STATUSES.includes(order.status) && (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full bg-[#C1272D]"
+                          title="Aguardando avaliação/conclusão"
+                          aria-hidden="true"
+                        />
+                      )}
                     </span>
                     <OrderStatusChip status={order.status} />
                   </div>
