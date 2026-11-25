@@ -45,6 +45,20 @@ export const trialBookingsService = {
     return pb.collection('trial_bookings').create<TrialBooking>(input)
   },
 
+  /**
+   * Datas já ocupadas de uma turma (agendamentos não-cancelados), via rota
+   * pública /backend/v1/trial-availability/{classId} (hook trial_bookings.js).
+   * Resposta contém APENAS as datas — nenhum dado pessoal. Usada pelo
+   * calendário do formulário para desabilitar dias já reservados.
+   */
+  async fetchOccupiedDates(classId: string): Promise<string[]> {
+    const res = await pb.send<{ dates: string[] }>(
+      '/backend/v1/trial-availability/' + encodeURIComponent(classId),
+      { method: 'GET' },
+    )
+    return Array.isArray(res?.dates) ? res.dates : []
+  },
+
   /** Todos os agendamentos, mais recentes primeiro (painel — só admin). */
   async list(): Promise<TrialBooking[]> {
     return pb.collection('trial_bookings').getFullList<TrialBooking>({

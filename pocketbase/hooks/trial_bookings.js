@@ -7,14 +7,17 @@
 //   - data da aula é um dos dias da semana da turma (ex.: ter/qui recusa seg/qua);
 //   - data da aula não está no passado;
 //   - data de nascimento encaixa na faixa de idade da turma (min_age/max_age
-//     calculados NA data da aula escolhida).
+//     calculados NA data da aula escolhida);
+//   - UNICIDADE: só um agendamento por turma por dia — se já existe outro
+//     agendamento NÃO-cancelado para a mesma turma na mesma data, o create é
+//     recusado (cancelado libera o dia).
 //
 // Notas da JSVM deste projeto: callbacks não enxergam declarações de nível
 // superior (lógica inline no callback) e não existe $app.countRecordsByFilter
 // (usar findRecordsByFilter e contar em objeto).
 //
 // onRecordCreateRequest roda ANTES da criação, com a regra createRule=null
-// (público) já passada — aqui podemos bloquear com $app.throwError.
+// (público) já passada — aqui podemos bloquear com BadRequestError.
 //
 
 onRecordCreateRequest((e) => {
@@ -149,5 +152,99 @@ onRecordCreateRequest((e) => {
     }
   }
 
+  // ---- 6. UNICIDADE: um agendamento por turma por dia ----------------------
+  // Já existe agendamento NÃO-cancelado nesta turma nesta data? Bloqueia —
+  // o dia fica reservado para UMA aula experimental por vez. Status 'cancelado'
+  // libera o dia (a aula não vai acontecer). Vale para QUALQUER chamador:
+  // o público pelo form e quem burlar e chamar a API direto.
+  const dParts = dateStr.split('-')
+  const proximoDiaStr = new Date(Date.UTC(+dParts[0], +dParts[1] - 1, +dParts[2] + 1))
+    .toISOString()
+    .slice(0, 10)
+  const existentes = $app.findRecordsByFilter(
+    'trial_bookings',
+    'class = {:classId} && date >= {:dayStart} && date < {:dayEnd} && status != "cancelado"',
+    '',
+    1,
+    0,
+    {
+      classId: classId,
+      dayStart: dateStr + ' 00:00:00.000Z',
+      dayEnd: proximoDiaStr + ' 00:00:00.000Z',
+    },
+  )
+  if (existentes.length > 0) {
+    throw new BadRequestError(
+      'Já existe uma aula experimental agendada para esta turma neste dia. Escolha outra data.',
+    )
+  }
+
   e.next()
 }, 'trial_bookings')
+
+// ---- Rota pública de disponibilidade (calendário do formulário) ------------
+//
+// GET /backend/v1/trial-availability/{classId}
+//   → { dates: ["2026-01-15", ...] }
+// Devolve as datas (dia, sem hora e SEM nenhum dado pessoal) que já têm
+// agendamento NÃO-cancelado para a turma — o mesmo critério do bloqueio acima.
+// O front usa para desabilitar/marcar esses dias no calendário.
+//
+// RESTRIÇÃO DA JSVM: callbacks não enxergam declarações de nível superior —
+// tudo inline dentro da callback.
+
+routerAdd(
+  'GET',
+  '/backend/v1/trial-availability/{classId}',
+  (e) => {
+    const classId = e.request.pathValue('classId') || ''
+
+    if (classId === '') {
+      throw new BadRequestError('Turma não informada.')
+    }
+
+    // Turma precisa existir e estar ativa — turma inexistente/inativa devolve
+    // a MESMA resposta de datas vazias (não revela quais turmas existem).
+    try {
+      const klass = $app.findRecordById('classes', classId)
+      if (klass.getBool('active') === false) {
+        return e.json(200, { dates: [] })
+      }
+    } catch (errClass) {
+      return e.json(200, { dates: [] })
+    }
+
+    // Datas ocupadas: agendamentos não-cancelados, a partir de HOJE (Brasília)
+    // — datas passadas não interessam ao calendário (nenhum dia passado é
+    // agendável de qualquer forma).
+    const todayStr = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const recs = $app.findRecordsByFilter(
+      'trial_bookings',
+      'class = {:classId} && date >= {:today} && status != "cancelado"',
+      'date',
+      0,
+      0,
+      { classId: classId, today: todayStr + ' 00:00:00.000Z' },
+    )
+
+    const dates = []
+    for (let i = 0; i < recs.length; i++) {
+      const raw = recs[i].get('date')
+      let d = ''
+      if (raw instanceof Date) {
+        d = raw.toISOString().slice(0, 10)
+      } else {
+        const m = String(raw || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+        if (m) d = m[1] + '-' + m[2] + '-' + m[3]
+      }
+      if (d !== '' && dates.indexOf(d) === -1) {
+        dates.push(d)
+      }
+    }
+
+    return e.json(200, { dates: dates })
+  },
+  // Pública: o calendário do formulário roda sem login e recebe apenas as
+  // datas ocupadas — nenhum dado pessoal (nome, contato, observação ficam
+  // fora da resposta).
+)

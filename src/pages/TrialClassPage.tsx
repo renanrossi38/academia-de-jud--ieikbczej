@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CalendarCheck, CheckCircle2, Clock, Users } from 'lucide-react'
 import { HankoStamp } from '@/components/HankoStamp'
 import { BrushDivider } from '@/components/hero/HeroDecor'
+import { TrialCalendar } from '@/components/TrialCalendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,6 +41,8 @@ export default function TrialClassPage() {
   const [isLoadingClasses, setIsLoadingClasses] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  /** Incrementa após cada agendamento bem-sucedido → refetch das datas ocupadas. */
+  const [refreshDates, setRefreshDates] = useState(0)
 
   const [form, setForm] = useState({
     student_name: '',
@@ -61,6 +64,27 @@ export default function TrialClassPage() {
     }
   }, [])
 
+  /** Datas já reservadas da turma selecionada (rota pública trial-availability). */
+  const [occupiedDates, setOccupiedDates] = useState<string[]>([])
+  const [isLoadingDates, setIsLoadingDates] = useState(false)
+
+  useEffect(() => {
+    if (!form.classId) {
+      setOccupiedDates([])
+      return
+    }
+    let alive = true
+    setIsLoadingDates(true)
+    trialBookingsService
+      .fetchOccupiedDates(form.classId)
+      .then((dates) => alive && setOccupiedDates(dates))
+      .catch(() => alive && setOccupiedDates([]))
+      .finally(() => alive && setIsLoadingDates(false))
+    return () => {
+      alive = false
+    }
+  }, [form.classId, refreshDates])
+
   const selected = useMemo(
     () => classes.find((c) => c.klass.id === form.classId) ?? null,
     [classes, form.classId],
@@ -81,6 +105,8 @@ export default function TrialClassPage() {
     !!form.date &&
     weekdaysOfSelected.length > 0 &&
     !weekdaysOfSelected.includes(chosenDowKey as ClassWeekday)
+  /** Dia que a turma tem aula, mas já tem aula experimental reservada. */
+  const diaReservado = !!form.date && occupiedDates.includes(form.date)
 
   /** Idade do aluno na data da aula escolhida (para avisar antes de enviar). */
   const idadeNaAula = useMemo(() => {
@@ -148,6 +174,15 @@ export default function TrialClassPage() {
       })
       return
     }
+    if (diaReservado) {
+      toast({
+        title: 'Dia já reservado',
+        description:
+          'Já existe uma aula experimental agendada para esta turma neste dia. Escolha outra data.',
+        variant: 'destructive',
+      })
+      return
+    }
     if (idadeInvalida) {
       toast({
         title: 'Idade fora da faixa da turma',
@@ -168,6 +203,7 @@ export default function TrialClassPage() {
         notes: form.notes.trim() || undefined,
       }
       await trialBookingsService.create(payload)
+      setRefreshDates((n) => n + 1)
       setDone(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err: any) {
@@ -335,15 +371,22 @@ export default function TrialClassPage() {
             <Label htmlFor="trial-date" className="text-xs font-bold text-[#1C1B1A]">
               Data desejada da aula *
             </Label>
-            <Input
-              id="trial-date"
-              type="date"
-              value={form.date}
-              min={minDate}
-              max={maxDate}
-              onChange={(e) => set({ date: e.target.value })}
-              className={cn(inputClass, diaInvalido && 'border-[#C1272D] ring-1 ring-[#C1272D]/40')}
-            />
+            {!form.classId ? (
+              <p className="text-xs text-[#6B6560]">
+                Selecione a turma para ver no calendário os dias disponíveis para agendar.
+              </p>
+            ) : isLoadingDates ? (
+              <div className="h-[280px] animate-pulse rounded-xl border border-[#E8E0D5] bg-[#FAF6F0]" />
+            ) : (
+              <TrialCalendar
+                weekdays={weekdaysOfSelected}
+                occupied={occupiedDates}
+                minDate={minDate}
+                maxDate={maxDate}
+                value={form.date}
+                onChange={(d) => set({ date: d })}
+              />
+            )}
             {form.date && weekdaysOfSelected.length > 0 && (
               <p
                 className={cn(
