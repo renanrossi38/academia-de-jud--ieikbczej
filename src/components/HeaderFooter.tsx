@@ -27,6 +27,7 @@ import {
   CalendarCheck,
   Trophy,
   Award,
+  CalendarPlus,
 } from 'lucide-react'
 import { useSiteContent } from '@/services/siteSettings'
 import { hasArea, AdminArea } from '@/lib/adminAreas'
@@ -88,6 +89,17 @@ const PANEL_NAV: { area: AdminArea; to: string; icon: React.ReactNode; label: st
     to: '/painel/pedidos',
     icon: <ShoppingBag className="w-4 h-4" />,
     label: 'Pedidos',
+  },
+  /**
+   * Aulas experimentais: pedidos feitos por visitantes em /aula-experimental.
+   * Mesma mecânica das demais áreas — o dono vê sempre; o secundário só
+   * quando 'experimentais' está nas admin_permissions dele.
+   */
+  {
+    area: 'experimentais',
+    to: '/painel/experimentais',
+    icon: <CalendarPlus className="w-4 h-4" />,
+    label: 'Experimentais',
   },
   {
     area: 'financeiro',

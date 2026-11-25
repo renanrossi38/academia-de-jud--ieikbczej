@@ -1,5 +1,15 @@
 import { useCallback, useMemo, useState } from 'react'
-import { CalendarCheck, CalendarX2, Check, Clock, Loader2, Trash2, X } from 'lucide-react'
+import {
+  CalendarCheck,
+  CalendarX2,
+  Check,
+  Clock,
+  Loader2,
+  MessageCircle,
+  Phone,
+  Trash2,
+  X,
+} from 'lucide-react'
 import {
   AdminEmptyState,
   AdminPageHeader,
@@ -29,6 +39,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useRealtime } from '@/hooks/use-realtime'
 import { cn } from '@/lib/utils'
+import { digitosTelefoneValido, telUrlResponsavel, waMeUrlResponsavel } from '@/services/whatsapp'
 import {
   TrialBooking,
   TrialBookingStatus,
@@ -273,6 +284,10 @@ export default function AdminTrialBookings() {
         <div className="space-y-3">
           {filtered.map((b) => {
             const idade = idadeDe(b.birth_date)
+            // Contato em formato de telefone (10/11 dígitos com DDD; 12/13
+            // já com 55) ganha botões de ligar/WhatsApp — e-mail ou texto
+            // livre fica só como texto.
+            const contatoDigitos = digitosTelefoneValido(b.contact || '')
             return (
               <div
                 key={b.id}
@@ -314,8 +329,32 @@ export default function AdminTrialBookings() {
                 </div>
 
                 <div className="mt-2 text-xs text-[#6B6560]">
-                  <p>
-                    Contato: <strong className="text-[#1C1B1A]">{b.contact}</strong>
+                  <p className="flex flex-wrap items-center gap-1.5">
+                    <span>
+                      Contato: <strong className="text-[#1C1B1A]">{b.contact}</strong>
+                    </span>
+                    {contatoDigitos && (
+                      <span className="inline-flex items-center gap-1">
+                        <a
+                          href={telUrlResponsavel(contatoDigitos)}
+                          title="Ligar para o contato"
+                          aria-label={`Ligar para o contato de ${b.student_name}`}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#C1272D]/25 text-[#C1272D] transition-colors hover:bg-[#C1272D] hover:text-white"
+                        >
+                          <Phone className="h-3 w-3" />
+                        </a>
+                        <a
+                          href={waMeUrlResponsavel(contatoDigitos)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Abrir WhatsApp do contato"
+                          aria-label={`Abrir WhatsApp do contato de ${b.student_name}`}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#128C4B]/25 text-[#128C4B] transition-colors hover:bg-[#128C4B] hover:text-white"
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                        </a>
+                      </span>
+                    )}
                   </p>
                   {b.notes && <p className="mt-1 italic">“{b.notes}”</p>}
                 </div>
