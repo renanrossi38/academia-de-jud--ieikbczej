@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T02:02:25.321Z",
+  "generatedAt": "2026-11-25T02:18:33.660Z",
   "collections": [
     {
       "name": "users",
@@ -1522,11 +1522,70 @@
       "apiRules": {
         "list": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')",
         "view": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')",
-        "create": null,
-        "update": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')",
+        "create": "",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais') && (@request.body.status = 'novo' || @request.body.status = 'confirmado' || @request.body.status = 'realizado' || @request.body.status = 'cancelado')",
         "delete": "@request.auth.id != '' && @request.auth.role = 'admin' && (@request.auth.is_owner = true || @request.auth.admin_permissions:length = 0 || @request.auth.admin_permissions ?= 'experimentais')"
       },
-      "fields": [],
+      "fields": [
+        {
+          "name": "student_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "birth_date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "class",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "classes"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "contact",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["novo", "confirmado", "realizado", "cancelado"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
       "indexes": []
     }
   ]
