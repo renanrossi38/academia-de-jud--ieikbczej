@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useToast } from '@/hooks/use-toast'
 
 /**
  * Links de âncora internos à home ("/#secao" e "#secao").
@@ -21,6 +22,17 @@ import { useLocation, useNavigate } from 'react-router-dom'
  *    ScrollToTop repete a tentativa por alguns segundos até a seção aparecer.
  */
 export const HEADER_OFFSET_PX = 88
+
+/**
+ * Seções da home que somem quando não há conteúdo (HighlightsSection e
+ * InstagramSection fazem "return null" com a lista vazia). Clicar na âncora
+ * delas quando vazias era um clique morto: agora o usuário recebe um toast
+ * amigável em vez de nada (mesma classe de bug dos "Kimonos sem função").
+ */
+export const EMPTY_ANCHOR_TOAST: Record<string, string> = {
+  destaques: 'Ainda não há destaques publicados neste momento.',
+  instagram: 'Nenhuma notícia publicada no momento.',
+}
 
 /** Âncoras que selecionam uma aba da Index (não existem como id no DOM). */
 const TAB_ANCHORS = ['turmas', 'kimonos']
@@ -68,17 +80,22 @@ export function scrollToSection(id: string): boolean {
   return true
 }
 
+/** Timer pendente da espera por seção async (um clique novo cancela o anterior). */
+let waitFaltou: number | undefined
+
 /** Intercepta cliques em âncoras da home. */
 export function useHomeAnchorScroll() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { toast } = useToast()
 
   return (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     const raw = href.startsWith('#') ? href : `#${href.split('#')[1] || ''}`
     const id = raw.slice(1)
     if (!id) return
 
-    // Fora da home: navega para "/#secao" (ScrollToTop/Index resolvem).
+    // Fora da home: navega para "/#secao" (ScrollToTop/Index resolvem — e, se
+    // a seção estiver vazia, o ScrollToTop dá o feedback de âncora sem conteúdo).
     if (pathname !== '/') {
       event.preventDefault()
       navigate(`/#${id}`)
@@ -99,9 +116,28 @@ export function useHomeAnchorScroll() {
       window.history.replaceState(null, '', `#${id}`)
       return
     }
-    // Seção ainda não renderizada (dados async, ex. Destaques): o router +
-    // ScrollToTop repetem a tentativa até ela aparecer.
-    navigate(`/#${id}`, { replace: true })
+
+    // Seção de dados async (Destaques/Notícias): pode estar apenas CARREGANDO
+    // ou estar VAZIA (a seção não existe no DOM). Espera a janela em que ela
+    // costuma aparecer (~2,4s, mesma ordem das tentativas do ScrollToTop); se
+    // não vier, rola para o topo e dá feedback claro — nunca clique morto.
+    window.clearTimeout(waitFaltou)
+    const inicio = Date.now()
+    const tentar = () => {
+      if (document.getElementById(id)) {
+        scrollToSection(id)
+        window.history.replaceState(null, '', `#${id}`)
+        return
+      }
+      if (Date.now() - inicio > 2400) {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        const msg = EMPTY_ANCHOR_TOAST[id]
+        if (msg) toast({ title: msg })
+        return
+      }
+      waitFaltou = window.setTimeout(tentar, 120)
+    }
+    tentar()
   }
 }
 

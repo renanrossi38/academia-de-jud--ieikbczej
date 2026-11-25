@@ -24,7 +24,6 @@ import {
   BarChart3,
   UsersRound,
   ShieldCheck,
-  Wallet,
   CalendarCheck,
   Trophy,
   Award,
@@ -48,12 +47,12 @@ const PANEL_NAV: { area: AdminArea; to: string; icon: React.ReactNode; label: st
     icon: <UsersRound className="w-4 h-4" />,
     label: 'Alunos',
   },
-  {
-    area: 'mensalidades',
-    to: '/painel/alunos',
-    icon: <Wallet className="w-4 h-4" />,
-    label: 'Mensalidades',
-  },
+  /**
+   * "Mensalidades" não é item do menu: a gestão de cobranças vive dentro da
+   * ficha de cada aluno (/painel/alunos/:id → aba "Financeiro"). Um item de
+   * menu apontando para a MESMA página de "Alunos" só confundia — a área
+   * 'mensalidades' segue existindo nas permissões, apenas sem entrada própria.
+   */
   {
     area: 'presencas',
     to: '/painel/turmas',
@@ -213,8 +212,8 @@ export const Header: React.FC = () => {
                         {item.label}
                       </Link>
                     ))}
-                    <div className="border-t border-[#E8E0D5] mt-1.5 pt-1.5">
-                      {isOwner && (
+                    {isOwner && (
+                      <div className="border-t border-[#E8E0D5] mt-1.5 pt-1.5">
                         <Link
                           to="/painel/admins"
                           role="menuitem"
@@ -224,17 +223,10 @@ export const Header: React.FC = () => {
                           <ShieldCheck className="w-4 h-4 text-[#C1272D]" />
                           Administradores
                         </Link>
-                      )}
-                      <Link
-                        to="/painel/configuracoes"
-                        role="menuitem"
-                        className="flex items-center gap-2.5 px-3 py-2 text-sm text-[#1C1B1A] hover:bg-[#FAF6F0] hover:text-[#C1272D] transition-colors"
-                        onClick={() => setPanelOpen(false)}
-                      >
-                        <Mail className="w-4 h-4 text-[#C1272D]" />
-                        Mensagens de cobrança
-                      </Link>
-                    </div>
+                      </div>
+                    )}
+                    {/* "Mensagens de cobrança" removido: "Configurações"
+                        (na lista acima) já abre /painel/configuracoes. */}
                   </div>
                 )}
               </div>
