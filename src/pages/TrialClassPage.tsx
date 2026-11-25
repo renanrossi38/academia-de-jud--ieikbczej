@@ -329,7 +329,11 @@ export default function TrialClassPage() {
               Conheça o judô na Academia Judô Tatsu: escolha a turma, o dia e deixe seu contato. A
               primeira aula é por nossa conta — sem compromisso.
             </p>
-            <ol className="mt-8 grid gap-3 sm:grid-cols-3" aria-label="Como agendar">
+            {/* Etapas sempre empilhadas (1 → 2 → 3, de cima para baixo),
+                também no PC, onde antes ficavam lado a lado e o passo 2
+                se deslocava pela página. max-w-md evita que o selo estique
+                por toda a coluna larga do hero. */}
+            <ol className="mt-8 grid max-w-md gap-3" aria-label="Como agendar">
               {PASSOS.map((passo, i) => (
                 <li
                   key={passo}
