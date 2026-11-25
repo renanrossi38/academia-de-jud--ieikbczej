@@ -564,6 +564,20 @@ export default function AdminStudents() {
     }
   }
 
+  // A mensagem de cobrança é montada a partir do template editável pelo
+  // usuário (app_settings). Se esse template ficar malformado, um erro aqui
+  // acontece DURANTE o render de cada linha e derruba a página inteira
+  // (tela preta travada) — para o dono e para qualquer admin. Captura o erro
+  // e apenas desativa o link, mantendo a listagem utilizável.
+  const safeCobrancaUrl = (student: Student): string => {
+    try {
+      return cobrancaWhatsappPara(student) || ''
+    } catch (err) {
+      console.error('Template de WhatsApp de cobrança inválido:', err)
+      return ''
+    }
+  }
+
   const handleToggleActive = async (student: Student) => {
     setTogglingId(student.id)
     try {
@@ -778,6 +792,7 @@ export default function AdminStudents() {
               <tbody className="divide-y divide-[#E8E0D5]">
                 {filteredStudents.map((student) => {
                   const canCreateAccess = !!student.email && !student.user
+                  const waUrl = safeCobrancaUrl(student)
 
                   return (
                     <tr key={student.id} className="hover:bg-[#FAF6F0]/50 transition-colors">
@@ -874,9 +889,9 @@ export default function AdminStudents() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="inline-flex items-center gap-2">
-                          {cobrancaWhatsappPara(student) && (
+                          {waUrl && (
                             <a
-                              href={cobrancaWhatsappPara(student) || '#'}
+                              href={waUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-[#128C4B] hover:underline font-semibold text-xs inline-flex items-center gap-1"
@@ -940,6 +955,7 @@ export default function AdminStudents() {
           <div className="md:hidden divide-y divide-[#E8E0D5]">
             {filteredStudents.map((student) => {
               const canCreateAccess = !!student.email && !student.user
+              const waUrl = safeCobrancaUrl(student)
 
               return (
                 <div
@@ -1041,9 +1057,9 @@ export default function AdminStudents() {
                       Faixa {beltLabel(beltOf(student))}
                     </Badge>
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                      {cobrancaWhatsappPara(student) && (
+                      {waUrl && (
                         <a
-                          href={cobrancaWhatsappPara(student) || '#'}
+                          href={waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[#128C4B] hover:underline font-semibold text-xs inline-flex items-center gap-1"
