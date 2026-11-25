@@ -39,15 +39,15 @@ export const HighlightsSection = () => {
   if (!hasMonth && !hasComp) return null
 
   return (
-    <section id="destaques" className="py-14 sm:py-20 bg-[#FAF6F0] scroll-mt-24">
+    <section id="destaques" className="py-12 sm:py-16 bg-[#FAF6F0] scroll-mt-24">
       <div className="container mx-auto px-4 max-w-6xl">
         {/* Cabeçalho no idioma da casa: etiqueta + divisor em pincelada */}
-        <div className="flex flex-col items-center text-center mb-10">
+        <div className="flex flex-col items-center text-center mb-8 sm:mb-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-[#C1272D] text-white px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest shadow-sm">
             <Medal className="w-3.5 h-3.5" />
             {site.highlights_tag}
           </span>
-          <h2 className="font-serif font-bold text-3xl sm:text-4xl text-[#1C1B1A] mt-4">
+          <h2 className="font-serif font-bold text-2xl sm:text-4xl text-[#1C1B1A] mt-3 sm:mt-4">
             {site.highlights_title}
           </h2>
           <BrushDivider className="w-48 h-3 mt-3" />
@@ -58,7 +58,7 @@ export const HighlightsSection = () => {
 
         {/* (a) Destaques do mês — fica fica vigente */}
         {hasMonth && (
-          <div className="mb-12">
+          <div className="mb-10">
             <h3 className="flex items-center justify-center gap-2 font-serif font-bold text-lg sm:text-xl text-[#1C1B1A] mb-5">
               <Award className="w-5 h-5 text-[#C1272D]" />
               {site.highlights_month_title}
@@ -118,10 +118,10 @@ const HighlightCard = ({
   subtitleIcon: ReactNode
   ringClass: string
 }) => (
-  <div className="flex flex-col items-center text-center w-36 sm:w-44">
+  <div className="flex flex-col items-center text-center w-32 sm:w-44">
     <div
       className={
-        'w-24 h-24 sm:w-28 sm:h-28 rounded-full p-1 bg-white shadow-md ring-2 ' + ringClass
+        'w-20 h-20 sm:w-28 sm:h-28 rounded-full p-1 bg-white shadow-md ring-2 ' + ringClass
       }
     >
       {photoUrl ? (

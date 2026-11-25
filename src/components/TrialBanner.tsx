@@ -22,7 +22,7 @@ export function TrialBanner({ site }: { site: SiteContent }) {
       />
       <BrushDivider className="absolute bottom-0 left-0 right-0 w-full text-[#A01E23] rotate-180" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-9 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-9 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-5">
         <div className="flex items-start gap-4">
           <span className="hidden sm:flex w-12 h-12 shrink-0 rounded-full bg-white text-[#C1272D] items-center justify-center shadow-sm">
             <CalendarPlus className="w-6 h-6" aria-hidden="true" />
@@ -31,11 +31,11 @@ export function TrialBanner({ site }: { site: SiteContent }) {
           <div>
             <h2
               id="trial-banner-title"
-              className="font-brush font-serif font-bold text-xl sm:text-2xl leading-snug [text-shadow:0_1px_0_rgba(160,30,35,0.6)]"
+              className="font-brush font-serif font-bold text-lg sm:text-2xl leading-snug [text-shadow:0_1px_0_rgba(160,30,35,0.6)]"
             >
               {site.trial_banner_title}
             </h2>
-            <p className="mt-1.5 text-sm sm:text-base text-white/90 leading-relaxed max-w-2xl [text-shadow:0_1px_0_rgba(160,30,35,0.6)]">
+            <p className="mt-1 sm:mt-1.5 text-sm text-white/90 leading-relaxed max-w-2xl [text-shadow:0_1px_0_rgba(160,30,35,0.6)]">
               {site.trial_banner_text}
             </p>
           </div>

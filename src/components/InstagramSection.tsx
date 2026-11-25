@@ -61,19 +61,19 @@ export default function InstagramSection() {
   const miniaturas = restantes.slice(0, 6)
 
   return (
-    <section className="relative bg-[#FAF6F0] border-y border-[#E8E0D5] py-14 overflow-hidden">
+    <section className="relative bg-[#FAF6F0] border-y border-[#E8E0D5] py-12 sm:py-16 overflow-hidden">
       {/* Sol vermelho ao fundo, discreto, ecoando o hero.
           MOBILE: ainda mais discreto (opacity-5) para o cabeçalho não apagar. */}
       <HeroSun className="absolute -left-24 -top-28 w-72 h-72 opacity-5 sm:opacity-15 pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Cabeçalho no padrão das outras seções */}
-        <div className="text-center max-w-2xl mx-auto mb-10">
+        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#A31B21] uppercase tracking-widest font-serif">
             <InstagramIcon className="w-3.5 h-3.5" />
             {site.news_tag}
           </span>
-          <h2 className="font-serif font-bold text-2xl sm:text-3xl text-[#1C1B1A] mt-1">
+          <h2 className="font-serif font-bold text-xl sm:text-3xl text-[#1C1B1A] mt-1">
             {site.news_title} <span className="text-[#A31B21]">{site.news_title_highlight}</span>
           </h2>
           <p className="text-sm text-[#4A443F] mt-2">{site.news_subtitle}</p>
@@ -123,7 +123,7 @@ export default function InstagramSection() {
           </a>
 
           {/* ===== Grade de miniaturas (demais posts) ===== */}
-          <div className="lg:col-span-2 grid grid-cols-2 gap-4 content-start">
+          <div className="lg:col-span-2 grid grid-cols-2 gap-3 sm:gap-4 content-start">
             {miniaturas.map((post) => (
               <a
                 key={post.id || post.permalink}
@@ -160,7 +160,7 @@ export default function InstagramSection() {
         </div>
 
         {/* Rodapé da seção com o hanko (carimbo) da academia */}
-        <div className="mt-10 flex justify-center">
+        <div className="mt-8 sm:mt-10 flex justify-center">
           <HankoStamp size="md" />
         </div>
       </div>

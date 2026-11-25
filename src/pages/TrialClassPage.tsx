@@ -233,9 +233,9 @@ export default function TrialClassPage() {
   // ---- Confirmação ---------------------------------------------------------
   if (done) {
     return (
-      <div className="min-h-[70dvh] bg-[#FAF6F0] py-16 px-4">
-        <div className="mx-auto max-w-md rounded-2xl border border-[#E8E0D5] bg-white p-8 text-center shadow-sm">
-          <CheckCircle2 className="mx-auto h-14 w-14 text-green-600" />
+      <div className="min-h-[70dvh] bg-[#FAF6F0] px-4 py-12 sm:py-16">
+        <div className="mx-auto flex max-w-md flex-col items-center rounded-2xl border border-[#E8E0D5] bg-white p-6 text-center shadow-sm sm:p-8">
+          <CheckCircle2 className="h-12 w-12 text-green-600 sm:h-14 sm:w-14" />
           <h1 className="mt-4 font-serif text-2xl font-bold text-[#1C1B1A]">Aula agendada!</h1>
           <p className="mt-2 text-sm leading-relaxed text-[#6B6560]">
             Recebemos seu pedido de aula experimental na turma{' '}
@@ -262,7 +262,7 @@ export default function TrialClassPage() {
                 notes: '',
               })
             }}
-            className="mt-6 bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold"
+            className="mt-6 h-11 w-full bg-[#C1272D] hover:bg-[#A01E23] text-white text-sm font-semibold sm:w-auto"
           >
             Agendar outra aula
           </Button>
@@ -275,23 +275,28 @@ export default function TrialClassPage() {
   return (
     <div className="min-h-dvh bg-[#FAF6F0]">
       {/* Cabeçalho com a identidade da casa */}
-      <div className="relative overflow-hidden bg-[#1C1B1A] py-12 text-center text-white">
+      <div className="relative overflow-hidden bg-[#1C1B1A] py-10 text-center text-white sm:py-14">
         <div className="absolute inset-0 opacity-15" aria-hidden>
           <BrushDivider className="h-full w-full" preserveAspectRatio="none" />
         </div>
-        <HankoStamp className="mx-auto mb-4 h-16 w-16" />
-        <h1 className="font-serif text-3xl font-bold sm:text-4xl">Aula experimental</h1>
-        <p className="mx-auto mt-2 max-w-xl px-4 text-sm text-white/70">
-          Conheça o judô na Academia Tatsu: escolha a turma, o dia e deixe seu contato. A primeira
-          aula é por nossa conta — sem compromisso.
-        </p>
+        <div className="relative mx-auto max-w-xl px-4">
+          <HankoStamp className="mx-auto mb-3 h-14 w-14 sm:mb-4 sm:h-16 sm:w-16" />
+          <h1 className="font-serif text-2xl font-bold sm:text-4xl">Aula experimental</h1>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-white/70">
+            Conheça o judô na Academia Tatsu: escolha a turma, o dia e deixe seu contato. A primeira
+            aula é por nossa conta — sem compromisso.
+          </p>
+        </div>
       </div>
 
-      <div className="mx-auto max-w-xl px-4 py-10 sm:py-14">
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5 rounded-2xl border border-[#E8E0D5] bg-white p-6 shadow-sm sm:p-8"
-        >
+      {/* Duas colunas no PC (formulário | calendário); empilhado no mobile na
+          MESMA ordem de leitura: dados → turma → calendário → contato → envio. */}
+      <form
+        onSubmit={handleSubmit}
+        className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:items-start lg:gap-x-12"
+      >
+        {/* Coluna 1 (PC) / topo (mobile): dados do aluno + turma */}
+        <div className="grid gap-5 rounded-2xl border border-[#E8E0D5] bg-white p-5 shadow-sm sm:p-6 lg:col-start-1 lg:row-start-1 lg:row-span-2">
           <div className="space-y-1.5">
             <Label htmlFor="trial-name" className="text-xs font-bold text-[#1C1B1A]">
               Nome do aluno *
@@ -366,11 +371,12 @@ export default function TrialClassPage() {
               </p>
             )}
           </div>
+        </div>
 
+        {/* Coluna 2 (PC) / meio (mobile): calendário de dias disponíveis */}
+        <div className="rounded-2xl border border-[#E8E0D5] bg-white p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start">
           <div className="space-y-1.5">
-            <Label htmlFor="trial-date" className="text-xs font-bold text-[#1C1B1A]">
-              Data desejada da aula *
-            </Label>
+            <span className="text-xs font-bold text-[#1C1B1A]">Data desejada da aula *</span>
             {!form.classId ? (
               <p className="text-xs text-[#6B6560]">
                 Selecione a turma para ver no calendário os dias disponíveis para agendar.
@@ -405,6 +411,21 @@ export default function TrialClassPage() {
             )}
           </div>
 
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[#E8E0D5] pt-3 text-[11px] font-medium text-[#4A443F] sm:gap-x-5">
+            <span className="inline-flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" /> Sem compromisso
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <CalendarCheck className="h-3.5 w-3.5" /> Confirmação por contato
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" /> Resposta rápida
+            </span>
+          </div>
+        </div>
+
+        {/* Coluna 1 (PC) / depois do calendário (mobile): contato, observação, alertas */}
+        <div className="grid gap-5 rounded-2xl border border-[#E8E0D5] bg-white p-5 shadow-sm sm:p-6 lg:col-start-1 lg:row-start-3">
           <div className="space-y-1.5">
             <Label htmlFor="trial-contact" className="text-xs font-bold text-[#1C1B1A]">
               Telefone ou e-mail para contato *
@@ -443,7 +464,10 @@ export default function TrialClassPage() {
               turma é para alunos {faixaTexto}. Escolha outra turma ou fale com a academia.
             </div>
           )}
+        </div>
 
+        {/* Envio: largura total, embaixo de tudo */}
+        <div className="lg:col-span-2">
           <Button
             type="submit"
             disabled={submitting || isLoadingClasses || classes.length === 0}
@@ -451,20 +475,8 @@ export default function TrialClassPage() {
           >
             {submitting ? 'Agendando...' : 'Agendar aula experimental'}
           </Button>
-
-          <div className="flex items-center justify-center gap-5 pt-1 text-[11px] text-[#6B6560]">
-            <span className="inline-flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> Sem compromisso
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <CalendarCheck className="h-3.5 w-3.5" /> Confirmação por contato
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" /> Resposta rápida
-            </span>
-          </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   )
 }

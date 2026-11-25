@@ -117,14 +117,14 @@ export function TrialCalendar({
   }
 
   return (
-    <div className="rounded-xl border border-[#E8E0D5] bg-[#FAF6F0] p-3">
+    <div className="rounded-xl border border-[#E8E0D5] bg-[#FAF6F0] p-3 sm:p-4">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => movMes(-1)}
           disabled={prevDisabled || disabled}
           aria-label="Mês anterior"
-          className="rounded-md p-1.5 text-[#6B6560] hover:bg-[#E8E0D5] disabled:opacity-30"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[#6B6560] hover:bg-[#E8E0D5] disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -136,14 +136,14 @@ export function TrialCalendar({
           onClick={() => movMes(1)}
           disabled={nextDisabled || disabled}
           aria-label="Próximo mês"
-          className="rounded-md p-1.5 text-[#6B6560] hover:bg-[#E8E0D5] disabled:opacity-30"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[#6B6560] hover:bg-[#E8E0D5] disabled:opacity-30"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
       <div
-        className="mt-2 grid grid-cols-7 gap-1 text-center"
+        className="mt-2 grid grid-cols-7 gap-1 sm:gap-1.5 text-center"
         role="group"
         aria-label="Calendário de dias disponíveis para agendar"
       >
@@ -177,7 +177,7 @@ export function TrialCalendar({
                     : undefined
               }
               className={cn(
-                'flex h-9 items-center justify-center rounded-md text-xs font-semibold transition-colors',
+                'flex h-10 w-full items-center justify-center rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40',
                 cell.state === 'available' &&
                   'border border-[#C1272D]/40 bg-[#F7E4E2] text-[#1C1B1A] hover:bg-[#C1272D] hover:text-white',
                 cell.state === 'occupied' &&
@@ -194,22 +194,22 @@ export function TrialCalendar({
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[#6B6560]">
-        <span className="inline-flex items-center gap-1">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-[#4A443F]">
+        <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden
             className="inline-block h-2.5 w-2.5 rounded-sm border border-[#C1272D]/40 bg-[#F7E4E2]"
           />
           Disponível
         </span>
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden
             className="inline-block h-2.5 w-2.5 rounded-sm bg-[#F3EFE8] line-through decoration-[#C1272D]/60"
           />
           Já reservado
         </span>
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden
             className="inline-block h-2.5 w-2.5 rounded-sm bg-white text-[#C4BCB2]"

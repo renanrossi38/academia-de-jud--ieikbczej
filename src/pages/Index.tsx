@@ -186,7 +186,7 @@ export default function Index() {
       {/* Hero Section — inspirado no folder: papel branco, sol vermelho texturizado, kanji vertical */}
       <section
         id="hero"
-        className="relative bg-[#FAF6F0] text-[#1C1B1A] py-14 sm:py-20 overflow-hidden"
+        className="relative bg-[#FAF6F0] text-[#1C1B1A] py-12 sm:py-20 overflow-hidden"
       >
         {/* Sol vermelho texturizado (sem imagem externa).
             MOBILE: sobe para o topo/direita e fica MENOR e mais transparente,
@@ -196,8 +196,8 @@ export default function Index() {
             o contêiner tem o mesmo tamanho/posição do sol.
             MOBILE: o sol sobe para o topo/direita, menor e translúcido, e o
             kanji some junto (hidden sm:flex) — comportamento mantido. */}
-        <div className="absolute -right-16 -top-10 w-[260px] h-[260px] pointer-events-none sm:top-1/2 sm:-translate-y-1/2 sm:right-[-10%] sm:w-[420px] sm:h-[420px] md:right-[4%] md:w-[460px] md:h-[460px]">
-          <HeroSun className="absolute inset-0 w-full h-full opacity-50 sm:opacity-100" />
+        <div className="absolute -right-20 -top-12 w-[210px] h-[210px] pointer-events-none sm:top-1/2 sm:-translate-y-1/2 sm:right-[-10%] sm:w-[420px] sm:h-[420px] md:right-[4%] md:w-[460px] md:h-[460px]">
+          <HeroSun className="absolute inset-0 w-full h-full opacity-40 sm:opacity-100" />
           {/* Kanji centrado no disco: branco, vertical, com sombra suave.
               Fonte proporcional ao sol (sol 420/460px → kanji 60/72px). */}
           <div className="absolute inset-0 hidden sm:flex items-center justify-center z-[5]">
@@ -213,11 +213,11 @@ export default function Index() {
         {/* Pétalas de sakura caindo */}
         <HeroPetals />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10">
           <div className="relative z-10 max-w-2xl text-center md:text-left">
             {/* Chip do topo: fundo sólido (não mais translúcido) para o texto
                 não "apagar" sobre o sol/papel em telas pequenas. */}
-            <div className="inline-flex items-center gap-2 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] mb-5 border border-[#C1272D]/40 text-[#A31B21] shadow-xs [clip-path:polygon(3%_20%,97%_10%,100%_55%,97%_90%,3%_96%,0_50%)]">
+            <div className="inline-flex items-center gap-2 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] mb-4 sm:mb-5 border border-[#C1272D]/40 text-[#A31B21] shadow-xs [clip-path:polygon(3%_20%,97%_10%,100%_55%,97%_90%,3%_96%,0_50%)]">
               <Sparkles className="w-3.5 h-3.5" />
               {site.hero_badge}
             </div>
@@ -231,10 +231,10 @@ export default function Index() {
               </span>
               .
             </h1>
-            <p className="mt-5 text-base sm:text-lg text-[#3E3A36] leading-relaxed font-sans max-w-xl [text-shadow:0_1px_0_rgba(250,246,240,0.9)]">
+            <p className="mt-4 sm:mt-5 text-base sm:text-lg text-[#3E3A36] leading-relaxed font-sans max-w-xl [text-shadow:0_1px_0_rgba(250,246,240,0.9)]">
               {site.hero_subtitle}
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-semibold text-[#1C1B1A]">
+            <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 text-xs font-semibold text-[#1C1B1A]">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-[#A31B21]" /> {site.hero_chip1}
               </span>
@@ -278,7 +278,7 @@ export default function Index() {
 
       {/* ===== Aba Turmas ===== */}
       {activeTab === 'turmas' && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {classesLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-[#4A443F]">
               <Loader2 className="w-8 h-8 animate-spin text-[#C1272D] mb-3" />
@@ -293,7 +293,7 @@ export default function Index() {
               <p className="text-sm text-[#4A443F] mt-1">{site.classes_empty_text}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
               {classes.map((c) => (
                 <div
                   key={c.id}
@@ -313,7 +313,7 @@ export default function Index() {
                     <ClassCoverFallback className="transition-transform duration-300 group-hover:scale-105" />
                   )}
 
-                  <div className="p-5 flex-1 flex flex-col">
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-serif font-bold text-lg text-[#1C1B1A] leading-snug">
                         {c.name}
@@ -365,7 +365,7 @@ export default function Index() {
 
       {/* ===== Aba Kimonos e Acessórios ===== */}
       {activeTab === 'kimonos' && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {/* Filtros de categoria */}
           <div className="flex items-center gap-2 overflow-x-auto pb-4">
             {shopCategories(site).map((cat) => {
@@ -409,7 +409,7 @@ export default function Index() {
             </div>
           ) : (
             /* Grade de produtos */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mt-2 sm:mt-4">
               {filteredProducts.map((product) => {
                 const imageUrl = productsService.getImageUrl(product)
 
@@ -442,7 +442,7 @@ export default function Index() {
                     </div>
 
                     {/* Corpo */}
-                    <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                       <div>
                         <h3 className="font-serif font-bold text-lg text-[#1C1B1A] group-hover:text-[#C1272D] transition-colors leading-snug line-clamp-1">
                           {product.name}
@@ -485,9 +485,12 @@ export default function Index() {
       </div>
 
       {/* Como funciona */}
-      <section id="como-funciona" className="bg-white border-y border-[#E8E0D5] py-14 scroll-mt-24">
+      <section
+        id="como-funciona"
+        className="bg-white border-y border-[#E8E0D5] py-12 sm:py-16 scroll-mt-24"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-10">
+          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
             {/* Mesmo padrão de cabeçalho das demais seções (chip com ícone + pincel) */}
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#A31B21] uppercase tracking-widest font-serif">
               <Sparkles className="w-3.5 h-3.5" />
@@ -500,7 +503,7 @@ export default function Index() {
             <BrushDivider className="w-40 mx-auto mt-4 text-[#C1272D]" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {site.how_steps.map((step, i) => (
               <div key={i} className="flex flex-col items-center text-center p-4">
                 <div className="w-12 h-12 rounded-full bg-[#C1272D] text-white flex items-center justify-center font-serif font-bold text-lg mb-4 shadow-sm">
