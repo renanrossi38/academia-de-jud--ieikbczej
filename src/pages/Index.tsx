@@ -13,6 +13,7 @@ import { HeroSun, HeroWaves, HeroPetals, HeroUnderline } from '@/components/hero
 import { BrushDivider } from '@/components/hero/HeroDecor'
 import InstagramSection from '@/components/InstagramSection'
 import { HighlightsSection } from '@/components/HighlightsSection'
+import { TrialBanner } from '@/components/TrialBanner'
 import { Badge } from '@/components/ui/badge'
 import {
   ArrowRight,
@@ -254,6 +255,9 @@ export default function Index() {
           </div>
         </div>
       </section>
+
+      {/* Faixa "Aula experimental" — destaque público, sempre visível */}
+      <TrialBanner site={site} />
 
       {/* Abas: Turmas | Kimonos e Acessórios */}
       <section

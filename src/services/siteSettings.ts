@@ -41,6 +41,10 @@ export interface SiteContent {
   contact_email: string
   /** Horários de funcionamento (rodapé) */
   hours: SiteHour[]
+  /** Faixa "Aula experimental" (entre hero e turmas) */
+  trial_banner_title: string
+  trial_banner_text: string
+  trial_banner_button: string
   /** Seção "Como funciona" */
   how_tag: string
   how_title: string
@@ -199,6 +203,10 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   news_open_label: 'Ver no Instagram',
   news_fallback_caption: 'Veja esta publicação no Instagram',
   news_fallback_thumb: 'Ver publicação no Instagram',
+  trial_banner_title: 'Quer conhecer o judô?',
+  trial_banner_text:
+    'Agende uma aula experimental gratuita: escolha o dia no calendário e venha treinar com a gente — sem compromisso.',
+  trial_banner_button: 'Agendar aula experimental',
 }
 
 /** Registro bruto da collection site_settings. */

@@ -5,6 +5,7 @@ import {
   Eye,
   ExternalLink,
   Footprints,
+  CalendarPlus,
   History,
   Home,
   ImageIcon,
@@ -95,6 +96,35 @@ const MenuSection = ({ content, set }: EditorProps) => (
         onChange={(v) => set('nav_como_funciona', v)}
       />
     </div>
+  </SiteSection>
+)
+
+/* ==================== Seção: Aula experimental (faixa) ==================== */
+
+const TrialBannerSection = ({ content, set }: EditorProps) => (
+  <SiteSection
+    title="Faixa Aula experimental"
+    description="Faixa vermelha de destaque na home, entre o topo e as turmas. Deixe vazio para voltar ao texto padrão."
+    icon={<CalendarPlus className="w-5 h-5" />}
+  >
+    <div className="grid gap-4 sm:grid-cols-2">
+      <SiteInput
+        label="Título da faixa"
+        value={content.trial_banner_title}
+        onChange={(v) => set('trial_banner_title', v)}
+      />
+      <SiteInput
+        label="Botão da faixa"
+        value={content.trial_banner_button}
+        onChange={(v) => set('trial_banner_button', v)}
+      />
+    </div>
+    <SiteTextarea
+      label="Frase da faixa"
+      value={content.trial_banner_text}
+      onChange={(v) => set('trial_banner_text', v)}
+      rows={2}
+    />
   </SiteSection>
 )
 
@@ -526,6 +556,7 @@ const FooterSection = ({ content, set }: EditorProps) => {
 
 const SECTIONS = [
   MenuSection,
+  TrialBannerSection,
   HeroSection,
   ClassesSection,
   ShopSection,
