@@ -388,7 +388,7 @@ export default function ProductDetail() {
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1}
-                  className="p-2.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-[#1C1B1A] hover:bg-[#F7E4E2] rounded-md disabled:opacity-40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
+                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1C1B1A] hover:bg-[#F7E4E2] rounded-md disabled:opacity-40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
                   aria-label="Diminuir quantidade"
                 >
                   <Minus className="w-4 h-4" />
@@ -399,7 +399,7 @@ export default function ProductDetail() {
                 <button
                   onClick={() => setQuantity(Math.min(10, quantity + 1))}
                   disabled={quantity >= 10}
-                  className="p-2.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-[#1C1B1A] hover:bg-[#F7E4E2] rounded-md disabled:opacity-40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
+                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1C1B1A] hover:bg-[#F7E4E2] rounded-md disabled:opacity-40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
                   aria-label="Aumentar quantidade"
                 >
                   <Plus className="w-4 h-4" />

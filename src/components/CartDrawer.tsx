@@ -42,7 +42,7 @@ export const CartDrawer: React.FC = () => {
           </div>
           <button
             onClick={() => setIsDrawerOpen(false)}
-            className="p-1 rounded-full text-[#6B6560] hover:text-[#1C1B1A] hover:bg-[#E8E0D5]/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2"
+            className="p-2 min-h-[44px] min-w-[44px] rounded-full text-[#6B6560] hover:text-[#1C1B1A] hover:bg-[#E8E0D5]/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40 focus-visible:ring-offset-2"
             aria-label="Fechar"
           >
             <X className="w-5 h-5" />
@@ -121,7 +121,7 @@ export const CartDrawer: React.FC = () => {
                             item.customAnswers,
                           )
                         }
-                        className="p-1 hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-l-md transition-colors"
+                        className="p-2 min-w-[36px] min-h-[36px] hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-l-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
                         aria-label="Diminuir"
                       >
                         <Minus className="w-3.5 h-3.5" />
@@ -138,7 +138,7 @@ export const CartDrawer: React.FC = () => {
                             item.customAnswers,
                           )
                         }
-                        className="p-1 hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-r-md transition-colors"
+                        className="p-2 min-w-[36px] min-h-[36px] hover:bg-[#F7E4E2] text-[#1C1B1A] rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1272D]/40"
                         aria-label="Aumentar"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -157,7 +157,8 @@ export const CartDrawer: React.FC = () => {
 
                 <button
                   onClick={() => removeItem(item.productId, item.variationId, item.customAnswers)}
-                  className="p-1 text-[#6B6560] hover:text-[#B3261E] rounded transition-colors"
+                  className="p-2 min-w-[36px] min-h-[36px] text-[#6B6560] hover:text-[#B3261E] rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B3261E]/40"
+                  aria-label="Remover item"
                   title="Remover item"
                 >
                   <Trash2 className="w-4 h-4" />
