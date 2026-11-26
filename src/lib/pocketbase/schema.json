@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T00:52:43.228Z",
+  "generatedAt": "2026-11-26T01:11:01.023Z",
   "collections": [
     {
       "name": "users",
@@ -58,11 +58,15 @@
           "system": false,
           "selectValues": [
             "branca",
+            "branca_ponta_cinza",
             "cinza",
+            "cinza_ponta_azul",
+            "azul",
+            "azul_ponta_amarela",
             "amarela",
+            "amarela_ponta_laranja",
             "laranja",
             "verde",
-            "azul",
             "roxa",
             "marrom",
             "preta"
@@ -504,11 +508,15 @@
           "system": false,
           "selectValues": [
             "branca",
+            "branca_ponta_cinza",
             "cinza",
+            "cinza_ponta_azul",
+            "azul",
+            "azul_ponta_amarela",
             "amarela",
+            "amarela_ponta_laranja",
             "laranja",
             "verde",
-            "azul",
             "roxa",
             "marrom",
             "preta"
@@ -1156,11 +1164,15 @@
           "system": false,
           "selectValues": [
             "branca",
+            "branca_ponta_cinza",
             "cinza",
+            "cinza_ponta_azul",
+            "azul",
+            "azul_ponta_amarela",
             "amarela",
+            "amarela_ponta_laranja",
             "laranja",
             "verde",
-            "azul",
             "roxa",
             "marrom",
             "preta"
