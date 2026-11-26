@@ -92,8 +92,13 @@ export const beltBadgeClass = (belt?: string) => {
   }
 }
 
+// iOS Safari dá zoom automático em qualquer controle de formulário com fonte
+// menor que 16px — o zoom desloca o diálogo fixed para fora da tela e os
+// campos "sumiam". Inputs do shadcn já usam text-base md:text-sm; o select
+// (e qualquer controle raw) precisa seguir o MESMO padrão: 16px no celular,
+// 14px só a partir de md.
 const selectClass =
-  'w-full h-9 text-sm rounded-md border border-[#E8E0D5] bg-white px-3 text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]'
+  'w-full h-10 text-base md:h-9 md:text-sm rounded-md border border-[#E8E0D5] bg-white px-3 text-[#1C1B1A] focus:outline-hidden focus:ring-1 focus:ring-[#C1272D]'
 
 interface StudentFormState {
   name: string
@@ -276,6 +281,7 @@ export const GuardianSection: React.FC<{
           value={form.guardian_name}
           onChange={(e) => setForm({ ...form, guardian_name: e.target.value })}
           placeholder="Ex.: Kenji Suzuki"
+          autoComplete="off"
           className="bg-white border-[#E8E0D5]"
         />
       </div>
@@ -289,6 +295,9 @@ export const GuardianSection: React.FC<{
           </Label>
           <Input
             id={`${idPrefix}-guardian-phone`}
+            type="tel"
+            inputMode="tel"
+            autoComplete="off"
             value={form.guardian_phone}
             onChange={(e) => setForm({ ...form, guardian_phone: e.target.value })}
             placeholder="(11) 90000-0000"
@@ -306,6 +315,7 @@ export const GuardianSection: React.FC<{
           <Input
             id={`${idPrefix}-guardian-email`}
             type="email"
+            autoComplete="off"
             value={form.guardian_email}
             onChange={(e) => setForm({ ...form, guardian_email: e.target.value })}
             placeholder="Opcional — responsavel@email.com"
@@ -430,7 +440,11 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : resetAndClose())}>
       {/* Cabeçalho e rodapé fixos; só o corpo rola — nada some da tela
           (desktop e celular, mesmo com o teclado aberto). */}
-      <DialogContent className="flex max-h-[92dvh] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
+      {/* iOS: sem w-fit (o default md:max-w-lg do shadcn estoura a tela em
+          landscape) e sem h/altura fixa — só max-h com dvh, que respeita a
+          barra do Safari e o teclado aberto. Cabeçalho e rodapé fixos; só o
+          corpo rola (min-h-0 obrigatório para o overflow do meio funcionar). */}
+      <DialogContent className="flex max-h-[92dvh] w-[calc(100%-2rem)] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
         <form onSubmit={handleCreate} className="flex min-h-0 flex-1 flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-serif text-[#1C1B1A]">Cadastrar Novo Aluno</DialogTitle>
@@ -478,6 +492,9 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
               </Label>
               <Input
                 id="student-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="off"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="Opcional — (11) 90000-0000"
@@ -510,6 +527,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
               </Label>
               <Input
                 id="student-address"
+                autoComplete="off"
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
                 placeholder="Opcional — rua, número, bairro, cidade"
@@ -537,6 +555,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
               <Input
                 id="student-email"
                 type="email"
+                autoComplete="off"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="Opcional — aluno@email.com"
@@ -721,8 +740,9 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
 
   return (
     <Dialog open={!!student} onOpenChange={onOpenChange}>
-      {/* Mesmo padrão do cadastro: cabeçalho e rodapé sempre visíveis. */}
-      <DialogContent className="flex max-h-[92dvh] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
+      {/* Mesmo padrão do cadastro: largura limitada à tela no celular
+          (w-[calc(100%-2rem)]) e cabeçalho/rodapé sempre visíveis. */}
+      <DialogContent className="flex max-h-[92dvh] w-[calc(100%-2rem)] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
         <form onSubmit={handleEdit} className="flex min-h-0 flex-1 flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-serif text-[#1C1B1A]">Editar Aluno</DialogTitle>
@@ -762,6 +782,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
               </Label>
               <Input
                 id="edit-name"
+                autoComplete="off"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="bg-white border-[#E8E0D5]"
@@ -776,6 +797,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
               <Input
                 id="edit-email"
                 type="email"
+                autoComplete="off"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 disabled={hasAccount}
@@ -795,6 +817,9 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
               </Label>
               <Input
                 id="edit-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="off"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="Opcional — (11) 90000-0000"
@@ -808,6 +833,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
               </Label>
               <Input
                 id="edit-address"
+                autoComplete="off"
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
                 placeholder="Opcional — rua, número, bairro, cidade"
