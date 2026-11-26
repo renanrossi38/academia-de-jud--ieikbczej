@@ -231,22 +231,28 @@ export const studentsService = {
   },
 
   async createStudent(input: CreateStudentInput): Promise<Student> {
+    // Campos opcionais vazios NÃO são enviados: o PocketBase recusa string
+    // vazia em campos date e select (400 "Failed to create record.") e, em
+    // texto, enviá-las é desnecessário. Era o que acontecia ao cadastrar
+    // aluno MAIOR de idade sem responsável: o payload anterior sempre
+    // enviava guardian_name/phone/email: '' (e belt: '') — omitir resolve.
     const payload: Record<string, unknown> = {
       name: input.name.trim(),
-      email: input.email?.trim() || '',
-      phone: input.phone?.trim() || '',
-      belt: input.belt || '',
-      address: input.address?.trim() || '',
-      guardian_name: input.guardian_name?.trim() || '',
-      guardian_phone: input.guardian_phone?.trim() || '',
-      guardian_email: input.guardian_email?.trim() || '',
       active: true,
     }
-    // DateField não aceita string vazia (400 "Failed to create record."):
-    // omitir o campo quando a data não foi informada. Foi a causa do erro ao
-    // cadastrar o primeiro aluno — com ou sem data de nascimento preenchida,
-    // o payload anterior sempre enviava birth_date: ''.
-    if (input.birth_date?.trim()) payload.birth_date = input.birth_date.trim()
+    const optional: Record<string, string | undefined> = {
+      email: input.email?.trim(),
+      phone: input.phone?.trim(),
+      belt: input.belt,
+      address: input.address?.trim(),
+      birth_date: input.birth_date?.trim(),
+      guardian_name: input.guardian_name?.trim(),
+      guardian_phone: input.guardian_phone?.trim(),
+      guardian_email: input.guardian_email?.trim(),
+    }
+    for (const [field, value] of Object.entries(optional)) {
+      if (value) payload[field] = value
+    }
     try {
       return await pb.collection('students').create<Student>(payload)
     } catch (err) {
@@ -270,9 +276,11 @@ export const studentsService = {
       payload.guardian_phone = payload.guardian_phone.trim()
     if (typeof payload.guardian_email === 'string')
       payload.guardian_email = payload.guardian_email.trim()
-    // Mesma regra do create: DateField recusa string vazia — omitir quando vazia.
+    // Campos date e select recusam string vazia (400 "Failed to create
+    // record.") — omitir quando vazios, em vez de enviar ''.
     if (typeof payload.birth_date === 'string' && !payload.birth_date.trim())
       delete payload.birth_date
+    if (payload.belt === '') delete payload.belt
     try {
       return await pb.collection('students').update<Student>(id, payload)
     } catch (err) {

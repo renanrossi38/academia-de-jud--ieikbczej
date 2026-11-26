@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { studentsService, guardianPhoneError, friendlyStudentSaveError } from '@/services/students'
+import { idadeDe } from '@/services/trialBookings'
 import { iniciaisDoNome } from '@/services/highlights'
 import { Loader2, X } from 'lucide-react'
 
@@ -214,27 +215,56 @@ export const studentPhotoError = (f: File | null): string | null => {
   return null
 }
 
+/**
+ * Idade completa a partir da data de nascimento (YYYY-MM-DD), recalculada a
+ * cada digitação. null quando a data não foi informada (ou está incompleta).
+ */
+const idadeDeBirth = (birth: string): number | null => idadeDe(birth || '')
+
+/** A seção de responsável aparece SOMENTE quando a data de nascimento dá
+ * menos de 18 anos (regra do dono). Data em branco ou 18+ → some. */
+const responsavelVisivel = (birth: string): boolean => {
+  const idade = idadeDeBirth(birth)
+  return idade !== null && idade < 18
+}
+
 /** Seção "Responsável" — contato do responsável de aluno menor de idade.
- * Todos os campos são opcionais e disponíveis para qualquer aluno. */
+ * Aparece só quando a data de nascimento dá menos de 18 anos; quando o aluno
+ * é maior e já tem responsável gravado, mostra leitura discreta sem apagar
+ * o dado (nada é enviado ao salvar). */
 export const GuardianSection: React.FC<{
   form: StudentFormState
   setForm: React.Dispatch<React.SetStateAction<StudentFormState>>
   phoneError: string | null
   idPrefix: string
-}> = ({ form, setForm, phoneError, idPrefix }) => {
-  const [y, m] = form.birth_date ? form.birth_date.slice(0, 10).split('-') : ['', '']
-  // Menor de idade: derive da data de nascimento quando ela existir.
-  const isMinor = !!y && !!m && new Date().getFullYear() - Number(y) < 18
+  existingGuardian?: { name?: string; phone?: string; email?: string }
+}> = ({ form, setForm, phoneError, idPrefix, existingGuardian }) => {
+  const isMinor = responsavelVisivel(form.birth_date)
+
+  if (!isMinor) {
+    const g = existingGuardian
+    const temDado = !!(g && (g.name || g.phone || g.email))
+    if (!temDado) return null
+    return (
+      <div className="space-y-1 rounded-xl border border-[#E8E0D5] bg-[#FAF6F0]/60 p-3">
+        <p className="text-xs font-semibold text-[#1C1B1A] font-serif">Responsável</p>
+        <p className="text-[11px] text-[#6B6560]">
+          Aluno maior de idade — estes dados ficaram gravados de um cadastro anterior e são
+          mantidos: {g?.name || '—'}
+          {g?.phone ? ` · ${g.phone}` : ''}
+          {g?.email ? ` · ${g.email}` : ''}.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3 rounded-xl border border-[#E8E0D5] bg-[#FAF6F0]/60 p-3">
       <div>
         <p className="text-xs font-semibold text-[#1C1B1A] font-serif">Responsável</p>
         <p className="text-[11px] text-[#6B6560]">
-          {isMinor
-            ? 'Aluno menor de idade — cadastre o contato do responsável.'
-            : 'Opcional — use para o responsável de um aluno menor de idade.'}{' '}
-          O responsável não recebe conta de acesso ao site.
+          Aluno menor de idade — cadastre o contato do responsável. O responsável não recebe conta
+          de acesso ao site.
         </p>
       </div>
       <div className="space-y-1.5">
@@ -303,7 +333,9 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [creating, setCreating] = useState(false)
   const [photoPreview, setPhotoPreview] = useState('')
-  const guardianPhoneErr = guardianPhoneError(form.guardian_phone)
+  const guardianPhoneErr = responsavelVisivel(form.birth_date)
+    ? guardianPhoneError(form.guardian_phone)
+    : null
 
   // URL local de prévia da foto escolhida
   useEffect(() => {
@@ -331,7 +363,8 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
       })
       return
     }
-    const gPhoneErr = guardianPhoneError(form.guardian_phone)
+    const menor = responsavelVisivel(form.birth_date)
+    const gPhoneErr = menor ? guardianPhoneError(form.guardian_phone) : null
     if (gPhoneErr) {
       toast({
         title: 'Telefone do responsável inválido',
@@ -350,9 +383,15 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
         belt: (form.belt || undefined) as Belt | undefined,
         address: form.address,
         birth_date: form.birth_date,
-        guardian_name: form.guardian_name,
-        guardian_phone: form.guardian_phone,
-        guardian_email: form.guardian_email,
+        // Responsável só é enviado para menor de 18 anos (regra do dono);
+        // para maior, nada de responsável sai no payload.
+        ...(menor
+          ? {
+              guardian_name: form.guardian_name,
+              guardian_phone: form.guardian_phone,
+              guardian_email: form.guardian_email,
+            }
+          : {}),
       })
       // Foto escolhida: envia após criar o registro (campo file do PocketBase)
       if (form.photo) {
@@ -549,7 +588,9 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [photoRemoval, setPhotoRemoval] = useState(false)
-  const guardianPhoneErr = guardianPhoneError(form.guardian_phone)
+  const guardianPhoneErr = responsavelVisivel(form.birth_date)
+    ? guardianPhoneError(form.guardian_phone)
+    : null
 
   // Preenche o formulário sempre que um aluno diferente é aberto
   if (student && loadedFor !== student.id) {
@@ -592,7 +633,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       toast({ title: 'O nome é obrigatório', variant: 'destructive' })
       return
     }
-    const gPhoneErr = guardianPhoneError(form.guardian_phone)
+    const menor = responsavelVisivel(form.birth_date)
+    const gPhoneErr = menor ? guardianPhoneError(form.guardian_phone) : null
     if (gPhoneErr) {
       toast({
         title: 'Telefone do responsável inválido',
@@ -617,9 +659,15 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
         belt: form.belt,
         address: form.address.trim(),
         birth_date: form.birth_date,
-        guardian_name: form.guardian_name.trim(),
-        guardian_phone: form.guardian_phone.trim(),
-        guardian_email: form.guardian_email.trim(),
+        // Responsável: para menor, salva o que está no formulário; para maior,
+        // NADA é enviado — dados de responsável gravados ficam intactos.
+        ...(menor
+          ? {
+              guardian_name: form.guardian_name.trim(),
+              guardian_phone: form.guardian_phone.trim(),
+              guardian_email: form.guardian_email.trim(),
+            }
+          : {}),
         active,
       })
       let final = updated
@@ -759,6 +807,11 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
               setForm={setForm}
               phoneError={guardianPhoneErr}
               idPrefix="edit"
+              existingGuardian={{
+                name: student?.guardian_name,
+                phone: student?.guardian_phone,
+                email: student?.guardian_email,
+              }}
             />
 
             <div className="space-y-1.5">
