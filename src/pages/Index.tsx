@@ -213,11 +213,11 @@ export default function Index() {
     }`
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       {/* Hero Section — inspirado no folder: papel branco, sol vermelho texturizado, kanji vertical */}
       <section
         id="hero"
-        className="relative bg-[#FAF6F0] text-[#1C1B1A] py-12 sm:py-20 overflow-hidden"
+        className="relative bg-[#FAF6F0] text-[#1C1B1A] pt-12 pb-16 sm:pt-20 sm:pb-28 lg:pb-32 overflow-hidden"
       >
         {/* Sol vermelho texturizado (sem imagem externa).
             MOBILE: sobe para o topo/direita e fica MENOR e mais transparente,
@@ -238,8 +238,14 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Ondas sumi-e na base (tinta preta) */}
-        <HeroWaves className="absolute bottom-0 left-0 right-0 w-full pointer-events-none" />
+        {/* Ondas sumi-e na base (tinta preta). ALTURA COM TETO por breakpoint:
+            o SVG só tem w-full (viewBox 1200x110 esticado), então a altura
+            crescia junto com a largura da tela — em monitores largos
+            (~1920px+) a onda passava de ~170px e as pinceladas pretas
+            invadiam o texto do hero (tinta escura atrás de texto escuro).
+            O max-h mantém a onda como faixa da base em qualquer largura e o
+            padding-bottom da seção garante folga acima dela. */}
+        <HeroWaves className="absolute bottom-0 left-0 right-0 w-full max-h-10 sm:max-h-16 lg:max-h-20 pointer-events-none" />
 
         {/* Pétalas de sakura caindo */}
         <HeroPetals />

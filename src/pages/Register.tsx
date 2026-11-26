@@ -110,8 +110,8 @@ export default function Register() {
 
   if (registeredEmail) {
     return (
-      <div className="min-h-[75vh] flex items-center justify-center px-4 py-12 animate-fade-rise">
-        <div className="w-full max-w-md bg-white rounded-3xl border border-[#E8E0D5] p-8 shadow-md text-center">
+      <div className="min-h-dvh flex items-center justify-center px-4 py-8 sm:py-12 animate-fade-rise">
+        <div className="w-full max-w-md bg-white rounded-3xl border border-[#E8E0D5] px-5 py-7 sm:p-8 shadow-md text-center">
           <div className="w-16 h-16 rounded-full bg-[#E8F5E9] text-[#2E7D4F] flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-8 h-8" />
           </div>
@@ -144,9 +144,9 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-[75vh] flex items-center justify-center px-4 py-12 animate-fade-rise">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-[#E8E0D5] p-8 shadow-md">
-        <div className="text-center mb-8">
+    <div className="min-h-dvh flex items-start sm:items-center justify-center px-4 py-8 sm:py-12 animate-fade-rise pb-16 sm:pb-12">
+      <div className="w-full max-w-md bg-white rounded-3xl border border-[#E8E0D5] px-5 py-7 sm:p-8 shadow-md">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="inline-flex flex-col items-center mb-3">
             {/* Logo oficial (dragão) em tamanho grande, sem cortes no texto */}
             <OfficialLogo className="w-44 h-auto" />
@@ -162,11 +162,17 @@ export default function Register() {
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif">
+            <label
+              htmlFor="reg-name"
+              className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif"
+            >
               Nome Completo
             </label>
             <Input
+              id="reg-name"
+              name="name"
               type="text"
+              autoComplete="name"
               placeholder="Ex.: Takeshi Yamada"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -175,11 +181,18 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif">
+            <label
+              htmlFor="reg-email"
+              className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif"
+            >
               E-mail
             </label>
             <Input
+              id="reg-email"
+              name="email"
               type="email"
+              inputMode="email"
+              autoComplete="email"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -188,11 +201,17 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif">
+            <label
+              htmlFor="reg-password"
+              className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif"
+            >
               Senha (mínimo 8 dígitos)
             </label>
             <Input
+              id="reg-password"
+              name="new-password"
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -201,11 +220,17 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif">
+            <label
+              htmlFor="reg-password-confirm"
+              className="block text-xs font-bold text-[#1C1B1A] uppercase tracking-wider mb-1 font-serif"
+            >
               Confirmar Senha
             </label>
             <Input
+              id="reg-password-confirm"
+              name="new-password"
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
@@ -232,7 +257,7 @@ export default function Register() {
           </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-[#E8E0D5] text-center text-xs text-[#6B6560]">
+        <div className="mt-6 pt-6 border-t border-[#E8E0D5] text-center text-xs text-[#6B6560] break-words">
           Já possui conta?{' '}
           <Link
             to={`/entrar?redirect=${encodeURIComponent(redirect)}`}
