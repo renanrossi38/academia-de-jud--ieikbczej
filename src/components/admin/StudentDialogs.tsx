@@ -364,6 +364,17 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
       return
     }
     const menor = responsavelVisivel(form.birth_date)
+    // Telefone do aluno é opcional — mas, se preenchido, precisa ser válido
+    // (mesma regra do telefone do responsável).
+    const sPhoneErr = guardianPhoneError(form.phone)
+    if (sPhoneErr) {
+      toast({
+        title: 'Telefone do aluno inválido',
+        description: sPhoneErr,
+        variant: 'destructive',
+      })
+      return
+    }
     const gPhoneErr = menor ? guardianPhoneError(form.guardian_phone) : null
     if (gPhoneErr) {
       toast({
@@ -422,8 +433,8 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
           <DialogHeader>
             <DialogTitle className="font-serif text-[#1C1B1A]">Cadastrar Novo Aluno</DialogTitle>
             <DialogDescription className="text-xs text-[#6B6560]">
-              Só o nome é obrigatório. O e-mail é opcional e só serve para gerar o acesso ao site
-              depois.
+              Só o nome é obrigatório. Telefone e e-mail do aluno são opcionais; para aluno menor de
+              idade, cadastre o contato do responsável.
             </DialogDescription>
           </DialogHeader>
 
@@ -467,7 +478,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
                 id="student-phone"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="(11) 90000-0000"
+                placeholder="Opcional — (11) 90000-0000"
                 className="bg-white border-[#E8E0D5]"
               />
             </div>
@@ -634,6 +645,18 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       return
     }
     const menor = responsavelVisivel(form.birth_date)
+    // Telefone do aluno é opcional — mas, se preenchido, precisa ser válido
+    // (mesma regra do telefone do responsável). Para menor, o contato real
+    // costuma ser o do responsável; o do aluno pode ficar em branco.
+    const sPhoneErr = guardianPhoneError(form.phone)
+    if (sPhoneErr) {
+      toast({
+        title: 'Telefone do aluno inválido',
+        description: sPhoneErr,
+        variant: 'destructive',
+      })
+      return
+    }
     const gPhoneErr = menor ? guardianPhoneError(form.guardian_phone) : null
     if (gPhoneErr) {
       toast({
@@ -771,7 +794,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
                 id="edit-phone"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="(11) 90000-0000"
+                placeholder="Opcional — (11) 90000-0000"
                 className="bg-white border-[#E8E0D5]"
               />
             </div>
