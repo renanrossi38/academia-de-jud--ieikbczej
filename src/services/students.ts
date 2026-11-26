@@ -84,9 +84,6 @@ const STUDENT_FIELD_LABELS: Record<string, string> = {
  * e motivo — a tela precisa disso em vez do erro bruto. */
 export function friendlyStudentSaveError(err: unknown): string {
   const fieldErrors = extractFieldErrors(err)
-  const raw = getErrorMessage(err)
-  const lower = raw.toLowerCase()
-
   const parts: string[] = []
   for (const [field, msg] of Object.entries(fieldErrors)) {
     const label = STUDENT_FIELD_LABELS[field] || `O campo ${field}`
@@ -103,12 +100,16 @@ export function friendlyStudentSaveError(err: unknown): string {
   }
   if (parts.length) return parts.join(' ')
 
+  // Sem fieldError na resposta: dá o motivo real do servidor quando ele não é
+  // o genérico, e nunca deixa o texto cru ("Failed to create record.")
+  // chegar ao dono da academia.
+  const raw = getErrorMessage(err).trim()
   if (
-    lower.startsWith('failed to create record') ||
-    lower.startsWith('failed to update record') ||
-    !lower
+    /^failed to (create|update) record/i.test(raw) ||
+    !raw ||
+    raw === 'An unexpected error occurred.'
   ) {
-    return 'O servidor recusou o cadastro sem detalhes. Verifique os campos (especialmente a data de nascimento e a faixa) e tente novamente.'
+    return 'O servidor recusou o cadastro sem informar o campo. Confira a faixa escolhida e a data de nascimento (os campos mais comuns de recusa) e tente novamente. Se persistir, recarregue a página para o painel buscar a lista de faixas atualizada.'
   }
   return raw
 }
