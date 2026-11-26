@@ -428,9 +428,11 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : resetAndClose())}>
-      <DialogContent className="sm:max-w-md bg-white border-[#E8E0D5]">
-        <form onSubmit={handleCreate}>
-          <DialogHeader>
+      {/* Cabeçalho e rodapé fixos; só o corpo rola — nada some da tela
+          (desktop e celular, mesmo com o teclado aberto). */}
+      <DialogContent className="flex max-h-[92dvh] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
+        <form onSubmit={handleCreate} className="flex min-h-0 flex-1 flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="font-serif text-[#1C1B1A]">Cadastrar Novo Aluno</DialogTitle>
             <DialogDescription className="text-xs text-[#6B6560]">
               Só o nome é obrigatório. Telefone e e-mail do aluno são opcionais; para aluno menor de
@@ -438,7 +440,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2 pr-1">
             <StudentPhotoField
               previewUrl={photoPreview}
               name={form.name}
@@ -550,7 +552,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
             />
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="shrink-0 gap-2 border-t border-[#E8E0D5] pt-3">
             <Button
               type="button"
               variant="outline"
@@ -719,16 +721,17 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
 
   return (
     <Dialog open={!!student} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-white border-[#E8E0D5]">
-        <form onSubmit={handleEdit}>
-          <DialogHeader>
+      {/* Mesmo padrão do cadastro: cabeçalho e rodapé sempre visíveis. */}
+      <DialogContent className="flex max-h-[92dvh] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
+        <form onSubmit={handleEdit} className="flex min-h-0 flex-1 flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="font-serif text-[#1C1B1A]">Editar Aluno</DialogTitle>
             <DialogDescription className="text-xs text-[#6B6560]">
               Atualize os dados de {student?.name}.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2 pr-1">
             <StudentPhotoField
               previewUrl={
                 photoPreview ||
@@ -880,7 +883,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="shrink-0 gap-2 border-t border-[#E8E0D5] pt-3">
             <Button
               type="button"
               variant="outline"
