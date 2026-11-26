@@ -75,6 +75,20 @@ const upsertClass = (list: Class[], record: Class): Class[] =>
     ? list.map((c) => (c.id === record.id ? record : c))
     : [record, ...list]
 
+/**
+ * Vagas disponíveis de uma turma (vagas − matrículas em class_students), o
+ * mesmo cálculo usado para agendar aula experimental. Devolve null quando a
+ * turma não tem limite de vagas definido (comportamento de antes: sem contagem).
+ */
+const vagasDisponiveisDe = (
+  c: Class,
+  counts: Record<string, number> | undefined,
+): number | null => {
+  const vagas = typeof c.vagas === 'number' ? c.vagas : 0
+  if (vagas <= 0 || !counts) return null
+  return Math.max(0, vagas - (counts[c.id] ?? 0))
+}
+
 export default function Index() {
   const site = useSiteContent()
   const location = useLocation()
@@ -82,6 +96,8 @@ export default function Index() {
 
   const [classes, setClasses] = useState<Class[]>([])
   const [classesLoading, setClassesLoading] = useState(true)
+  /** Matrículas por turma (class_students) — para calcular vagas disponíveis. */
+  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({})
 
   const [products, setProducts] = useState<Product[]>([])
   const [productsLoading, setProductsLoading] = useState(false)
@@ -91,6 +107,7 @@ export default function Index() {
   useEffect(() => {
     // A aba de turmas é a inicial: produtos carregam só quando ela abre.
     loadClasses()
+    loadEnrollmentCounts()
   }, [])
 
   // Âncoras do menu (#turmas / #kimonos): não existem como seção com id —
@@ -105,6 +122,11 @@ export default function Index() {
     return () => window.clearTimeout(timer)
     // location.key muda também em cliques repetidos na mesma âncora.
   }, [location.key, location.hash])
+
+  // Realtime: matrícula/remoção na turma reflete nas vagas disponíveis na hora.
+  useRealtime('class_students', () => {
+    loadEnrollmentCounts()
+  })
 
   // Realtime: capa nova na turma (ou turma criada/removida no painel) reflete na home na hora.
   useRealtime<Class>('classes', (e) => {
@@ -149,6 +171,15 @@ export default function Index() {
       console.error('Erro ao carregar turmas:', err)
     } finally {
       setClassesLoading(false)
+    }
+  }
+
+  /** Matrículas por turma (um pedido só — mesmo método da aula experimental). */
+  const loadEnrollmentCounts = async () => {
+    try {
+      setEnrollmentCounts(await classesService.countStudentsByClass())
+    } catch (err) {
+      console.error('Erro ao carregar matrículas das turmas:', err)
     }
   }
 
@@ -339,11 +370,25 @@ export default function Index() {
                           </strong>
                         </span>
                       </span>
-                      {!!c.vagas && (
+                      {!!c.vagas && vagasDisponiveisDe(c, enrollmentCounts) !== null && (
                         <span className="flex items-center gap-2 text-[#1C1B1A]">
                           <Users className="w-4 h-4 text-[#C1272D] shrink-0" />
-                          {site.class_vagas_label}{' '}
-                          <strong className="font-semibold">{c.vagas}</strong>
+                          {(() => {
+                            const restantes = vagasDisponiveisDe(c, enrollmentCounts) as number
+                            return restantes <= 0 ? (
+                              <Badge className="text-[11px] font-bold border bg-[#F7E4E2] text-[#C1272D] border-[#C1272D]/30">
+                                Turma lotada
+                              </Badge>
+                            ) : (
+                              <span>
+                                {site.class_vagas_label}{' '}
+                                <strong className="font-semibold">
+                                  {restantes}{' '}
+                                  {restantes === 1 ? 'vaga disponível' : 'vagas disponíveis'}
+                                </strong>
+                              </span>
+                            )
+                          })()}
                         </span>
                       )}
                     </div>
