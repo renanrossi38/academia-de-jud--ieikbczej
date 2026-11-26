@@ -227,6 +227,44 @@ export const PersonalDataPanel: React.FC<{
         referência da turma. Veja as compras da loja na aba "Financeiro".
       </p>
     </div>
+
+    {/* Responsável (contato da ficha) */}
+    {(student.guardian_name || student.guardian_email || student.guardian_phone) && (
+      <div className={`${cardCls} p-5`}>
+        <h3 className="font-serif font-bold text-base text-[#1C1B1A] mb-4">Responsável</h3>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wider text-[#9A948C]">Nome</dt>
+            <dd className="text-[#1C1B1A] font-semibold mt-0.5 break-words">
+              {student.guardian_name || '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wider text-[#9A948C] flex items-center gap-1">
+              <Phone className="w-3 h-3" /> Telefone
+            </dt>
+            <dd className="text-[#1C1B1A] mt-0.5">{student.guardian_phone || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wider text-[#9A948C] flex items-center gap-1">
+              <Mail className="w-3 h-3" /> E-mail
+            </dt>
+            <dd className="text-[#1C1B1A] mt-0.5 break-words">
+              {student.guardian_email || (
+                <span className="text-[#6B6560]">sem e-mail cadastrado</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+        {student.guardian_email && !student.email && !student.user && (
+          <p className="text-[11px] text-[#6B6560] mt-4 flex items-start gap-1.5">
+            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            Na lista de alunos, o acesso deste aluno pode ser criado pelo e-mail do responsável — ao
+            logar, ele acompanha as mensalidades, pedidos e presenças do aluno.
+          </p>
+        )}
+      </div>
+    )}
   </div>
 )
 

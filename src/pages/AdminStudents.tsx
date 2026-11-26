@@ -11,7 +11,7 @@ import {
 } from '@/components/admin/StudentDialogs'
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { GuardianContactButtons } from '@/components/admin/GuardianContactButtons'
-import { studentsService } from '@/services/students'
+import { accessOptionsFor, studentsService } from '@/services/students'
 import { iniciaisDoNome } from '@/services/highlights'
 import pb from '@/lib/pocketbase/client'
 import React from 'react'
@@ -139,6 +139,8 @@ export default function AdminStudents() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [accessStudent, setAccessStudent] = useState<Student | null>(null)
+  /** Modo do diálogo de acesso: 'aluno' (e-mail do aluno) ou 'responsavel'. */
+  const [accessMode, setAccessMode] = useState<'aluno' | 'responsavel'>('aluno')
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -791,7 +793,7 @@ export default function AdminStudents() {
               </thead>
               <tbody className="divide-y divide-[#E8E0D5]">
                 {filteredStudents.map((student) => {
-                  const canCreateAccess = !!student.email && !student.user
+                  const access = accessOptionsFor(student)
                   const waUrl = safeCobrancaUrl(student)
 
                   return (
@@ -908,14 +910,39 @@ export default function AdminStudents() {
                             <Pencil className="w-3.5 h-3.5 inline mr-1" />
                             Editar
                           </button>
-                          {canCreateAccess && (
+                          {access.own && (
                             <button
-                              onClick={() => setAccessStudent(student)}
+                              onClick={() => {
+                                setAccessMode('aluno')
+                                setAccessStudent(student)
+                              }}
                               className="text-[#C1272D] hover:underline font-semibold text-xs inline-flex items-center gap-1"
                             >
                               <KeyRound className="w-3.5 h-3.5" />
                               Gerar acesso
                             </button>
+                          )}
+                          {access.guardian && (
+                            <button
+                              onClick={() => {
+                                setAccessMode('responsavel')
+                                setAccessStudent(student)
+                              }}
+                              className="text-[#7A6AA8] hover:underline font-semibold text-xs inline-flex items-center gap-1"
+                              title={`Criar a conta com o e-mail do responsável (${access.guardianEmail})`}
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                              Acesso do responsável ({access.guardianEmail})
+                            </button>
+                          )}
+                          {access.none && (
+                            <span
+                              className="text-[#6B6560] text-[10px] opacity-70 inline-flex items-center gap-1"
+                              title="Preencha o e-mail do aluno ou do responsável para gerar o acesso"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
+                              Sem e-mail p/ acesso
+                            </span>
                           )}
                           <button
                             onClick={() => handleToggleActive(student)}
@@ -954,7 +981,7 @@ export default function AdminStudents() {
           {/* Cartões (mobile) */}
           <div className="md:hidden divide-y divide-[#E8E0D5]">
             {filteredStudents.map((student) => {
-              const canCreateAccess = !!student.email && !student.user
+              const access = accessOptionsFor(student)
               const waUrl = safeCobrancaUrl(student)
 
               return (
@@ -1075,13 +1102,36 @@ export default function AdminStudents() {
                       >
                         Editar
                       </button>
-                      {canCreateAccess && (
+                      {access.own && (
                         <button
-                          onClick={() => setAccessStudent(student)}
+                          onClick={() => {
+                            setAccessMode('aluno')
+                            setAccessStudent(student)
+                          }}
                           className="text-[#C1272D] hover:underline font-semibold text-xs"
                         >
                           Gerar acesso
                         </button>
+                      )}
+                      {access.guardian && (
+                        <button
+                          onClick={() => {
+                            setAccessMode('responsavel')
+                            setAccessStudent(student)
+                          }}
+                          className="text-[#7A6AA8] hover:underline font-semibold text-xs"
+                          title={`Criar a conta com o e-mail do responsável (${access.guardianEmail})`}
+                        >
+                          Acesso do responsável ({access.guardianEmail})
+                        </button>
+                      )}
+                      {access.none && (
+                        <span
+                          className="text-[#6B6560] text-[10px] opacity-70"
+                          title="Preencha o e-mail do aluno ou do responsável para gerar o acesso"
+                        >
+                          Sem e-mail p/ acesso
+                        </span>
                       )}
                       <button
                         onClick={() => handleToggleActive(student)}
@@ -1124,6 +1174,7 @@ export default function AdminStudents() {
       />
       <StudentAccessDialog
         student={accessStudent}
+        mode={accessMode}
         onOpenChange={(open) => !open && setAccessStudent(null)}
         onAccessCreated={(updated) => setStudents((prev) => upsert(prev, updated))}
       />
@@ -1134,7 +1185,10 @@ export default function AdminStudents() {
           <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <p>
             O cadastro é um controle interno da academia: o e-mail é opcional. Alunos com e-mail
-            podem receber um acesso ao site pelo botão "Gerar acesso".
+            recebem um acesso ao site pelo botão "Gerar acesso"; alunos menores de idade (ou sem
+            e-mail próprio) podem receber o acesso pelo e-mail do responsável, em "Acesso do
+            responsável" — o responsável logado acompanha as mensalidades, pedidos e presenças do
+            aluno. Sem nenhum e-mail (do aluno ou do responsável), não é possível gerar acesso.
           </p>
         </div>
       )}

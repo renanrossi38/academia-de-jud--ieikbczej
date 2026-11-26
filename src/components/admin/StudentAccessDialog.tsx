@@ -12,18 +12,25 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { studentsService } from '@/services/students'
+import { accessOptionsFor, studentsService } from '@/services/students'
 import { Loader2, Copy, Check, KeyRound } from 'lucide-react'
 
 interface StudentAccessDialogProps {
   student: Student | null
+  /** 'aluno' = e-mail do próprio aluno; 'responsavel' = e-mail do responsável. */
+  mode?: 'aluno' | 'responsavel'
   onOpenChange: (open: boolean) => void
   onAccessCreated: (student: Student) => void
 }
 
-/** Gera a conta de acesso ao site de um aluno com e-mail. A senha aparece uma única vez. */
+/**
+ * Gera a conta de acesso ao site — pelo e-mail do ALUNO (fluxo original) ou
+ * pelo e-mail do RESPONSÁVEL (aluno menor de idade sem e-mail próprio).
+ * A senha aparece uma única vez.
+ */
 export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
   student,
+  mode = 'aluno',
   onOpenChange,
   onAccessCreated,
 }) => {
@@ -31,6 +38,13 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
   const [creating, setCreating] = useState(false)
   const [password, setPassword] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const accessEmail = student
+    ? mode === 'responsavel'
+      ? student.guardian_email?.trim() || ''
+      : student.email?.trim() || ''
+    : ''
+  const isGuardian = mode === 'responsavel'
 
   const close = () => {
     setPassword(null)
@@ -42,11 +56,14 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
     if (!student) return
     setCreating(true)
     try {
-      const { account, initialPassword } = await studentsService.createAccess(student)
+      const { account, initialPassword } =
+        mode === 'responsavel'
+          ? await studentsService.createGuardianAccess(student)
+          : await studentsService.createAccess(student)
       onAccessCreated({ ...student, user: account.id })
       setPassword(initialPassword)
     } catch (err: any) {
-      console.error('Erro ao gerar acesso do aluno:', err)
+      console.error('Erro ao gerar acesso:', err)
       toast({
         title: 'Não foi possível gerar o acesso',
         description: getErrorMessage(err),
@@ -84,8 +101,19 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
                 Acesso criado!
               </DialogTitle>
               <DialogDescription className="text-xs text-[#6B6560]">
-                A conta de <strong>aluno</strong> foi criada. Guarde a senha inicial gerada — ela
-                será exibida <strong>apenas uma vez</strong>.
+                {isGuardian ? (
+                  <>
+                    A conta do <strong>responsável</strong> foi criada e já está vinculada ao aluno{' '}
+                    <strong>{student.name}</strong> — ao logar, ele acompanha as mensalidades,
+                    pedidos e presenças do dependente. Guarde a senha inicial gerada — ela será
+                    exibida <strong>apenas uma vez</strong>.
+                  </>
+                ) : (
+                  <>
+                    A conta de <strong>aluno</strong> foi criada. Guarde a senha inicial gerada —
+                    ela será exibida <strong>apenas uma vez</strong>.
+                  </>
+                )}
               </DialogDescription>
             </DialogHeader>
 
@@ -94,7 +122,7 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
                 <Label className="text-[10px] uppercase tracking-wider text-[#6B6560] font-serif">
                   E-mail de acesso
                 </Label>
-                <p className="text-sm font-semibold text-[#1C1B1A] mt-0.5">{student.email}</p>
+                <p className="text-sm font-semibold text-[#1C1B1A] mt-0.5">{accessEmail}</p>
               </div>
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-[#6B6560] font-serif">
@@ -135,8 +163,18 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
             <DialogHeader>
               <DialogTitle className="font-serif text-[#1C1B1A]">Gerar acesso ao site</DialogTitle>
               <DialogDescription className="text-xs text-[#6B6560]">
-                Cria uma conta de login para <strong>{student?.name}</strong> com o e-mail{' '}
-                <strong>{student?.email}</strong> e uma senha inicial gerada pelo sistema.
+                {isGuardian ? (
+                  <>
+                    Cria a conta do <strong>responsável</strong> de {student?.name} com o e-mail{' '}
+                    <strong>{accessEmail}</strong> e uma senha inicial gerada pelo sistema. Ao
+                    logar, o responsável acompanha as mensalidades, pedidos e presenças do aluno.
+                  </>
+                ) : (
+                  <>
+                    Cria uma conta de login para <strong>{student?.name}</strong> com o e-mail{' '}
+                    <strong>{accessEmail}</strong> e uma senha inicial gerada pelo sistema.
+                  </>
+                )}
               </DialogDescription>
             </DialogHeader>
 

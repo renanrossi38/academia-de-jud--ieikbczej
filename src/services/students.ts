@@ -36,6 +36,42 @@ export function guardianPhoneError(phone: string): string | null {
   return null
 }
 
+/** Data de nascimento "YYYY-MM-DD" → idade completa hoje (null se incompleta). */
+export function idadeDeAluno(birthDate: string): number | null {
+  const m = birthDate?.slice(0, 10)?.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  const birth = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]))
+  const now = new Date()
+  let age = now.getFullYear() - birth.getUTCFullYear()
+  const monthDiff = now.getUTCMonth() - birth.getUTCMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && birth.getUTCDate() > now.getUTCDate())) age--
+  return age
+}
+
+/** Situação do acesso do aluno na listagem/ficha, para o dono saber qual
+ * botão aparece. Usa o e-mail PRÓPRIO; quando o aluno é MENOR de 18 (ou está
+ * sem e-mail) e tem guardian_email, o acesso pode usar o e-mail do
+ * responsável — decisão do dono: o responsável pode ter conta quando o
+ * dependente não tem e-mail. */
+export function accessOptionsFor(student: Student): {
+  /** Conceder acesso pelo e-mail do próprio aluno. */
+  own: boolean
+  /** Conceder acesso pelo e-mail do responsável gravado na ficha. */
+  guardian: boolean
+  /** E-mail que seria usado no acesso do responsável ('' se não há). */
+  guardianEmail: string
+  /** Nenhum e-mail disponível — botão desabilitado com explicação. */
+  none: boolean
+} {
+  const own = !!student.email?.trim() && !student.user
+  const guardianEmail = student.guardian_email?.trim() || ''
+  const idade = idadeDeAluno(student.birth_date || '')
+  const menor = idade !== null && idade < 18
+  const semEmailProprio = !student.email?.trim()
+  const guardian = !student.user && !!guardianEmail && (menor || semEmailProprio)
+  return { own, guardian, guardianEmail, none: !own && !guardian }
+}
+
 // Senha inicial gerada para o aluno (exibida uma única vez)
 export function generateInitialPassword(): string {
   const lower = 'abcdefghijkmnopqrstuvwxyz'
@@ -195,6 +231,77 @@ export async function createAccess(
   return { account, initialPassword }
 }
 
+/**
+ * Gera a conta de acesso ao site pelo E-MAIL DO RESPONSÁVEL (aluno menor de
+ * idade sem e-mail próprio): cria o usuário (role 'aluno') com senha inicial
+ * e vincula student.user a ele — o MESMO vínculo do acesso do aluno, então o
+ * responsável logado vê a área do aluno daquele dependente. Se o e-mail do
+ * responsável já existe em users (ex.: conta de outro filho), recusa com
+ * mensagem clara em vez de falhar.
+ */
+export async function createGuardianAccess(
+  student: Student,
+): Promise<{ account: User; initialPassword: string }> {
+  const guardianEmail = student.guardian_email?.trim() || ''
+  if (!guardianEmail) {
+    throw new Error('A ficha do aluno não tem e-mail do responsável para criar o acesso.')
+  }
+  if (student.user) {
+    throw new Error('Este aluno já possui acesso ao site.')
+  }
+
+  const initialPassword = generateInitialPassword()
+
+  let account: User
+  try {
+    account = await pb.collection('users').create<User>({
+      email: guardianEmail,
+      password: initialPassword,
+      passwordConfirm: initialPassword,
+      // Nome do responsável quando existe; senão o próprio nome do aluno.
+      name: student.guardian_name?.trim() || student.name,
+      phone: student.guardian_phone || student.phone || '',
+      belt: '',
+      role: 'aluno',
+      active: true,
+      // verified NÃO é enviado (mesmo motivo do createAccess)
+    })
+  } catch (err) {
+    throw new Error(friendlyGuardianAccessError(err, guardianEmail))
+  }
+
+  try {
+    await pb.collection('students').update(student.id, { user: account.id })
+  } catch (err) {
+    await pb
+      .collection('users')
+      .delete(account.id)
+      .catch(() => {})
+    console.error('Falha ao vincular student.user (responsável):', err)
+    throw new Error(
+      'A conta foi criada, mas o vínculo com o cadastro do aluno falhou. Tente novamente.',
+    )
+  }
+
+  return { account, initialPassword }
+}
+
+/** Mensagens claras para a criação da conta do responsável. */
+function friendlyGuardianAccessError(err: unknown, email: string): string {
+  const fieldErrors = extractFieldErrors(err)
+  const raw = getErrorMessage(err).toLowerCase()
+  const emailErr = (fieldErrors.email || '').toLowerCase()
+
+  if (raw.includes('not unique') || emailErr.includes('not unique')) {
+    return `O e-mail ${email} já tem uma conta no site (provavelmente o responsável de outro aluno). Use essa conta para acompanhar este aluno ou cadastre outro e-mail.`
+  }
+  const msg = friendlyCreateAccessError(err, email)
+  return msg.replace(
+    'Verifique o e-mail do aluno e tente novamente.',
+    'Verifique o e-mail do responsável na ficha do aluno e tente novamente.',
+  )
+}
+
 export const studentsService = {
   /** Todos os alunos cadastrados (com ou sem conta de acesso), com a conta
    * expandida para o painel saber o cargo (role/is_owner) do usuário. */
@@ -313,4 +420,5 @@ export const studentsService = {
   },
 
   createAccess,
+  createGuardianAccess,
 }
