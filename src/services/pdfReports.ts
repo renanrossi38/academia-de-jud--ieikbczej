@@ -27,7 +27,7 @@ const fmtBRL = (v: number) =>
   (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 /** Abre a janela de impressão com o HTML da folha (padrão do comprovante). */
-function openPrintWindow(opts: {
+export function openPrintWindow(opts: {
   /** Nome sugerido do arquivo ao "Salvar como PDF". */
   title: string
   /** Rótulo pequeno no canto (ex.: "Relatório de alunos"). */

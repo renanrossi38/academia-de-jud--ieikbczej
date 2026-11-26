@@ -20,6 +20,7 @@ import AdminRanking from './pages/AdminRanking'
 import AdminClasses from './pages/AdminClasses'
 import AdminClassDetail from './pages/AdminClassDetail'
 import AdminAttendance from './pages/AdminAttendance'
+import AdminAttendanceReport from './pages/AdminAttendanceReport'
 import AdminStudentDetail from './pages/admin/AdminStudentDetail'
 import AdminHighlights from './pages/AdminHighlights'
 import AdminEmailSettings from './pages/AdminEmailSettings'
@@ -202,6 +203,14 @@ const App = () => (
                   element={
                     <RequireArea area="presencas">
                       <AdminAttendance />
+                    </RequireArea>
+                  }
+                />
+                <Route
+                  path="/painel/relatorio-presenca"
+                  element={
+                    <RequireArea area="presencas">
+                      <AdminAttendanceReport />
                     </RequireArea>
                   }
                 />

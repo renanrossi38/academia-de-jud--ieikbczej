@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 const PANEL_LINKS = [
   { to: '/painel/alunos', label: 'Alunos' },
   { to: '/painel/turmas', label: 'Turmas' },
+  { to: '/painel/relatorio-presenca', label: 'Relatório de presença' },
   { to: '/painel/ranking', label: 'Ranking' },
   { to: '/painel/produtos', label: 'Loja' },
   { to: '/painel/pedidos', label: 'Pedidos' },
