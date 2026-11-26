@@ -78,6 +78,8 @@ export interface StudentAreaBelt {
 
 export interface StudentAreaData {
   student: { id: string; name: string; belt: string; active: boolean } | null
+  /** Todos os alunos vinculados à conta (seletor "Qual filho?"). */
+  students?: StudentAreaChild[]
   paidFees: StudentAreaFee[]
   /** Mensalidades pendentes/atrasadas — oferecem "Pagar com Pix". */
   pendingFees?: StudentAreaFee[]
@@ -120,7 +122,21 @@ export function mesPorExtenso(mesChave: string): string {
   return `${nomes[m - 1]} de ${y}`
 }
 
-/** Busca o resumo completo do aluno logado. */
-export async function fetchStudentArea(): Promise<StudentAreaData> {
-  return pb.send<StudentAreaData>('/backend/v1/student-area', {})
+/** Aluno dependente listado no seletor "Qual filho?". */
+export interface StudentAreaChild {
+  id: string
+  name: string
+  belt: string
+  active: boolean
+}
+
+/**
+ * Busca o resumo do aluno logado. Quando a conta tem vários alunos vinculados
+ * (responsável com mais de um filho), `studentId` escolhe qual ficha carregar.
+ */
+export async function fetchStudentArea(studentId?: string): Promise<StudentAreaData> {
+  return pb.send<StudentAreaData>(
+    '/backend/v1/student-area',
+    studentId ? { query: { student: studentId } } : {},
+  )
 }

@@ -31,14 +31,14 @@ routerAdd(
     }
 
     try {
-      var out = buildArea(e, auth)
+      var out = buildArea(e, auth, e.request.url.query().get('student') || '')
       return e.json(200, out)
     } catch (err) {
       console.log('[student-area] ERRO: ' + err)
       return e.json(500, { message: 'Erro ao carregar a área do aluno: ' + err })
     }
 
-    function buildArea(e2, auth2) {
+    function buildArea(e2, auth2, requestedId) {
       function brasiliaNow() {
         return new Date(Date.now() - 3 * 60 * 60 * 1000)
       }
@@ -50,8 +50,11 @@ routerAdd(
       var nowB = brasiliaNow()
       var anoCorrente = nowB.getUTCFullYear()
 
-      // ---- Aluno vinculado ao usuário logado (students.user) ----
-      var students = $app.findRecordsByFilter('students', 'user = {:uid}', '', 1, 0, {
+      // ---- Alunos vinculados ao usuário logado (students.user) ----
+      // Um responsável pode ter VÁRIOS filhos na mesma conta: todas as fichas
+      // de students apontando para o mesmo users.id. O front escolhe um via
+      // ?student= (fallback: o primeiro, ordem de criação — o mais antigo).
+      var students = $app.findRecordsByFilter('students', 'user = {:uid}', 'created', 0, 0, {
         uid: auth.id,
       })
       if (students.length === 0) {
@@ -59,6 +62,7 @@ routerAdd(
         // o front mostra estados vazios em vez de quebrar.
         return {
           student: null,
+          students: [],
           paidFees: [],
           pendingFees: [],
           orders: [],
@@ -72,7 +76,25 @@ routerAdd(
         }
       }
       var student = students[0]
+      if (requestedId !== '') {
+        for (var pre = 0; pre < students.length; pre++) {
+          if (students[pre].id === requestedId) {
+            student = students[pre]
+            break
+          }
+        }
+      }
       var studentId = student.id
+      // Lista para o seletor "Qual filho?" do front (nomes + faixa da ficha).
+      var studentList = []
+      for (var sl = 0; sl < students.length; sl++) {
+        studentList.push({
+          id: students[sl].id,
+          name: students[sl].getString('name'),
+          belt: students[sl].getString('belt'),
+          active: students[sl].getBool('active'),
+        })
+      }
 
       // ---- Mensalidades: pagas + pendentes/atrasadas (o front oferece o Pix
       //      das pendentes; confirmação manual pela academia) ----
@@ -433,6 +455,7 @@ routerAdd(
           belt: student.getString('belt'),
           active: student.getBool('active'),
         },
+        students: studentList,
         paidFees: paidFees,
         pendingFees: pendingFees,
         orders: orders,

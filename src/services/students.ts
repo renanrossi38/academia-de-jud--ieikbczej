@@ -231,13 +231,21 @@ export async function createAccess(
   return { account, initialPassword }
 }
 
+export class GuardianEmailInUseError extends Error {
+  constructor(public email: string) {
+    super('email-in-use')
+  }
+}
+
 /**
  * Gera a conta de acesso ao site pelo E-MAIL DO RESPONSÁVEL (aluno menor de
  * idade sem e-mail próprio): cria o usuário (role 'aluno') com senha inicial
  * e vincula student.user a ele — o MESMO vínculo do acesso do aluno, então o
- * responsável logado vê a área do aluno daquele dependente. Se o e-mail do
- * responsável já existe em users (ex.: conta de outro filho), recusa com
- * mensagem clara em vez de falhar.
+ * responsável logado vê a área do aluno daquele dependente.
+ *
+ * Um responsável pode ter VÁRIOS filhos: se o e-mail já tem conta (ex.: a conta
+ * criada para outro filho), lança GuardianEmailInUseError — o diálogo pergunta
+ * "Deseja vincular este aluno a ela?" e chama linkStudentToExistingUser.
  */
 export async function createGuardianAccess(
   student: Student,
@@ -267,6 +275,14 @@ export async function createGuardianAccess(
       // verified NÃO é enviado (mesmo motivo do createAccess)
     })
   } catch (err) {
+    // E-mail já cadastrado? NÃO é mais um erro: sinaliza para o diálogo
+    // oferecer vincular esta ficha à conta existente (segundo filho).
+    const fieldErrors = extractFieldErrors(err)
+    const raw = getErrorMessage(err).toLowerCase()
+    const emailErr = (fieldErrors.email || '').toLowerCase()
+    if (raw.includes('not unique') || emailErr.includes('not unique')) {
+      throw new GuardianEmailInUseError(guardianEmail)
+    }
     throw new Error(friendlyGuardianAccessError(err, guardianEmail))
   }
 
@@ -284,6 +300,29 @@ export async function createGuardianAccess(
   }
 
   return { account, initialPassword }
+}
+
+/**
+ * Vincula a ficha do aluno a uma conta existente do responsável (mesmo e-mail
+ * usado por outro filho): students.user = conta.id, sem criar segunda conta.
+ * Retorna a conta vinculada para o painel atualizar a listagem.
+ */
+export async function linkStudentToExistingUser(student: Student, email: string): Promise<User> {
+  const target = email.trim().toLowerCase()
+  const res = await pb.collection('users').getList<User>(1, 1, {
+    filter: `email = "${target}"`,
+  })
+  const account = res.items[0]
+  if (!account) {
+    throw new Error('Não encontramos uma conta com esse e-mail. Gere um acesso novo.')
+  }
+  try {
+    await pb.collection('students').update(student.id, { user: account.id })
+  } catch (err) {
+    console.error('Falha ao vincular student.user (conta existente):', err)
+    throw new Error('Não foi possível vincular este aluno à conta existente. Tente novamente.')
+  }
+  return account
 }
 
 /** Mensagens claras para a criação da conta do responsável. */

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T03:04:42.224Z",
+  "generatedAt": "2026-11-26T15:09:00.030Z",
   "collections": [
     {
       "name": "users",
@@ -592,7 +592,7 @@
           "system": false
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_students_user ON students (user) WHERE user != \"\""]
+      "indexes": ["CREATE INDEX idx_students_user_lookup ON students (user) WHERE user != \"\""]
     },
     {
       "name": "classes",

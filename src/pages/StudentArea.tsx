@@ -6,6 +6,7 @@ import { HankoStamp } from '@/components/HankoStamp'
 import { fetchStudentArea, mesPorExtenso } from '@/services/studentArea'
 import type {
   StudentAreaData,
+  StudentAreaChild,
   StudentAreaAttendanceMonth,
   StudentAreaOrder,
 } from '@/services/studentArea'
@@ -19,8 +20,19 @@ import { OrderTrackingTimeline } from '@/components/orderTrackingTimeline/OrderT
 import { PixPaymentBlock } from '@/components/PixPaymentBlock'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Wallet, ShoppingBag, CalendarCheck, Trophy, Award, KeyRound, Receipt } from 'lucide-react'
+import {
+  Wallet,
+  ShoppingBag,
+  CalendarCheck,
+  Trophy,
+  Award,
+  KeyRound,
+  Receipt,
+  Users,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ChildSwitcher } from '@/components/student/ChildSwitcher'
+import { selectedChildKey, setSelectedChildKey } from '@/services/selectedChild'
 
 const fmtBRL = (v: number) =>
   (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -64,51 +76,75 @@ export default function StudentArea() {
   const [data, setData] = useState<StudentAreaData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  // Filho escolhido no seletor "Qual filho?" (contas de responsável com
+  // mais de um dependente vinculado). null = comportamento atual (1 aluno).
+  const [selectedChild, setSelectedChild] = useState<StudentAreaChild | null>(() => {
+    const stored = localStorage.getItem(selectedChildKey)
+    return stored ? { id: stored, name: '', belt: '', active: true } : null
+  })
 
-  const load = useCallback(async () => {
-    if (!user) return
-    setIsLoading(true)
-    setError('')
-    try {
-      const res = await fetchStudentArea()
-      setData(res)
-    } catch (err) {
-      console.error('Erro ao carregar área do aluno:', err)
-      setError('Não foi possível carregar seus dados. Tente novamente mais tarde.')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [user])
+  const load = useCallback(
+    async (childId?: string) => {
+      if (!user) return
+      setIsLoading(true)
+      setError('')
+      try {
+        const res = await fetchStudentArea(childId)
+        setData(res)
+        // Reconcilia o nome do filho persistido (o localStorage guarda só o id).
+        if (res.students && res.students.length > 1) {
+          const match = res.students.find((s) => s.id === childId)
+          if (match) setSelectedChild(match)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar área do aluno:', err)
+        setError('Não foi possível carregar seus dados. Tente novamente mais tarde.')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [user],
+  )
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/entrar?redirect=/area-do-aluno')
       return
     }
-    if (user) load()
+    if (user) load(selectedChild?.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, load])
+
+  const handleSelectChild = (child: StudentAreaChild) => {
+    setSelectedChild(child)
+    setSelectedChildKey(child.id)
+    load(child.id)
+  }
 
   // Dados frescos quando o aluno volta para a aba (presença nova, promoção nova).
   useEffect(() => {
     const onFocus = () => {
-      if (user && document.visibilityState === 'visible') load()
+      if (user && document.visibilityState === 'visible') load(selectedChild?.id)
     }
     document.addEventListener('visibilitychange', onFocus)
     return () => document.removeEventListener('visibilitychange', onFocus)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, load])
+
+  const children = data?.students ?? []
 
   const months: StudentAreaAttendanceMonth[] = data?.attendanceMonth ?? []
 
   // Rastreio ao vivo: quando o admin muda o status ou registra uma etapa
   // (ex.: "Em produção"), a área do aluno atualiza sem recarregar a página.
-  useRealtime('orders', () => load())
+  useRealtime('orders', () => load(selectedChild?.id))
   useRealtime('order_status_log', (e) => {
     const oid = (e.record as { order?: string }).order
-    if (oid && data?.orders.some((o) => o.id === oid)) load()
+    if (oid && data?.orders.some((o) => o.id === oid)) load(selectedChild?.id)
   })
   useRealtime('order_tracking', (e) => {
     const oid = (e.record as { order?: string }).order
-    if (oid && data?.orders.some((o) => o.id === oid)) load()
+    if (oid && data?.orders.some((o) => o.id === oid)) load(selectedChild?.id)
   })
 
   if (authLoading || isLoading) {
@@ -156,8 +192,8 @@ export default function StudentArea() {
           Área do aluno
         </h1>
         <p className="text-xs text-[#6B6560] mt-1">
-          Olá{data?.student?.name ? `, ${data.student.name}` : ''}! Aqui está um resumo da sua vida
-          na academia.
+          Olá{data?.student?.name ? `, ${data.student.name}` : ''}! Aqui está um resumo da vida{' '}
+          {data?.student?.name ? `de ${data.student.name}` : 'do aluno'} na academia.
         </p>
         {data?.currentBelt && (
           <div className="mt-3 flex items-center gap-2 flex-wrap">
@@ -170,6 +206,17 @@ export default function StudentArea() {
           </div>
         )}
       </div>
+
+      {/* Seletor de dependente: só aparece quando a conta tem 2+ alunos */}
+      {children.length > 1 && (
+        <div className="mb-6">
+          <ChildSwitcher
+            children={children}
+            selectedId={data?.student?.id ?? ''}
+            onSelect={handleSelectChild}
+          />
+        </div>
+      )}
 
       {/* Atalho para trocar a senha inicial por uma própria */}
       <div className="mb-6 bg-white rounded-2xl border border-[#C1272D]/25 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

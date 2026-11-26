@@ -12,8 +12,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { accessOptionsFor, studentsService } from '@/services/students'
-import { Loader2, Copy, Check, KeyRound } from 'lucide-react'
+import {
+  accessOptionsFor,
+  studentsService,
+  GuardianEmailInUseError,
+  linkStudentToExistingUser,
+} from '@/services/students'
+import { Loader2, Copy, Check, KeyRound, Users } from 'lucide-react'
 
 interface StudentAccessDialogProps {
   student: Student | null
@@ -27,6 +32,10 @@ interface StudentAccessDialogProps {
  * Gera a conta de acesso ao site — pelo e-mail do ALUNO (fluxo original) ou
  * pelo e-mail do RESPONSÁVEL (aluno menor de idade sem e-mail próprio).
  * A senha aparece uma única vez.
+ *
+ * Quando o e-mail do responsável JÁ tem conta (responsável com mais de um
+ * filho), em vez de erro oferece vincular esta ficha à conta existente — o
+ * responsável loga uma vez e alterna entre os filhos na área do aluno.
  */
 export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
   student,
@@ -36,7 +45,9 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
 }) => {
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
+  const [linking, setLinking] = useState(false)
   const [password, setPassword] = useState<string | null>(null)
+  const [linkedToExisting, setLinkedToExisting] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const accessEmail = student
@@ -49,6 +60,7 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
   const close = () => {
     setPassword(null)
     setCopied(false)
+    setLinkedToExisting(false)
     onOpenChange(false)
   }
 
@@ -62,7 +74,14 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
           : await studentsService.createAccess(student)
       onAccessCreated({ ...student, user: account.id })
       setPassword(initialPassword)
-    } catch (err: any) {
+      setLinkedToExisting(false)
+    } catch (err) {
+      if (err instanceof GuardianEmailInUseError) {
+        // E-mail do responsável já tem conta (ex.: de outro filho): pergunta
+        // antes de vincular — não cria conta duplicada nem falha.
+        setLinkedToExisting(true)
+        return
+      }
       console.error('Erro ao gerar acesso:', err)
       toast({
         title: 'Não foi possível gerar o acesso',
@@ -71,6 +90,29 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
       })
     } finally {
       setCreating(false)
+    }
+  }
+
+  const handleLinkExisting = async () => {
+    if (!student) return
+    setLinking(true)
+    try {
+      const account = await linkStudentToExistingUser(student, accessEmail)
+      onAccessCreated({ ...student, user: account.id })
+      toast({
+        title: 'Aluno vinculado à conta existente!',
+        description: `${student.name} agora aparece na mesma conta (${accessEmail}). O responsável alterna entre os filhos na área do aluno.`,
+      })
+      close()
+    } catch (err) {
+      console.error('Erro ao vincular à conta existente:', err)
+      toast({
+        title: 'Não foi possível vincular',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setLinking(false)
     }
   }
 
@@ -155,6 +197,48 @@ export const StudentAccessDialog: React.FC<StudentAccessDialogProps> = ({
                 className="w-full bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
               >
                 Entendi, copiei a senha
+              </Button>
+            </DialogFooter>
+          </>
+        ) : linkedToExisting && student ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="font-serif text-[#1C1B1A] flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#C1272D]" />
+                E-mail já tem conta
+              </DialogTitle>
+              <DialogDescription className="text-xs text-[#6B6560]">
+                O e-mail <strong>{accessEmail}</strong> já tem uma conta no site (provavelmente do{' '}
+                <strong>responsável</strong>, usada por outro filho). Deseja vincular{' '}
+                <strong>{student.name}</strong> a essa mesma conta? Assim, com um único login, o
+                responsável alterna entre os filhos na área do aluno.
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={close}
+                disabled={linking}
+                className="border-[#E8E0D5] text-xs"
+              >
+                Não, cancelar
+              </Button>
+              <Button
+                type="button"
+                disabled={linking}
+                onClick={handleLinkExisting}
+                className="bg-[#C1272D] hover:bg-[#A01E23] text-white text-xs font-semibold"
+              >
+                {linking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Vinculando...
+                  </>
+                ) : (
+                  'Sim, vincular este aluno'
+                )}
               </Button>
             </DialogFooter>
           </>
