@@ -21,6 +21,11 @@
 // Sem registro de configuração, usa o texto padrão inline (mesmo do fallback do
 // painel em src/services/appSettings.ts).
 //
+// REGRA DO MÊS SEGUINTE PAGO (definida pelo usuário): quem JÁ PAGOU a
+//   mensalidade do mês seguinte ao corrente quitou adiantado e não deve a do
+//   mês corrente — não é destinatário por ela (nem pela regra do dia 15, nem
+//   por pendência do PRÓPRIO mês corrente). Pendência de mês ANTERIOR continua
+//   contando.
 // REGRA DE "ATRASADO" (definida pelo usuário, v0.0.39) — MESMA do painel
 // (feeStanding/isPastFeeDay15 em src/services/monthlyFees.ts), sempre em
 // Brasília (UTC-3 fixo):
@@ -224,6 +229,15 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     ] = true
   }
 
+  // Regra do MÊS SEGUINTE PAGO: aluno que pagou o mês seguinte ao corrente não
+  // é inadimplente no corrente — nem pela regra do dia 15, nem por pendência
+  // do próprio mês corrente (mesma regra do painel, feeStanding).
+  var proximoMes = (function (b) {
+    var y = b.getUTCFullYear()
+    var m = b.getUTCMonth() + 1
+    return m === 12 ? y + 1 + '-01' : y + '-' + ('0' + (m + 1)).slice(-2)
+  })(nowB)
+
   var limite =
     new Date(nowB.getTime() + 3 * 60 * 60 * 1000 - 7 * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -250,11 +264,17 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     var feeParaMes = null
     var atrasada = null
 
+    var mesSeguintePago = !!pagosPorAlunoMes[studentId + '|' + proximoMes]
+
     // (a) pendência vencida: mês de referência MAIS RECENTE em atraso — mas
-    // NUNCA um mês que o aluno já PAGOU (lançamento pendente duplicado).
+    // NUNCA um mês que o aluno já PAGOU (lançamento pendente duplicado) e, se
+    // o mês seguinte está PAGO, a pendência do PRÓPRIO mês corrente também não
+    // conta (quitou adiantado; pendência de mês ANTERIOR segue contando).
     for (var j = 0; j < fees.length; j++) {
+      var refMes = fees[j].getString('reference_month')
       if (!estaAtrasada(fees[j])) continue
-      if (pagosPorAlunoMes[studentId + '|' + fees[j].getString('reference_month')]) continue
+      if (pagosPorAlunoMes[studentId + '|' + refMes]) continue
+      if (mesSeguintePago && refMes === mesAtual) continue
       atrasada = fees[j]
       break // ordenado por -reference_month: o primeiro já é o mais recente
     }
@@ -262,14 +282,18 @@ cronAdd('avisos_mensalidade_atrasada', '0 9 16 * *', () => {
     if (atrasada) {
       mesCobranca = atrasada.getString('reference_month')
       feeParaMes = atrasada
-    } else if (depoisDoDia15 && student.getBool('active')) {
+    } else if (
+      depoisDoDia15 &&
+      student.getBool('active') &&
+      !pagosPorAlunoMes[studentId + '|' + mesAtual] &&
+      !mesSeguintePago
+    ) {
       // (b) regra do dia 15: aluno ATIVO sem mensalidade PAGA do mês corrente —
       // vale mesmo sem nenhum lançamento para o mês. O conjunto pagosPorAlunoMes
-      // (montado acima, uma consulta só) decide. {mes} = mês CORRENTE.
-      if (!pagosPorAlunoMes[studentId + '|' + mesAtual]) {
-        mesCobranca = mesAtual
-        feeParaMes = null // sem row pendente: nada a marcar em last_notice_at
-      }
+      // (montado acima, uma consulta só) decide. Quem pagou o MÊS SEGUINTE não
+      // é destinatário. {mes} = mês CORRENTE.
+      mesCobranca = mesAtual
+      feeParaMes = null // sem row pendente: nada a marcar em last_notice_at
     }
 
     if (!mesCobranca) continue
@@ -671,6 +695,15 @@ routerAdd(
         ] = true
       }
 
+      // Regra do MÊS SEGUINTE PAGO (mesma do painel, feeStanding): quem pagou
+      // o mês seguinte ao corrente quitou adiantado — não é inadimplente no
+      // corrente (nem pelo dia 15, nem por pendência do próprio mês corrente).
+      var proximoMes = (function (b) {
+        var y = b.getUTCFullYear()
+        var m = b.getUTCMonth() + 1
+        return m === 12 ? y + 1 + '-01' : y + '-' + ('0' + (m + 1)).slice(-2)
+      })(nowB)
+
       // Alunos com ao menos UMA matrícula (class_students) — mesma regra do
       // painel (feeStanding): sem turma nenhuma, nunca é inadimplente.
       var matriculados = {}
@@ -691,11 +724,17 @@ routerAdd(
         var feeParaMes = null
         var atrasada = null
 
+        var mesSeguintePago = !!pagosPorAlunoMes[studentId + '|' + proximoMes]
+
         // (a) pendência vencida: mês MAIS RECENTE em atraso — mas NUNCA um mês
-        // que o aluno já PAGOU (lançamento pendente duplicado).
+        // que o aluno já PAGOU (lançamento pendente duplicado) e, se o mês
+        // seguinte está PAGO, a pendência do PRÓPRIO mês corrente também não
+        // conta (quitou adiantado; pendência de mês ANTERIOR segue contando).
         for (var j = 0; j < fees.length; j++) {
+          var refMes = fees[j].getString('reference_month')
           if (!estaAtrasada(fees[j])) continue
-          if (pagosPorAlunoMes[studentId + '|' + fees[j].getString('reference_month')]) continue
+          if (pagosPorAlunoMes[studentId + '|' + refMes]) continue
+          if (mesSeguintePago && refMes === mesAtual) continue
           atrasada = fees[j]
           break // ordenado por -reference_month: o primeiro já é o mais recente
         }
@@ -703,13 +742,17 @@ routerAdd(
         if (atrasada) {
           mesCobranca = atrasada.getString('reference_month')
           feeParaMes = atrasada
-        } else if (depoisDoDia15 && student.getBool('active')) {
+        } else if (
+          depoisDoDia15 &&
+          student.getBool('active') &&
+          !pagosPorAlunoMes[studentId + '|' + mesAtual] &&
+          !mesSeguintePago
+        ) {
           // (b) regra do dia 15: aluno ATIVO sem o mês corrente pago — vale mesmo
-          // sem lançamento para o mês. {mes} = mês CORRENTE.
-          if (!pagosPorAlunoMes[studentId + '|' + mesAtual]) {
-            mesCobranca = mesAtual
-            feeParaMes = null // sem row pendente: nada a marcar em last_notice_at
-          }
+          // sem lançamento para o mês. Quem pagou o MÊS SEGUINTE não é
+          // destinatário. {mes} = mês CORRENTE.
+          mesCobranca = mesAtual
+          feeParaMes = null // sem row pendente: nada a marcar em last_notice_at
         }
 
         if (!mesCobranca) continue

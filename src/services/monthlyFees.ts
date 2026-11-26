@@ -44,6 +44,16 @@ export function isPastFeeDay15(now: Date = new Date()): boolean {
   return b.getUTCDate() >= 15
 }
 
+/** Mês seguinte a um mês "YYYY-MM" (dezembro → janeiro do ano seguinte). */
+export function nextMonthKeyOf(month: string): string {
+  const [y, m] = (month || '').split('-').map(Number)
+  if (!y || !m) return ''
+  // Date normaliza mês 12 como janeiro do ano seguinte (mesmo truque de
+  // defaultDueDate).
+  const d = new Date(y, m, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 /**
  * Situação de um aluno a partir das mensalidades dele — MESMA regra do hook de
  * e-mail (fee_overdue_notice.js), sempre em Brasília:
@@ -52,6 +62,11 @@ export function isPastFeeDay15(now: Date = new Date()): boolean {
  *    "inadimplente" — mesmo sem nenhum lançamento para o mês (aqui o
  *    julgamento considera o conjunto de mensalidades do aluno, não uma row
  *    pendente). Antes do dia 15, o mês corrente vazio/pendente não conta;
+ *  - REGRA DO MÊS SEGUINTE PAGO (definida pelo usuário): quem JÁ PAGOU a
+ *    mensalidade do mês seguinte ao corrente quitou adiantado e não deve a do
+ *    mês corrente — não é "inadimplente" por ela (nem pela regra do dia 15,
+ *    nem por pendência do PRÓPRIO mês corrente). Pendência de mês ANTERIOR
+ *    continua contando;
  *  - mensalidade PENDENTE com mês de referência anterior ao atual OU (mês
  *    corrente com vencimento já passado) → "inadimplente", em qualquer dia;
  *  - sem lançamentos (e sem a regra do dia 15) → "sem_lancamentos" (neutro);
@@ -74,13 +89,18 @@ export function feeStanding(
   enrolled = true,
 ): FeeStanding {
   const month = monthKeyOf(now)
-  const hasOverdue = fees.some(
-    (f) => f.status === 'pendente' && (isOverdue(f, now) || f.reference_month < month),
+  const nextMonthPaid = fees.some(
+    (f) => f.reference_month === nextMonthKeyOf(month) && f.status === 'pago',
   )
+  const hasOverdue = fees.some((f) => {
+    if (f.status !== 'pendente') return false
+    if (f.reference_month === month) return isOverdue(f, now) && !nextMonthPaid
+    return f.reference_month < month
+  })
   if (enrolled) {
     if (hasOverdue) return 'inadimplente'
     const currentMonthPaid = fees.some((f) => f.reference_month === month && f.status === 'pago')
-    if (active && isPastFeeDay15(now) && !currentMonthPaid) return 'inadimplente'
+    if (active && isPastFeeDay15(now) && !currentMonthPaid && !nextMonthPaid) return 'inadimplente'
   }
   if (fees.length === 0) return 'sem_lancamentos'
   return 'em_dia'
