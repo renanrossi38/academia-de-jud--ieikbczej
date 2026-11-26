@@ -367,8 +367,8 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
     e.preventDefault()
     if (!form.name.trim()) {
       toast({
-        title: 'O nome é obrigatório',
-        description: 'Telefone, faixa e e-mail são opcionais.',
+        title: 'Informe o nome do aluno',
+        description: 'O nome é o único campo obrigatório — telefone, faixa e e-mail são opcionais.',
         variant: 'destructive',
       })
       return
@@ -398,11 +398,11 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
     setCreating(true)
     try {
       let student = await studentsService.createStudent({
-        name: form.name,
+        name: form.name.trim(),
         email: form.email,
         phone: form.phone,
         belt: (form.belt || undefined) as Belt | undefined,
-        address: form.address,
+        address: form.address.trim(),
         birth_date: form.birth_date,
         // Responsável só é enviado para menor de 18 anos (regra do dono);
         // para maior, nada de responsável sai no payload.
@@ -662,7 +662,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
     e.preventDefault()
     if (!student) return
     if (!form.name.trim()) {
-      toast({ title: 'O nome é obrigatório', variant: 'destructive' })
+      toast({ title: 'Informe o nome do aluno', variant: 'destructive' })
       return
     }
     const menor = responsavelVisivel(form.birth_date)
@@ -700,9 +700,9 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
         name: form.name.trim(),
         email: hasAccount ? student.email || '' : form.email.trim(),
         phone: form.phone.trim(),
-        belt: form.belt,
-        address: form.address.trim(),
-        birth_date: form.birth_date,
+        belt: form.belt || undefined,
+        address: form.address.trim() || undefined,
+        birth_date: form.birth_date || undefined,
         // Responsável: para menor, salva o que está no formulário; para maior,
         // NADA é enviado — dados de responsável gravados ficam intactos.
         ...(menor
