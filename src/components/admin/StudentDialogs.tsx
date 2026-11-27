@@ -448,7 +448,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
           description: 'Sua sessão expirou, entre novamente.',
           variant: 'destructive',
         })
-        window.location.assign('/login')
+        window.location.assign('/entrar')
         return
       }
       toast({
