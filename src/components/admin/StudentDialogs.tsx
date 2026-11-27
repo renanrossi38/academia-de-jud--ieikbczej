@@ -15,6 +15,12 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { studentsService, guardianPhoneError, friendlyStudentSaveError } from '@/services/students'
+import {
+  createStudentViaRoute,
+  isSessionError,
+  serverErrorMessage,
+  validateStudentInput,
+} from '@/services/studentsRoute'
 import { idadeDe } from '@/services/trialBookings'
 import { iniciaisDoNome } from '@/services/highlights'
 import { Loader2, X } from 'lucide-react'
@@ -39,6 +45,17 @@ const BELT_OPTIONS: { label: string; value: Belt }[] = BELT_ORDER.map((value) =>
   label: BELT_LABELS[value],
   value,
 }))
+
+/** Título do toast por campo com problema, na validação local do cadastro. */
+const FIRST_FIELD_TITLES: Record<string, string> = {
+  name: 'Informe o nome do aluno',
+  email: 'E-mail do aluno inválido',
+  phone: 'Telefone do aluno inválido',
+  belt: 'Faixa inválida',
+  birth_date: 'Data de nascimento inválida',
+  guardian_email: 'E-mail do responsável inválido',
+  guardian_phone: 'Telefone do responsável inválido',
+}
 
 export const beltLabel = (belt?: string) => BELT_LABELS[(belt || '') as Belt] || '—'
 
@@ -365,31 +382,27 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) {
-      toast({
-        title: 'Informe o nome do aluno',
-        description: 'O nome é o único campo obrigatório — telefone, faixa e e-mail são opcionais.',
-        variant: 'destructive',
-      })
-      return
-    }
     const menor = responsavelVisivel(form.birth_date)
-    // Telefone do aluno é opcional — mas, se preenchido, precisa ser válido
-    // (mesma regra do telefone do responsável).
-    const sPhoneErr = guardianPhoneError(form.phone)
-    if (sPhoneErr) {
-      toast({
-        title: 'Telefone do aluno inválido',
-        description: sPhoneErr,
-        variant: 'destructive',
-      })
-      return
+
+    // Validação local espelhada no servidor: o toast mostra campo e motivo —
+    // nunca um erro genérico.
+    const localErrors = validateStudentInput({
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      belt: form.belt || undefined,
+      birth_date: form.birth_date,
+      guardian_email: form.guardian_email,
+      ...(menor ? { guardian_phone: form.guardian_phone } : {}),
+    })
+    if (!menor && form.guardian_phone.trim() && guardianPhoneError(form.guardian_phone)) {
+      localErrors.guardian_phone = guardianPhoneError(form.guardian_phone) as string
     }
-    const gPhoneErr = menor ? guardianPhoneError(form.guardian_phone) : null
-    if (gPhoneErr) {
+    if (Object.keys(localErrors).length > 0) {
+      const first = Object.entries(localErrors)[0]
       toast({
-        title: 'Telefone do responsável inválido',
-        description: gPhoneErr,
+        title: FIRST_FIELD_TITLES[first[0]] || 'Falha ao cadastrar aluno',
+        description: first[1],
         variant: 'destructive',
       })
       return
@@ -397,12 +410,15 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
 
     setCreating(true)
     try {
-      let student = await studentsService.createStudent({
-        name: form.name.trim(),
+      // Criação pela ROTA PRÓPRIA do servidor (/backend/v1/students/create):
+      // valida o admin explicitamente (sessão fantasma vira 401 claro) e
+      // devolve erros reais POR CAMPO — nunca um 400 opaco.
+      let student = await createStudentViaRoute({
+        name: form.name,
         email: form.email,
         phone: form.phone,
         belt: (form.belt || undefined) as Belt | undefined,
-        address: form.address.trim(),
+        address: form.address,
         birth_date: form.birth_date,
         // Responsável só é enviado para menor de 18 anos (regra do dono);
         // para maior, nada de responsável sai no payload.
@@ -424,11 +440,20 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
         description: `${student.name} foi adicionado à academia.`,
       })
       resetAndClose()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao cadastrar aluno:', err)
+      if (isSessionError(err)) {
+        toast({
+          title: 'Sua sessão expirou',
+          description: 'Sua sessão expirou, entre novamente.',
+          variant: 'destructive',
+        })
+        window.location.assign('/login')
+        return
+      }
       toast({
         title: 'Falha ao cadastrar aluno',
-        description: friendlyStudentSaveError(err),
+        description: serverErrorMessage(err),
         variant: 'destructive',
       })
     } finally {

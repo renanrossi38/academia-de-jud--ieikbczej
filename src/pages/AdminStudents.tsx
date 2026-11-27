@@ -12,6 +12,7 @@ import {
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
 import { GuardianContactButtons } from '@/components/admin/GuardianContactButtons'
 import { accessOptionsFor, studentsService } from '@/services/students'
+import { isSessionError } from '@/services/studentsRoute'
 import { iniciaisDoNome } from '@/services/highlights'
 import pb from '@/lib/pocketbase/client'
 import React from 'react'
@@ -156,6 +157,18 @@ export default function AdminStudents() {
       setStudents(data.map((s) => (belts.get(s.id) ? { ...s, belt: belts.get(s.id)! } : s)))
     } catch (err) {
       console.error('Erro ao carregar alunos:', err)
+      if (isSessionError(err)) {
+        // Sessão fantasma: token morto no servidor. Limpa o authStore e manda
+        // para o login em vez de deixar o dono num painel que não salva nada.
+        pb.authStore.clear()
+        toast({
+          title: 'Sua sessão expirou',
+          description: 'Sua sessão expirou, entre novamente.',
+          variant: 'destructive',
+        })
+        navigate('/entrar?redirect=/painel/alunos')
+        return
+      }
       toast({
         title: 'Erro ao carregar alunos',
         description: 'Não foi possível buscar a lista de alunos no servidor.',
@@ -164,7 +177,7 @@ export default function AdminStudents() {
     } finally {
       setIsLoading(false)
     }
-  }, [toast])
+  }, [toast, navigate])
 
   useEffect(() => {
     if (authLoading) return
