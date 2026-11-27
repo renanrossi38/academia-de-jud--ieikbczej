@@ -310,6 +310,28 @@ routerAdd(
     // 2000 registros: resposta nunca cresce sem limite.
     var rows = $app.findRecordsByFilter('students', '', '-created', 2000, 0)
 
+    // user_email por users.id: o painel usa para saber quando o e-mail do
+    // responsável JÁ TEM conta mas a ficha do aluno ainda não está vinculada
+    // (caso Tatiane/Isabelly: a responsável também é aluna) e oferecer
+    // "Vincular à conta do responsável" sem N buscas no front.
+    var userEmailById = {}
+    var userOfId = function (userId) {
+      if (!userId) return null
+      if (userEmailById[userId] !== undefined) return userEmailById[userId]
+      var info = null
+      try {
+        var ur = $app.findRecordById('users', userId)
+        info = {
+          email: String(ur.getString('email') || ''),
+          role: String(ur.getString('role') || ''),
+        }
+      } catch (_) {
+        info = null // conta apagada: mantém o aluno sem expansão
+      }
+      userEmailById[userId] = info
+      return info
+    }
+
     // Contas de acesso referenciadas: uma busca única em vez de N.
     var usersCache = {}
     var userOf = function (userId) {
