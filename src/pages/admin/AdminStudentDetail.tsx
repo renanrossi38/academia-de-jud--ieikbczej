@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { AdminPageHeader, AdminPageLoader, AdminSummary } from '@/components/admin/AdminPage'
 import { EditStudentDialog } from '@/components/admin/StudentDialogs'
+import { LinkGuardianAction } from '@/components/admin/LinkGuardianAction'
 import { attendanceService } from '@/services/attendance'
 import { classesService } from '@/services/classes'
 import { rankingService } from '@/services/ranking'
@@ -172,16 +173,27 @@ export default function AdminStudentDetail() {
         breadcrumbTo={`/painel/alunos/${student.id}`}
         description="Dados pessoais, frequência, competições e compras deste aluno."
         action={
-          student.user ? (
-            <Badge className="bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20 text-[10px] font-bold gap-1">
-              <KeyRound className="w-3 h-3" />
-              Com acesso ao site
-            </Badge>
-          ) : (
-            <Badge className="bg-[#FAF6F0] text-[#6B6560] border-[#E8E0D5] text-[10px] font-bold">
-              Sem conta de acesso
-            </Badge>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            {student.user ? (
+              <Badge className="bg-[#E8F5E9] text-[#2E7D4F] border-[#2E7D4F]/20 text-[10px] font-bold gap-1">
+                <KeyRound className="w-3 h-3" />
+                Com acesso ao site
+              </Badge>
+            ) : (
+              <Badge className="bg-[#FAF6F0] text-[#6B6560] border-[#E8E0D5] text-[10px] font-bold">
+                Sem conta de acesso
+              </Badge>
+            )}
+            {/* Órfão (sem conta, mas com e-mail do responsável): vincula à
+                conta que o e-mail já tem, sem criar segunda (caso Tatiane). */}
+            {!student.user && !!student.guardian_email?.trim() && (
+              <LinkGuardianAction
+                student={student}
+                label="Vincular à conta existente do responsável"
+                onLinked={(updated) => setStudent(updated)}
+              />
+            )}
+          </div>
         }
       />
 

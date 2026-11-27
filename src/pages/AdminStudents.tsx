@@ -10,6 +10,7 @@ import {
   birthDateLabel,
 } from '@/components/admin/StudentDialogs'
 import { StudentAccessDialog } from '@/components/admin/StudentAccessDialog'
+import { LinkGuardianAction } from '@/components/admin/LinkGuardianAction'
 import { GuardianContactButtons } from '@/components/admin/GuardianContactButtons'
 import { accessOptionsFor, studentsService } from '@/services/students'
 import { isSessionError } from '@/services/studentsRoute'
@@ -971,6 +972,15 @@ export default function AdminStudents() {
                               Sem e-mail p/ acesso
                             </span>
                           )}
+                          {/* Órfão (sem conta, mas com e-mail do responsável):
+                              vincula a ficha à conta que o e-mail JÁ tem,
+                              sem criar conta duplicada (caso Tatiane/Isabelly). */}
+                          {!student.user && !!student.guardian_email?.trim() && (
+                            <LinkGuardianAction
+                              student={student}
+                              onLinked={(updated) => setStudents((prev) => upsert(prev, updated))}
+                            />
+                          )}
                           <button
                             onClick={() => handleToggleActive(student)}
                             disabled={togglingId === student.id}
@@ -1159,6 +1169,15 @@ export default function AdminStudents() {
                         >
                           Sem e-mail p/ acesso
                         </span>
+                      )}
+                      {/* Órfão (sem conta, mas com e-mail do responsável):
+                          vincula à conta existente — caso Tatiane/Isabelly. */}
+                      {!student.user && !!student.guardian_email?.trim() && (
+                        <LinkGuardianAction
+                          student={student}
+                          label="Vincular ao responsável"
+                          onLinked={(updated) => setStudents((prev) => upsert(prev, updated))}
+                        />
                       )}
                       <button
                         onClick={() => handleToggleActive(student)}

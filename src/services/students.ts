@@ -194,20 +194,19 @@ export async function createAccess(
   }
 
   const email = student.email.trim()
-  // Consulta ANTES de criar: o e-mail do responsável pode JÁ ter conta (de
-  // outro filho, ou o próprio responsável também é aluno — caso Tatiane). Nesse
-  // caso NÃO tenta criar (daria "not unique"): sinaliza o diálogo para oferecer
-  // vincular à conta existente — mesmo comportamento do fluxo antigo, agora
-  // detectado antes da tentativa.
+  // Consulta ANTES de criar (rota /backend/v1/students/lookup-user): o e-mail
+  // pode JÁ ter conta (outro aluno, ou o próprio responsável também é aluno —
+  // caso Tatiane). Nesse caso NÃO tenta criar (daria "not unique"): sinaliza o
+  // diálogo para oferecer vincular à conta existente.
   let existing: Awaited<ReturnType<typeof lookupUserByEmail>> | null = null
   try {
-    existing = await lookupUserByEmail(guardianEmail)
+    existing = await lookupUserByEmail(email)
   } catch {
     // Lookup indisponível: segue o fluxo antigo (create falha com not unique →
     // GuardianEmailInUseError).
   }
   if (existing?.found) {
-    throw new GuardianEmailInUseError(guardianEmail)
+    throw new GuardianEmailInUseError(email)
   }
 
   const initialPassword = generateInitialPassword()
@@ -274,6 +273,19 @@ export async function createGuardianAccess(
   }
   if (student.user) {
     throw new Error('Este aluno já possui acesso ao site.')
+  }
+
+  // Consulta ANTES de criar (lookup-user): se o e-mail do responsável JÁ tem
+  // conta (responsável com mais de um filho, ou o responsável também é aluno —
+  // caso Tatiane/Isabelly), NÃO cria duplicada: sinaliza o diálogo para
+  // oferecer vincular esta ficha à conta existente.
+  try {
+    const existing = await lookupUserByEmail(guardianEmail)
+    if (existing.found) throw new GuardianEmailInUseError(guardianEmail)
+  } catch (lookupErr) {
+    if (lookupErr instanceof GuardianEmailInUseError) throw lookupErr
+    // Lookup indisponível: segue o fluxo antigo (create falha com not unique →
+    // GuardianEmailInUseError no catch abaixo).
   }
 
   const initialPassword = generateInitialPassword()
