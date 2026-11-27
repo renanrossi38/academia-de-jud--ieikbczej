@@ -2,6 +2,7 @@ import pb from '@/lib/pocketbase/client'
 import { Belt, Student, User } from '@/types'
 import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { extractServerError, isSessionError, serverErrorMessage } from '@/services/studentsErrors'
+import { linkStudentViaRoute, lookupUserByEmail } from '@/services/studentsRoute'
 
 export interface CreateStudentInput {
   name: string
@@ -193,6 +194,22 @@ export async function createAccess(
   }
 
   const email = student.email.trim()
+  // Consulta ANTES de criar: o e-mail do responsável pode JÁ ter conta (de
+  // outro filho, ou o próprio responsável também é aluno — caso Tatiane). Nesse
+  // caso NÃO tenta criar (daria "not unique"): sinaliza o diálogo para oferecer
+  // vincular à conta existente — mesmo comportamento do fluxo antigo, agora
+  // detectado antes da tentativa.
+  let existing: Awaited<ReturnType<typeof lookupUserByEmail>> | null = null
+  try {
+    existing = await lookupUserByEmail(guardianEmail)
+  } catch {
+    // Lookup indisponível: segue o fluxo antigo (create falha com not unique →
+    // GuardianEmailInUseError).
+  }
+  if (existing?.found) {
+    throw new GuardianEmailInUseError(guardianEmail)
+  }
+
   const initialPassword = generateInitialPassword()
 
   let account: User
@@ -306,24 +323,18 @@ export async function createGuardianAccess(
 /**
  * Vincula a ficha do aluno a uma conta existente do responsável (mesmo e-mail
  * usado por outro filho): students.user = conta.id, sem criar segunda conta.
- * Retorna a conta vinculada para o painel atualizar a listagem.
+ * Usa a ROTA PRÓPRIA do servidor (/backend/v1/students/link) — o update direto
+ * em students era recusado pela regra de API (mesma família de falha já
+ * resolvida em create/list/delete). Retorna a conta vinculada para o painel
+ * atualizar a listagem.
  */
 export async function linkStudentToExistingUser(student: Student, email: string): Promise<User> {
-  const target = email.trim().toLowerCase()
-  const res = await pb.collection('users').getList<User>(1, 1, {
-    filter: `email = "${target}"`,
-  })
-  const account = res.items[0]
-  if (!account) {
-    throw new Error('Não encontramos uma conta com esse e-mail. Gere um acesso novo.')
-  }
   try {
-    await pb.collection('students').update(student.id, { user: account.id })
+    return await linkStudentViaRoute(student.id, email)
   } catch (err) {
-    console.error('Falha ao vincular student.user (conta existente):', err)
-    throw new Error('Não foi possível vincular este aluno à conta existente. Tente novamente.')
+    if (isSessionError(err)) throw err
+    throw new Error(serverErrorMessage(err))
   }
-  return account
 }
 
 /** Mensagens claras para a criação da conta do responsável. */

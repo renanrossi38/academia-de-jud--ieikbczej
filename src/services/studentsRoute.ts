@@ -1,6 +1,6 @@
-import { ClientResponseError } from 'pocketbase'
 import pb from '@/lib/pocketbase/client'
 import type { Student } from '@/types'
+import type { User } from '@/types'
 import type { CreateStudentInput } from '@/services/students'
 import {
   extractServerError,
@@ -13,6 +13,58 @@ import {
 
 export { extractServerError, isSessionError, serverErrorMessage, validateStudentInput, isValidBelt }
 export type { FieldErrorsMap }
+
+/** Conta users existente para um e-mail (via rota própria lookup-user).
+ *  found=false → pode criar conta nova; found=true → vinculável. */
+export interface LookupUserResult {
+  found: boolean
+  account?: { id: string; name: string; email: string; role: string; is_owner: boolean }
+  linkedStudents?: { id: string; name: string }[]
+}
+
+/** Consulta se o e-mail já tem conta no site (rota /backend/v1/students/
+ * lookup-user, validação de admin igual às demais). */
+export async function lookupUserByEmail(email: string): Promise<LookupUserResult> {
+  const target = email.trim().toLowerCase()
+  if (!target) return { found: false }
+  try {
+    return await pb.send<LookupUserResult>(
+      '/backend/v1/students/lookup-user?email=' + encodeURIComponent(target),
+      { method: 'GET' },
+    )
+  } catch (error) {
+    if (isSessionError(error)) {
+      pb.authStore.clear()
+    }
+    throw error
+  }
+}
+
+/** Vincula a ficha do aluno a uma conta users existente via ROTA PRÓPRIA
+ *  (/backend/v1/students/link) — o update direto em students recusava pelo
+ *  mesmo motivo de create/list/delete (falha de API rule com o registro lá). */
+export async function linkStudentViaRoute(studentId: string, email: string): Promise<User> {
+  try {
+    const res = await pb.send<{ student: { id: string; name: string; user: string } }>(
+      '/backend/v1/students/link',
+      { method: 'POST', body: { student_id: studentId, email: email.trim().toLowerCase() } },
+    )
+    // O front espera uma User — monta a partir da resposta da rota + lookup.
+    const lk = await lookupUserByEmail(email)
+    return {
+      id: res.student.user,
+      email: email.trim().toLowerCase(),
+      name: lk.account?.name || '',
+      role: lk.account?.role || 'aluno',
+      is_owner: lk.account?.is_owner || false,
+    } as User
+  } catch (error) {
+    if (isSessionError(error)) {
+      pb.authStore.clear()
+    }
+    throw error
+  }
+}
 
 /**
  * Criação de aluno pela ROTA PRÓPRIA do servidor (/backend/v1/students/create).

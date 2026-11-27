@@ -310,28 +310,6 @@ routerAdd(
     // 2000 registros: resposta nunca cresce sem limite.
     var rows = $app.findRecordsByFilter('students', '', '-created', 2000, 0)
 
-    // user_email por users.id: o painel usa para saber quando o e-mail do
-    // responsável JÁ TEM conta mas a ficha do aluno ainda não está vinculada
-    // (caso Tatiane/Isabelly: a responsável também é aluna) e oferecer
-    // "Vincular à conta do responsável" sem N buscas no front.
-    var userEmailById = {}
-    var userOfId = function (userId) {
-      if (!userId) return null
-      if (userEmailById[userId] !== undefined) return userEmailById[userId]
-      var info = null
-      try {
-        var ur = $app.findRecordById('users', userId)
-        info = {
-          email: String(ur.getString('email') || ''),
-          role: String(ur.getString('role') || ''),
-        }
-      } catch (_) {
-        info = null // conta apagada: mantém o aluno sem expansão
-      }
-      userEmailById[userId] = info
-      return info
-    }
-
     // Contas de acesso referenciadas: uma busca única em vez de N.
     var usersCache = {}
     var userOf = function (userId) {
@@ -356,6 +334,23 @@ routerAdd(
       }
       usersCache[userId] = u
       return u
+    }
+
+    // E-mails de responsável que já têm conta users (cache por e-mail): a
+    // listagem usa para oferecer "Vincular à conta existente do responsável"
+    // quando a ficha tem guardian_email mas user vazio (caso Tatiane/Isabelly).
+    var emailAccountCache = {}
+    var accountByEmail = function (email) {
+      if (!email) return null
+      if (emailAccountCache[email] !== undefined) return emailAccountCache[email]
+      var acc = null
+      try {
+        acc = $app.findFirstRecordByFilter('users', 'email = {:email}', { email: email })
+      } catch (_) {
+        acc = null
+      }
+      emailAccountCache[email] = acc || null
+      return acc
     }
 
     var students = []
@@ -384,6 +379,13 @@ routerAdd(
       }
       var u = userOf(userId)
       if (u) item.expand = { user: u }
+      // E-mail do responsável com conta users já existente e ficha sem vínculo:
+      // marca a linha para o painel oferecer o link direto (sem criar conta).
+      var gEmail = item.guardian_email.trim().toLowerCase()
+      if (item.user === '' && gEmail !== '') {
+        var gAcc = accountByEmail(gEmail)
+        if (gAcc) item.guardian_account = { id: gAcc.id, email: gEmail }
+      }
       students.push(item)
     }
 
@@ -496,6 +498,304 @@ routerAdd(
         (linkedUser || 'nenhuma'),
     )
     return e.json(200, { ok: true, id: qid })
+  },
+  $apis.requireAuth(),
+)
+
+/**
+ * GET /backend/v1/students/lookup-user?email=... — o e-mail já tem conta? (v0.0.177)
+ *
+ * Usado pelo painel ANTES de criar uma conta de acesso: quando o e-mail do
+ * responsável já tem conta (responsável com mais de um filho, ou o próprio
+ * responsável também é aluno — caso Tatiane/Isabelly), o painel oferece
+ * VINCULAR a ficha à conta existente em vez de criar conta duplicada.
+ *
+ * Resposta:
+ *   { found: false }                             — pode criar conta nova
+ *   { found: true, account: {...}, linkedStudents: [...] } — conta existente;
+ *     linkedStudents traz as fichas de alunos já apontando para ela (o texto
+ *     do diálogo distingue "outro aluno" de "nenhum aluno vinculado").
+ */
+routerAdd(
+  'GET',
+  '/backend/v1/students/lookup-user',
+  (e) => {
+    // ---- Declarações inline (JSVM não enxerga o escopo do módulo) ----
+    var hasAlunosAccess = function (admin) {
+      if (admin.getBool('is_owner')) return true
+      var list = []
+      try {
+        var perms = admin.get('admin_permissions')
+        if (Array.isArray(perms)) {
+          list = perms
+        } else if (typeof perms === 'string' && perms !== '') {
+          list = perms.split(',')
+        }
+      } catch (_) {
+        list = []
+      }
+      if (list.length === 0) return true
+      for (var p = 0; p < list.length; p++) {
+        if (String(list[p]).trim() === 'alunos') return true
+      }
+      return false
+    }
+
+    var admin = e.auth
+    if (!admin || admin.id === '') {
+      throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
+    }
+    if (admin.getString('role') !== 'admin' && !admin.getBool('is_owner')) {
+      throw new ForbiddenError('Sua conta não tem permissão para consultar contas de acesso.')
+    }
+    if (!hasAlunosAccess(admin)) {
+      throw new ForbiddenError('Sua conta não tem permissão para consultar contas de acesso.')
+    }
+
+    var email = ''
+    try {
+      var q = e.requestInfo().query
+      if (q && typeof q === 'object' && q.email !== undefined && q.email !== null) {
+        email = String(q.email).trim().toLowerCase()
+      }
+    } catch (_) {
+      email = ''
+    }
+    var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (email === '' || email.length > 200 || !emailRe.test(email)) {
+      throw new BadRequestError('Informe um e-mail válido para consultar.')
+    }
+
+    var account = null
+    try {
+      account = $app.findFirstRecordByFilter('users', 'email = {:email}', { email: email })
+    } catch (_) {
+      account = null // sem conta com este e-mail
+    }
+    if (!account) {
+      console.log('[students_lookup] admin=' + admin.id + ' email=*** sem conta')
+      return e.json(200, { found: false })
+    }
+
+    // Fichas de alunos já vinculadas a esta conta — o diálogo diferencia
+    // "esta conta já gerencia outro aluno" de "nenhum aluno vinculado ainda".
+    var linked = $app.findRecordsByFilter('students', 'user = {:uid}', '-created', 100, 0, {
+      uid: account.id,
+    })
+    var linkedStudents = []
+    for (var i = 0; i < linked.length; i++) {
+      linkedStudents.push({
+        id: linked[i].id,
+        name: linked[i].getString('name'),
+      })
+    }
+
+    console.log(
+      '[students_lookup] admin=' +
+        admin.id +
+        ' conta=' +
+        account.id +
+        ' alunos_vinculados=' +
+        linkedStudents.length,
+    )
+    return e.json(200, {
+      found: true,
+      account: {
+        id: account.id,
+        name: account.getString('name'),
+        email: account.getString('email'),
+        role: account.getString('role'),
+        is_owner: account.getBool('is_owner'),
+      },
+      linkedStudents: linkedStudents,
+    })
+  },
+  $apis.requireAuth(),
+)
+
+/**
+ * POST /backend/v1/students/link — VINCULA a ficha de um aluno a uma conta
+ * de usuário existente (v0.0.177).
+ *
+ * Por quê: o linkStudentToExistingUser do front gravava students.user com o
+ * PATCH padrão da collection, que as API rules podem recusar ao dono (mesma
+ * família de falha já resolvida em create/list/delete com rotas próprias).
+ * Caso real: Tatiane (tatizinha40@gmail.com) gera acesso pelo e-mail dela —
+ * a ficha da Isabelly fica com guardian_email preenchido e user vazio, e
+ * ninguém consegue vincular pelo painel.
+ *
+ * O que faz:
+ *   1. Valida o admin EXPLICITAMENTE (requireAuth + role/is_owner + permissão
+ *      granular 'alunos') — não depende da updateRule da collection.
+ *   2. Recebe student_id + email (string, truncados, validados) e resolve a
+ *      conta users pelo e-mail — erro em português por campo quando não acha.
+ *   3. Grava students.user via $app.save (dispara os hooks da collection,
+ *      incluindo o students_sanitize).
+ */
+routerAdd(
+  'POST',
+  '/backend/v1/students/link',
+  (e) => {
+    // ---- Declarações inline (JSVM não enxerga o escopo do módulo) ----
+    var ID_RE = /^[A-Za-z0-9]{15,}$/
+    var EMAIL_CAP = 200
+    var BODY_MAX_CHARS = 512
+    var hasAlunosAccess = function (admin) {
+      if (admin.getBool('is_owner')) return true
+      var list = []
+      try {
+        var perms = admin.get('admin_permissions')
+        if (Array.isArray(perms)) {
+          list = perms
+        } else if (typeof perms === 'string' && perms !== '') {
+          list = perms.split(',')
+        }
+      } catch (_) {
+        list = []
+      }
+      if (list.length === 0) return true
+      for (var p = 0; p < list.length; p++) {
+        if (String(list[p]).trim() === 'alunos') return true
+      }
+      return false
+    }
+
+    var admin = e.auth
+    if (!admin || admin.id === '') {
+      throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
+    }
+    if (admin.getString('role') !== 'admin' && !admin.getBool('is_owner')) {
+      throw new ForbiddenError('Sua conta não tem permissão para vincular alunos.')
+    }
+    if (!hasAlunosAccess(admin)) {
+      throw new ForbiddenError('Sua conta não tem permissão para vincular alunos.')
+    }
+
+    var body = {}
+    try {
+      var raw = e.requestInfo().body
+      if (raw && typeof raw === 'object') body = raw
+    } catch (_) {
+      body = {}
+    }
+    var rawLen = 0
+    try {
+      rawLen = String(JSON.stringify(body)).length
+    } catch (_) {
+      rawLen = BODY_MAX_CHARS + 1
+    }
+    if (rawLen > BODY_MAX_CHARS) {
+      throw new BadRequestError('Dados enviados são grandes demais.')
+    }
+
+    var studentId = ''
+    var email = ''
+    if (
+      body.student_id !== undefined &&
+      body.student_id !== null &&
+      typeof body.student_id === 'string'
+    ) {
+      studentId = body.student_id.trim()
+    }
+    if (body.email !== undefined && body.email !== null && typeof body.email === 'string') {
+      email = body.email.trim().toLowerCase()
+    }
+
+    // Mensagem de erro por campo no MESMO formato que o front já lê da rota
+    // create ({status, message, data: {campo: msg}} — via e.json, não via
+    // throw, que não carrega o objeto data).
+    var errOut = function (status, message, data) {
+      e.json(status, { status: status, message: message, data: data || {} })
+    }
+
+    var fieldErrors = {}
+    if (studentId === '') {
+      fieldErrors.student_id = 'Aluno não informado.'
+    } else if (!ID_RE.test(studentId)) {
+      fieldErrors.student_id = 'Identificador do aluno inválido.'
+    }
+    if (email === '') {
+      fieldErrors.email = 'Informe o e-mail do responsável.'
+    } else if (email.length > EMAIL_CAP) {
+      fieldErrors.email = 'E-mail grande demais — confira o valor informado.'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      fieldErrors.email = 'Informe um e-mail válido — ex.: responsavel@email.com.'
+    }
+    if (Object.keys(fieldErrors).length > 0) {
+      errOut(400, 'Revise os campos destacados.', fieldErrors)
+      return
+    }
+
+    // 1. A ficha precisa existir.
+    var student
+    try {
+      student = $app.findRecordById('students', studentId)
+    } catch (_) {
+      student = null
+    }
+    // 400 (e não 404): o front trata 404 como sessão fantasma e deslogaria o
+    // admin — falha de dados volta sempre como erro de campo em português.
+    if (!student) {
+      errOut(400, 'Revise os campos destacados.', {
+        student_id: 'Aluno não encontrado — a ficha pode ter sido excluída.',
+      })
+      return
+    }
+
+    // 2. A conta users precisa existir com este e-mail.
+    var account = null
+    try {
+      account = $app.findFirstRecordByFilter('users', 'email = {:email}', { email: email })
+    } catch (_) {
+      account = null
+    }
+    if (!account) {
+      errOut(400, 'Revise os campos destacados.', {
+        email:
+          'Nenhuma conta encontrada com este e-mail — confira se está escrito igual ao do login do responsável.',
+      })
+      return
+    }
+
+    // 3. Grava o vínculo (multi-filhos: índice não-unique, migration 0049 —
+    // a mesma conta pode gerenciar várias fichas).
+    try {
+      student.set('user', account.id)
+      $app.save(student)
+    } catch (saveErr) {
+      console.log('[students_link] save falhou: ' + String(saveErr))
+      throw new BadRequestError('O servidor não conseguiu gravar o vínculo. Tente novamente.')
+    }
+
+    console.log(
+      '[students_link] admin=' +
+        admin.id +
+        ' aluno=' +
+        studentId +
+        ' (' +
+        String(student.getString('name') || '') +
+        ') vinculado à conta=' +
+        account.id +
+        ' alunos_na_conta=' +
+        String(
+          $app.findRecordsByFilter('students', 'user = {:uid}', '', 100, 0, {
+            uid: account.id,
+          }).length,
+        ),
+    )
+    return e.json(200, {
+      ok: true,
+      student: {
+        id: student.id,
+        name: student.getString('name'),
+        user: account.id,
+      },
+      account: {
+        id: account.id,
+        email: account.getString('email'),
+        name: account.getString('name'),
+      },
+    })
   },
   $apis.requireAuth(),
 )
