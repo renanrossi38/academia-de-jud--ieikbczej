@@ -360,6 +360,10 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [creating, setCreating] = useState(false)
   const [photoPreview, setPhotoPreview] = useState('')
+  // Trava anti-duplicação: um duplo clique no botão "Cadastrar Aluno" dispara
+  // dois submits antes do re-render desabilitar o botão (o estado `creating`
+  // só é aplicado depois do paint). A ref bloqueia o segundo envio na hora.
+  const submittingRef = useRef(false)
   const guardianPhoneErr = responsavelVisivel(form.birth_date)
     ? guardianPhoneError(form.guardian_phone)
     : null
@@ -382,6 +386,10 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Duplo clique (ou Enter repetido) enquanto o envio anterior está em
+    // curso: ignora — não valida nem cria de novo.
+    if (submittingRef.current) return
+    submittingRef.current = true
     const menor = responsavelVisivel(form.birth_date)
 
     // Validação local espelhada no servidor: o toast mostra campo e motivo —
@@ -457,6 +465,7 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
         variant: 'destructive',
       })
     } finally {
+      submittingRef.current = false
       setCreating(false)
     }
   }
@@ -642,6 +651,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
   const [form, setForm] = useState<StudentFormState>(emptyForm)
   const [active, setActive] = useState(true)
   const [saving, setSaving] = useState(false)
+  // Mesma trava do cadastro: duplo clique em "Salvar" não reenvia o update.
+  const submittingRef = useRef(false)
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [photoRemoval, setPhotoRemoval] = useState(false)
@@ -719,6 +730,8 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
       return
     }
 
+    if (submittingRef.current) return
+    submittingRef.current = true
     setSaving(true)
     try {
       const updated = await studentsService.updateStudent(student.id, {
@@ -759,6 +772,7 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
         variant: 'destructive',
       })
     } finally {
+      submittingRef.current = false
       setSaving(false)
     }
   }

@@ -1,6 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import { Belt, Student, User } from '@/types'
 import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
+import { extractServerError } from '@/services/studentsErrors'
 
 export interface CreateStudentInput {
   name: string
@@ -345,7 +346,22 @@ export const studentsService = {
   /** Todos os alunos cadastrados (com ou sem conta de acesso), com a conta
    * expandida para o painel saber o cargo (role/is_owner) do usuário. */
   async listStudents(): Promise<Student[]> {
-    return pb.collection('students').getFullList<Student>({
+    // Fonte principal: a LISTA PRÓPRIA do backend (/backend/v1/students/list),
+    // que devolve TODOS os alunos gravados — correção do bug "só aparece o
+    // aluno com status de admin". A rota valida o admin pela MESMA sessão do
+    // dono; como a regra de API de students já permite a ele, é equivalente à
+    // busca padrão em condições normais.
+    try {
+      const list = await pb.send<{ students: Student[] }>('/backend/v1/students/list', {
+        method: 'GET',
+      })
+      if (Array.isArray(list?.students)) return list.students
+    } catch (err) {
+      console.warn('[listStudents] rota própria indisponível, usando busca padrão:', err)
+    }
+    // Fallback: busca padrão do SDK (regra de API de students) — mantida para
+    // os demais painéis que compartilham este serviço.
+    return await pb.collection('students').getFullList<Student>({
       sort: '-created',
       expand: 'user',
     })

@@ -146,3 +146,92 @@ routerAdd(
   },
   $apis.requireAuth(),
 )
+
+/**
+ * GET /backend/v1/students/list — LISTAGEM completa de alunos (v0.0.172).
+ *
+ * Por quê: o dono reportou que a aba de alunos só exibia o aluno vinculado à
+ * própria conta de admin ("só ficou o aluno com status de admin"), apesar dos
+ * registros existirem no banco. A rota devolve TODOS os alunos gravados
+ * (ordenados por criação, mais novos primeiro) com a conta de acesso expandida
+ * (nome, cargo e dono) — a mesma forma que o painel já consumia.
+ *
+ * A rota NÃO substitui a regra de listagem da collection (que continua
+ * correta); é um caminho estável para o painel, com autenticação e papel do
+ * admin validados explicitamente — igual à rota de criação acima.
+ */
+routerAdd(
+  'GET',
+  '/backend/v1/students/list',
+  (e) => {
+    const admin = e.auth
+    if (!admin || admin.id === '') {
+      throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
+    }
+    if (admin.getString('role') !== 'admin' && !admin.getBool('is_owner')) {
+      throw new ForbiddenError('Sua conta não tem permissão para ver a lista de alunos.')
+    }
+
+    // findRecordsByFilter (countRecordsByFilter não existe na JSVM).
+    const rows = $app.findRecordsByFilter('students', '', '-created', 0, 0)
+
+    // Contas de acesso referenciadas: uma busca única em vez de N.
+    const usersCache = {}
+    const userOf = (userId) => {
+      if (!userId) return null
+      if (usersCache[userId] !== undefined) return usersCache[userId]
+      let u = null
+      try {
+        const rec = $app.findRecordById('users', userId)
+        u = {
+          id: rec.id,
+          collectionId: rec.collection().id,
+          collectionName: 'users',
+          name: rec.getString('name'),
+          email: rec.getString('email'),
+          role: rec.getString('role'),
+          is_owner: rec.getBool('is_owner'),
+          avatar: rec.getString('avatar'),
+        }
+      } catch (_) {
+        // Conta apagada: mantém o aluno, sem expansão.
+        u = null
+      }
+      usersCache[userId] = u
+      return u
+    }
+
+    const students = []
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i]
+      const userId = r.getString('user')
+      const item = {
+        id: r.id,
+        collectionId: r.collection().id,
+        collectionName: 'students',
+        name: r.getString('name'),
+        phone: r.getString('phone'),
+        belt: r.getString('belt'),
+        email: r.getString('email'),
+        active: r.getBool('active'),
+        user: userId,
+        address: r.getString('address'),
+        birth_date: r.getString('birth_date'),
+        guardian_name: r.getString('guardian_name'),
+        guardian_phone: r.getString('guardian_phone'),
+        guardian_email: r.getString('guardian_email'),
+        photo: r.getString('photo'),
+        created: r.getString('created'),
+        updated: r.getString('updated'),
+        expand: {},
+      }
+      const u = userOf(userId)
+      if (u) item.expand = { user: u }
+      students.push(item)
+    }
+
+    console.log('[students_list] admin=' + admin.id + ' alunos=' + students.length)
+    return e.json(200, { students: students })
+  },
+  $apis.requireAuth(),
+)
