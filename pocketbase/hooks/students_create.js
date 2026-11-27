@@ -27,76 +27,82 @@
  *     só é apagada pelo delete_student_user, que preserva dono/admin e contas
  *     compartilhadas com outro aluno.
  *
+ * PERMISSÃO GRANULAR (v0.0.176): as três rotas espelham a regra de API da
+ * collection students — dono (is_owner) sempre passa; admin secundário com
+ * admin_permissions VAZIA tem acesso total (compatibilidade); com a lista
+ * preenchida, só quem tem 'alunos' nela. Sem isso, um admin restrito a outras
+ * áreas (ex.: só produtos) conseguiria criar/listar/excluir alunos por aqui,
+ * contornando a regra da API padrão.
+ *
+ * RESTRIÇÃO DA JSVM (limitação conhecida deste backend, v. admin_roles.js):
+ * callbacks de rota NÃO enxergam declarações de nível superior do arquivo —
+ * o servidor recusa o carregamento do hook. CAP, ID_RE, pickStr e
+ * hasAlunosAccess são repetidos INLINE dentro de cada callback abaixo.
+ *
  * O hook students_sanitize (v0.0.167) continua ativo como segunda camada para
  * o fluxo padrão da collection; estas rotas são o caminho do painel.
  */
 
-// Limites de tamanho por campo (o schema tem max 200; aqui truncamos ANTES,
-// para strings enormes não chegarem ao banco nem ao log).
-var CAP = {
-  name: 120,
-  phone: 30,
-  email: 200,
-  address: 300,
-  guardian_name: 120,
-  guardian_phone: 30,
-  guardian_email: 200,
-  belt: 32,
-  birth_date: 10,
-}
-
-// Limite bruto do body: um payload legítimo de aluno é minúsculo (< 1 KB).
-var BODY_MAX_CHARS = 4096
-
-// Valida e normaliza uma string do body: só string é aceita (números, objetos
-// e arrays viram inválido), espaços das pontas removidos, tamanho limitado.
-// null quando o campo não veio (undefined/null) — difere de '' (veio vazio).
-var pickStr = function (v, cap) {
-  if (v === undefined || v === null) return null
-  if (typeof v !== 'string') return ''
-  var s = v.trim()
-  if (s.length > cap) s = s.slice(0, cap)
-  return s
-}
-
-// Formato dos ids do PocketBase (15+ alfanuméricos) — o id do DELETE e os
-// campos relation só passam depois desta checagem.
-var ID_RE = /^[A-Za-z0-9]{15,}$/
-
-// Permissão granular (v0.0.176): espelha a regra de API da collection students
-// — dono sempre; admin secundário com admin_permissions VAZIA tem acesso
-// total (compatibilidade); com a lista preenchida, só quem tem 'alunos' nela.
-// Sem isso, um admin restrito a outras áreas (ex.: só produtos) conseguiria
-// criar/excluir alunos por aqui, contornando a regra da API padrão.
-var hasAlunosAccess = function (admin) {
-  if (admin.getBool('is_owner')) return true
-  var list = []
-  try {
-    var perms = admin.get('admin_permissions')
-    if (Array.isArray(perms)) {
-      list = perms
-    } else if (typeof perms === 'string' && perms !== '') {
-      list = perms.split(',')
-    } else {
-      var j = JSON.parse(JSON.stringify(perms))
-      if (Array.isArray(j)) list = j
-    }
-  } catch (_) {
-    list = []
-  }
-  if (list.length === 0) return true
-  for (var i = 0; i < list.length; i++) {
-    if (String(list[i]).trim() === 'alunos') return true
-  }
-  return false
-}
-
-// Mensagens de erro por campo — sempre genéricas em português, sem detalhes
-// internos do servidor.
 routerAdd(
   'POST',
   '/backend/v1/students/create',
   (e) => {
+    // ---- Declarações inline (JSVM não enxerga o escopo do módulo) ----
+    // Limites de tamanho por campo (o schema tem max 200; truncamos ANTES,
+    // para strings enormes não chegarem ao banco nem ao log).
+    var CAP = {
+      name: 120,
+      phone: 30,
+      email: 200,
+      address: 300,
+      guardian_name: 120,
+      guardian_phone: 30,
+      guardian_email: 200,
+      belt: 32,
+      birth_date: 10,
+    }
+    // Limite bruto do body: um payload legítimo de aluno é minúsculo (< 1 KB).
+    var BODY_MAX_CHARS = 4096
+    // Formato dos ids do PocketBase (15+ alfanuméricos).
+    var ID_RE = /^[A-Za-z0-9]{15,}$/
+
+    // Valida e normaliza uma string do body: só string é aceita (números,
+    // objetos e arrays viram inválido), espaços das pontas removidos, tamanho
+    // limitado. null quando o campo não veio (undefined/null) — difere de ''
+    // (veio vazio).
+    var pickStr = function (v, cap) {
+      if (v === undefined || v === null) return null
+      if (typeof v !== 'string') return ''
+      var s = v.trim()
+      if (s.length > cap) s = s.slice(0, cap)
+      return s
+    }
+
+    // Permissão granular: espelha a regra de API da collection students —
+    // dono sempre; admin_permissions vazia = acesso total; lista preenchida
+    // exige 'alunos'.
+    var hasAlunosAccess = function (admin) {
+      if (admin.getBool('is_owner')) return true
+      var list = []
+      try {
+        var perms = admin.get('admin_permissions')
+        if (Array.isArray(perms)) {
+          list = perms
+        } else if (typeof perms === 'string' && perms !== '') {
+          list = perms.split(',')
+        }
+      } catch (_) {
+        list = []
+      }
+      if (list.length === 0) return true
+      for (var i = 0; i < list.length; i++) {
+        if (String(list[i]).trim() === 'alunos') return true
+      }
+      return false
+    }
+
+    // Mensagens de erro por campo — sempre genéricas em português, sem
+    // detalhes internos do servidor.
     var errOut = function (status, message, fieldErrors) {
       e.json(status, { status: status, message: message, data: fieldErrors || {} })
     }
@@ -262,12 +268,33 @@ routerAdd(
  *
  * A rota NÃO substitui a regra de listagem da collection (que continua
  * correta); é um caminho estável para o painel, com autenticação e papel do
- * admin validados explicitamente — igual à rota de criação acima.
+ * admin validados explicitamente — igual às rotas de criar e excluir.
  */
 routerAdd(
   'GET',
   '/backend/v1/students/list',
   (e) => {
+    // ---- Declarações inline (JSVM não enxerga o escopo do módulo) ----
+    var hasAlunosAccess = function (admin) {
+      if (admin.getBool('is_owner')) return true
+      var list = []
+      try {
+        var perms = admin.get('admin_permissions')
+        if (Array.isArray(perms)) {
+          list = perms
+        } else if (typeof perms === 'string' && perms !== '') {
+          list = perms.split(',')
+        }
+      } catch (_) {
+        list = []
+      }
+      if (list.length === 0) return true
+      for (var p = 0; p < list.length; p++) {
+        if (String(list[p]).trim() === 'alunos') return true
+      }
+      return false
+    }
+
     var admin = e.auth
     if (!admin || admin.id === '') {
       throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
@@ -355,8 +382,8 @@ routerAdd(
  * aparecia como "cliquei em excluir e o aluno continua lá", sem erro.
  *
  * O que faz:
- *   1. Valida o admin EXPLICITAMENTE (requireAuth + role/is_owner) — não
- *      depende da deleteRule da collection.
+ *   1. Valida o admin EXPLICITAMENTE (requireAuth + role/is_owner + permissão
+ *      granular 'alunos') — não depende da deleteRule da collection.
  *   2. Recebe o id via query (?id=) — DELETE não costuma carregar body — e o
  *      valida contra o formato de ids do PocketBase antes de buscar.
  *   3. Apaga a ficha via $app (dispara os hooks onRecordDelete da collection,
@@ -370,6 +397,28 @@ routerAdd(
   'DELETE',
   '/backend/v1/students/delete',
   (e) => {
+    // ---- Declarações inline (JSVM não enxerga o escopo do módulo) ----
+    var ID_RE = /^[A-Za-z0-9]{15,}$/
+    var hasAlunosAccess = function (admin) {
+      if (admin.getBool('is_owner')) return true
+      var list = []
+      try {
+        var perms = admin.get('admin_permissions')
+        if (Array.isArray(perms)) {
+          list = perms
+        } else if (typeof perms === 'string' && perms !== '') {
+          list = perms.split(',')
+        }
+      } catch (_) {
+        list = []
+      }
+      if (list.length === 0) return true
+      for (var p = 0; p < list.length; p++) {
+        if (String(list[p]).trim() === 'alunos') return true
+      }
+      return false
+    }
+
     var admin = e.auth
     if (!admin || admin.id === '') {
       throw new UnauthorizedError('Sua sessão expirou, entre novamente.')

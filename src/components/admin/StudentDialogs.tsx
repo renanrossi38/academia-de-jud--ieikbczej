@@ -478,7 +478,13 @@ export const CreateStudentDialog: React.FC<CreateStudentDialogProps> = ({
           landscape) e sem h/altura fixa — só max-h com dvh, que respeita a
           barra do Safari e o teclado aberto. Cabeçalho e rodapé fixos; só o
           corpo rola (min-h-0 obrigatório para o overflow do meio funcionar). */}
-      <DialogContent className="flex max-h-[92dvh] w-[calc(100%-2rem)] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
+      {/* Mobile (v0.0.177): o diálogo é ANCORADO NO TOPO da tela — o default
+          do shadcn centraliza (top-50%/-translate-y-50%) e, quando o teclado
+          sobe, o topo do formulário fica escondido acima da área visível.
+          Zeramos left/top/translate no celular e a partir de sm: voltamos ao
+          posicionamento centralizado do shadcn. O max-h-[100dvh] respeita o
+          teclado (viewport meta com interactive-widget=resizes-content). */}
+      <DialogContent className="left-0 top-0 translate-x-0 translate-y-0 flex max-h-[100dvh] w-full flex-col overflow-hidden rounded-none border-x-0 border-t-0 bg-white p-4 sm:left-[50%] sm:top-[50%] sm:max-h-[92dvh] sm:max-w-md sm:w-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6 border-[#E8E0D5]">
         <form onSubmit={handleCreate} className="flex min-h-0 flex-1 flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-serif text-[#1C1B1A]">Cadastrar Novo Aluno</DialogTitle>
@@ -779,9 +785,10 @@ export const EditStudentDialog: React.FC<EditStudentDialogProps> = ({
 
   return (
     <Dialog open={!!student} onOpenChange={onOpenChange}>
-      {/* Mesmo padrão do cadastro: largura limitada à tela no celular
-          (w-[calc(100%-2rem)]) e cabeçalho/rodapé sempre visíveis. */}
-      <DialogContent className="flex max-h-[92dvh] w-[calc(100%-2rem)] flex-col overflow-hidden bg-white p-4 sm:max-w-md sm:p-6 border-[#E8E0D5]">
+      {/* Mesmo padrão do cadastro (v0.0.177): no celular o diálogo é ancorado
+          NO TOPO da tela (o teclado não esconde o topo do formulário) e a
+          partir de sm: volta ao padrão centralizado do shadcn. */}
+      <DialogContent className="left-0 top-0 translate-x-0 translate-y-0 flex max-h-[100dvh] w-full flex-col overflow-hidden rounded-none border-x-0 border-t-0 bg-white p-4 sm:left-[50%] sm:top-[50%] sm:max-h-[92dvh] sm:max-w-md sm:w-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6 border-[#E8E0D5]">
         <form onSubmit={handleEdit} className="flex min-h-0 flex-1 flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-serif text-[#1C1B1A]">Editar Aluno</DialogTitle>
