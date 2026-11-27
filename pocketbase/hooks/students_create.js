@@ -10,86 +10,181 @@
  * EXISTINDO no banco — mesma classe de falha de API rule. A rota própria de
  * exclusão abaixo valida o admin explicitamente e apaga via $app.
  *
- * O que faz — POST /backend/v1/students/create:
- *   1. Valida o admin EXPLICITAMENTE (token no header Authorization + checagem
- *      do registro users: role 'admin' ou is_owner) — NÃO depende da createRule
- *      da collection, que é onde a sessão fantasma recusava sem explicar.
- *   2. Sanitiza o payload: descarta opcionais vazios (string vazia em campo
- *      tipado = 400 do PocketBase), valida tipos, valida a faixa contra as 13
- *      do schema (BELT_ORDER), e-mail e telefone em formato válido.
- *   3. Grava o aluno via $app (findCollectionByNameOrId + new Record + save) e
- *      devolve o aluno criado.
- *   4. Em caso de recusa devolve SEMPRE erros reais por campo, em português —
- *      nunca um 400 opaco.
+ * SEGURANÇA (rodada v0.0.175 — revisão da superfície /backend/v1/students/*):
+ *   • Cada rota valida o papel DO REGISTRO users resolvido do token
+ *     (requireAuth + role 'admin' ou is_owner) — token de aluno comum,
+ *     responsável ou desconhecido recebe 401/403, sem dados nem confirmação
+ *     de existência de registros.
+ *   • O corpo é lido UMA vez, com limite de tamanho e validação de tipo: cada
+ *     campo só é aceito como string, truncado em um limite seguro e validado
+ *     em formato — payload malformado (tipo errado, string enorme, campos
+ *     desconhecidos) é descartado, nunca repassado ao banco.
+ *   • O id do DELETE é validado contra o formato dos ids do PocketBase
+ *     (15+ caracteres alfanuméricos) antes de qualquer busca.
+ *   • As mensagens de erro são sempre em português e genéricas — o erro real
+ *     do banco vai para o stream de hooks (console), nunca para a resposta.
+ *   • $app.delete dispara os hooks da collection: a conta de usuário vinculada
+ *     só é apagada pelo delete_student_user, que preserva dono/admin e contas
+ *     compartilhadas com outro aluno.
  *
  * O hook students_sanitize (v0.0.167) continua ativo como segunda camada para
- * o fluxo padrão da collection; esta rota é o caminho novo do painel.
+ * o fluxo padrão da collection; estas rotas são o caminho do painel.
  */
 
+// Limites de tamanho por campo (o schema tem max 200; aqui truncamos ANTES,
+// para strings enormes não chegarem ao banco nem ao log).
+var CAP = {
+  name: 120,
+  phone: 30,
+  email: 200,
+  address: 300,
+  guardian_name: 120,
+  guardian_phone: 30,
+  guardian_email: 200,
+  belt: 32,
+  birth_date: 10,
+}
+
+// Limite bruto do body: um payload legítimo de aluno é minúsculo (< 1 KB).
+var BODY_MAX_CHARS = 4096
+
+// Valida e normaliza uma string do body: só string é aceita (números, objetos
+// e arrays viram inválido), espaços das pontas removidos, tamanho limitado.
+// null quando o campo não veio (undefined/null) — difere de '' (veio vazio).
+var pickStr = function (v, cap) {
+  if (v === undefined || v === null) return null
+  if (typeof v !== 'string') return ''
+  var s = v.trim()
+  if (s.length > cap) s = s.slice(0, cap)
+  return s
+}
+
+// Formato dos ids do PocketBase (15+ alfanuméricos) — o id do DELETE e os
+// campos relation só passam depois desta checagem.
+var ID_RE = /^[A-Za-z0-9]{15,}$/
+
+// Permissão granular (v0.0.176): espelha a regra de API da collection students
+// — dono sempre; admin secundário com admin_permissions VAZIA tem acesso
+// total (compatibilidade); com a lista preenchida, só quem tem 'alunos' nela.
+// Sem isso, um admin restrito a outras áreas (ex.: só produtos) conseguiria
+// criar/excluir alunos por aqui, contornando a regra da API padrão.
+var hasAlunosAccess = function (admin) {
+  if (admin.getBool('is_owner')) return true
+  var list = []
+  try {
+    var perms = admin.get('admin_permissions')
+    if (Array.isArray(perms)) {
+      list = perms
+    } else if (typeof perms === 'string' && perms !== '') {
+      list = perms.split(',')
+    } else {
+      var j = JSON.parse(JSON.stringify(perms))
+      if (Array.isArray(j)) list = j
+    }
+  } catch (_) {
+    list = []
+  }
+  if (list.length === 0) return true
+  for (var i = 0; i < list.length; i++) {
+    if (String(list[i]).trim() === 'alunos') return true
+  }
+  return false
+}
+
+// Mensagens de erro por campo — sempre genéricas em português, sem detalhes
+// internos do servidor.
 routerAdd(
   'POST',
   '/backend/v1/students/create',
   (e) => {
-    const errOut = (status, message, fieldErrors) => {
-      e.json(status, { status, message, data: fieldErrors || {} })
+    var errOut = function (status, message, fieldErrors) {
+      e.json(status, { status: status, message: message, data: fieldErrors || {} })
     }
 
     // ---- 1. Autenticação e papel do admin (sem depender da createRule) ----
     // e.auth já é o registro users resolvido do token (middleware requireAuth) —
     // token morto/sessão fantasma nunca chega aqui (401 antes do handler).
-    const admin = e.auth
+    var admin = e.auth
     if (!admin || admin.id === '') {
       throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
     }
     if (admin.getString('role') !== 'admin' && !admin.getBool('is_owner')) {
       throw new ForbiddenError('Sua conta não tem permissão para cadastrar alunos.')
     }
+    if (!hasAlunosAccess(admin)) {
+      throw new ForbiddenError('Sua conta não tem permissão para cadastrar alunos.')
+    }
 
     // ---- 2. Payload e sanitização ----
-    let body = {}
+    var body = {}
     try {
-      body = e.requestInfo().body || {}
+      var raw = e.requestInfo().body
+      if (raw && typeof raw === 'object') body = raw
     } catch (_) {
       body = {}
     }
-    const str = (v) => (typeof v === 'string' ? v.trim() : '')
 
-    const name = str(body.name)
-    const email = str(body.email).toLowerCase()
-    const phone = str(body.phone)
-    const belt = str(body.belt)
-    const address = str(body.address)
-    const birthDate = str(body.birth_date)
-    const guardianName = str(body.guardian_name)
-    const guardianPhone = str(body.guardian_phone)
-    const guardianEmail = str(body.guardian_email).toLowerCase()
+    // Payload maior que o permitido: recusa sem tentar interpretar (proteção
+    // contra strings enormes).
+    var rawLen = 0
+    try {
+      rawLen = String(JSON.stringify(body)).length
+    } catch (_) {
+      rawLen = BODY_MAX_CHARS + 1
+    }
+    if (rawLen > BODY_MAX_CHARS) {
+      errOut(400, 'Dados enviados são grandes demais. Revise os campos e tente novamente.', {})
+      return
+    }
 
-    const data = {}
-    if (!name) data.name = 'Informe o nome do aluno.'
+    var data = {}
+    // Campo OPCIONAL: ausente, null, '' ou vazio após o trim viram null (não
+    // gravados) — "só o nome é obrigatório" é a regra do dono. Tipo errado
+    // (número, objeto, array) vira '' e é recusado com erro do campo.
+    var optStr = function (key) {
+      var s = pickStr(body[key], CAP[key] || 200)
+      if (s === null || s === '') return null
+      return s
+    }
 
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    var name = pickStr(body.name, CAP.name)
+    if (name === null || name === '') {
+      data.name = 'Informe o nome do aluno.'
+      name = ''
+    }
+
+    var email = optStr('email')
+    if (email) email = email.toLowerCase()
+    var phone = optStr('phone')
+    var address = optStr('address')
+    var guardianName = optStr('guardian_name')
+    var guardianPhone = optStr('guardian_phone')
+    var guardianEmail = optStr('guardian_email')
+    if (guardianEmail) guardianEmail = guardianEmail.toLowerCase()
+
+    var belt = optStr('belt')
+    var birthDate = optStr('birth_date')
+
+    var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (email && !emailRe.test(email))
       data.email = 'Informe um e-mail válido — ex.: aluno@email.com.'
-    const guardianEmailErr =
-      guardianEmail && !emailRe.test(guardianEmail)
-        ? 'Informe um e-mail válido para o responsável.'
-        : null
-    if (guardianEmailErr) data.guardian_email = guardianEmailErr
+    if (guardianEmail && !emailRe.test(guardianEmail))
+      data.guardian_email = 'Informe um e-mail válido para o responsável.'
 
-    const phoneErr = (p) => {
-      const digits = String(p || '').replace(/\D/g, '')
+    var phoneErr = function (p) {
+      var digits = String(p || '').replace(/\D/g, '')
       if (!digits) return null
       if (digits.length < 10 || digits.length > 11)
         return 'Informe o telefone com DDD — ex.: (11) 90000-0000.'
       return null
     }
-    const phoneE = phoneErr(phone)
+    var phoneE = phoneErr(phone)
     if (phoneE) data.phone = phoneE
-    const gPhoneE = phoneErr(guardianPhone)
+    var gPhoneE = phoneErr(guardianPhone)
     if (gPhoneE) data.guardian_phone = gPhoneE
 
     // As 13 faixas do schema (mesma lista do BELT_ORDER do front).
-    const belts = [
+    var belts = [
       'branca',
       'branca_ponta_cinza',
       'cinza',
@@ -104,9 +199,9 @@ routerAdd(
       'marrom',
       'preta',
     ]
-    let beltValue = ''
+    var beltValue = ''
     if (belt) {
-      const hit = belts.indexOf(belt)
+      var hit = belts.indexOf(belt)
       if (hit === -1) {
         data.belt = 'A faixa informada não é aceita — selecione novamente na lista e tente salvar.'
       } else {
@@ -115,8 +210,8 @@ routerAdd(
     }
 
     if (birthDate) {
-      const m = birthDate.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-      const valid = m && !isNaN(new Date(birthDate).getTime())
+      var m = birthDate.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      var valid = m && !isNaN(new Date(birthDate).getTime())
       if (!valid) data.birth_date = 'Informe uma data de nascimento válida.'
     }
 
@@ -127,8 +222,8 @@ routerAdd(
 
     // ---- 3. Gravação via $app ----
     try {
-      const col = $app.findCollectionByNameOrId('students')
-      const rec = new Record(col)
+      var col = $app.findCollectionByNameOrId('students')
+      var rec = new Record(col)
       rec.set('name', name)
       rec.set('active', true)
       if (email) rec.set('email', email)
@@ -144,8 +239,13 @@ routerAdd(
       console.log('[students_create] aluno criado id=' + rec.id + ' nome=' + name)
       return e.json(200, { student: rec })
     } catch (saveErr) {
+      // O motivo real fica só no log do servidor; a resposta é genérica.
       console.log('[students_create] save falhou: ' + String(saveErr))
-      return errOut(400, 'O servidor recusou o cadastro do aluno: ' + String(saveErr), {})
+      return errOut(
+        400,
+        'O servidor não conseguiu salvar o aluno. Verifique os dados e tente novamente.',
+        {},
+      )
     }
   },
   $apis.requireAuth(),
@@ -168,25 +268,29 @@ routerAdd(
   'GET',
   '/backend/v1/students/list',
   (e) => {
-    const admin = e.auth
+    var admin = e.auth
     if (!admin || admin.id === '') {
       throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
     }
     if (admin.getString('role') !== 'admin' && !admin.getBool('is_owner')) {
       throw new ForbiddenError('Sua conta não tem permissão para ver a lista de alunos.')
     }
+    if (!hasAlunosAccess(admin)) {
+      throw new ForbiddenError('Sua conta não tem permissão para ver a lista de alunos.')
+    }
 
-    // findRecordsByFilter (countRecordsByFilter não existe na JSVM).
-    const rows = $app.findRecordsByFilter('students', '', '-created', 0, 0)
+    // findRecordsByFilter (countRecordsByFilter não existe na JSVM). Teto de
+    // 2000 registros: resposta nunca cresce sem limite.
+    var rows = $app.findRecordsByFilter('students', '', '-created', 2000, 0)
 
     // Contas de acesso referenciadas: uma busca única em vez de N.
-    const usersCache = {}
-    const userOf = (userId) => {
+    var usersCache = {}
+    var userOf = function (userId) {
       if (!userId) return null
       if (usersCache[userId] !== undefined) return usersCache[userId]
-      let u = null
+      var u = null
       try {
-        const rec = $app.findRecordById('users', userId)
+        var rec = $app.findRecordById('users', userId)
         u = {
           id: rec.id,
           collectionId: rec.collection().id,
@@ -205,11 +309,11 @@ routerAdd(
       return u
     }
 
-    const students = []
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i]
-      const userId = r.getString('user')
-      const item = {
+    var students = []
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i]
+      var userId = r.getString('user')
+      var item = {
         id: r.id,
         collectionId: r.collection().id,
         collectionName: 'students',
@@ -229,7 +333,7 @@ routerAdd(
         updated: r.getString('updated'),
         expand: {},
       }
-      const u = userOf(userId)
+      var u = userOf(userId)
       if (u) item.expand = { user: u }
       students.push(item)
     }
@@ -253,7 +357,8 @@ routerAdd(
  * O que faz:
  *   1. Valida o admin EXPLICITAMENTE (requireAuth + role/is_owner) — não
  *      depende da deleteRule da collection.
- *   2. Recebe o id via query (?id=) — DELETE não costuma carregar body.
+ *   2. Recebe o id via query (?id=) — DELETE não costuma carregar body — e o
+ *      valida contra o formato de ids do PocketBase antes de buscar.
  *   3. Apaga a ficha via $app (dispara os hooks onRecordDelete da collection,
  *      incluindo o delete_student_user que apaga a conta de usuário vinculada,
  *      sem nunca apagar conta de dono/admin e sem apagar a conta quando
@@ -265,30 +370,46 @@ routerAdd(
   'DELETE',
   '/backend/v1/students/delete',
   (e) => {
-    const admin = e.auth
+    var admin = e.auth
     if (!admin || admin.id === '') {
       throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
     }
     if (admin.getString('role') !== 'admin' && !admin.getBool('is_owner')) {
       throw new ForbiddenError('Sua conta não tem permissão para excluir alunos.')
     }
+    if (!hasAlunosAccess(admin)) {
+      throw new ForbiddenError('Sua conta não tem permissão para excluir alunos.')
+    }
 
-    const id = (e.requestInfo().query.id || '') + ''
-    if (id === '') {
+    var qid = ''
+    try {
+      var q = e.requestInfo().query
+      if (q && typeof q === 'object' && q.id !== undefined && q.id !== null) {
+        qid = String(q.id).trim()
+      }
+    } catch (_) {
+      qid = ''
+    }
+    if (qid === '') {
       throw new BadRequestError('Aluno não informado para exclusão.')
     }
-
-    let student
-    try {
-      student = $app.findRecordById('students', id)
-    } catch (_) {
-      // Já não existe (clique duplo / aba aberta em duas máquinas): sucesso.
-      console.log('[students_delete] aluno=' + id + ' já não existia (idempotente)')
-      return e.json(200, { ok: true, id: id, already: true })
+    if (!ID_RE.test(qid)) {
+      // Id malformado: sem busca no banco, sem detalhe interno na resposta.
+      throw new BadRequestError('Identificador do aluno inválido.')
     }
 
-    const name = student.getString('name')
-    const linkedUser = student.getString('user')
+    var student
+    try {
+      student = $app.findRecordById('students', qid)
+    } catch (_) {
+      // Já não existe (clique duplo / aba aberta em duas máquinas): sucesso.
+      console.log('[students_delete] aluno=' + qid + ' já não existia (idempotente)')
+      return e.json(200, { ok: true, id: qid, already: true })
+    }
+
+    var name = student.getString('name')
+    var linkedUser = student.getString('user')
+    if (linkedUser && !ID_RE.test(linkedUser)) linkedUser = ''
 
     // $app.delete dispara os hooks da collection, incluindo o
     // delete_student_user (conta de usuário vinculada), com as proteções dele.
@@ -297,13 +418,13 @@ routerAdd(
       '[students_delete] admin=' +
         admin.id +
         ' aluno=' +
-        id +
+        qid +
         ' nome=' +
         name +
         ' conta_vinculada=' +
         (linkedUser || 'nenhuma'),
     )
-    return e.json(200, { ok: true, id: id })
+    return e.json(200, { ok: true, id: qid })
   },
   $apis.requireAuth(),
 )
