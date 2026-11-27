@@ -1,10 +1,14 @@
 /**
- * students_create.js — rota própria de CRIAÇÃO de alunos (v0.0.170).
+ * students_create.js — rotas próprias de CRIAÇÃO, LISTAGEM e EXCLUSÃO de alunos.
  *
  * Por quê: o POST padrão /api/collections/students/records recusava o cadastro
  * do dono com 400 genérico "Failed to create record." em <1ms, sem fieldErrors
  * e sem passar pelo hook students_sanitize (que logaria o motivo) — assinatura
  * de falha de API rule (sessão fantasma: token de auth morto no servidor).
+ * (v0.0.174) O DELETE padrão /api/collections/students/records/:id recusa o
+ * DONO com 404 "The requested resource wasn't found." — com o registro
+ * EXISTINDO no banco — mesma classe de falha de API rule. A rota própria de
+ * exclusão abaixo valida o admin explicitamente e apaga via $app.
  *
  * O que faz — POST /backend/v1/students/create:
  *   1. Valida o admin EXPLICITAMENTE (token no header Authorization + checagem
@@ -232,6 +236,74 @@ routerAdd(
 
     console.log('[students_list] admin=' + admin.id + ' alunos=' + students.length)
     return e.json(200, { students: students })
+  },
+  $apis.requireAuth(),
+)
+
+/**
+ * DELETE /backend/v1/students/delete?id=... — EXCLUSÃO de aluno (v0.0.174).
+ *
+ * Por quê: o DELETE padrão /api/collections/students/records/:id recusa o dono
+ * com 404 "The requested resource wasn't found." MESMO COM O REGISTRO
+ * EXISTINDO no banco (logs de 2026-11-27 00:40, 5 tentativas seguidas). O
+ * PocketBase responde 404 quando a deleteRule não bate — mesma classe de
+ * falha de API rule já documentada na criação e na listagem. Para o dono isso
+ * aparecia como "cliquei em excluir e o aluno continua lá", sem erro.
+ *
+ * O que faz:
+ *   1. Valida o admin EXPLICITAMENTE (requireAuth + role/is_owner) — não
+ *      depende da deleteRule da collection.
+ *   2. Recebe o id via query (?id=) — DELETE não costuma carregar body.
+ *   3. Apaga a ficha via $app (dispara os hooks onRecordDelete da collection,
+ *      incluindo o delete_student_user que apaga a conta de usuário vinculada,
+ *      sem nunca apagar conta de dono/admin e sem apagar a conta quando
+ *      outro aluno continua vinculado a ela).
+ *   4. Idempotente: id que não existe mais devolve 200 (já excluído) — NUNCA
+ *      404, que o front trata como sessão expirada.
+ */
+routerAdd(
+  'DELETE',
+  '/backend/v1/students/delete',
+  (e) => {
+    const admin = e.auth
+    if (!admin || admin.id === '') {
+      throw new UnauthorizedError('Sua sessão expirou, entre novamente.')
+    }
+    if (admin.getString('role') !== 'admin' && !admin.getBool('is_owner')) {
+      throw new ForbiddenError('Sua conta não tem permissão para excluir alunos.')
+    }
+
+    const id = (e.requestInfo().query.id || '') + ''
+    if (id === '') {
+      throw new BadRequestError('Aluno não informado para exclusão.')
+    }
+
+    let student
+    try {
+      student = $app.findRecordById('students', id)
+    } catch (_) {
+      // Já não existe (clique duplo / aba aberta em duas máquinas): sucesso.
+      console.log('[students_delete] aluno=' + id + ' já não existia (idempotente)')
+      return e.json(200, { ok: true, id: id, already: true })
+    }
+
+    const name = student.getString('name')
+    const linkedUser = student.getString('user')
+
+    // $app.delete dispara os hooks da collection, incluindo o
+    // delete_student_user (conta de usuário vinculada), com as proteções dele.
+    $app.delete(student)
+    console.log(
+      '[students_delete] admin=' +
+        admin.id +
+        ' aluno=' +
+        id +
+        ' nome=' +
+        name +
+        ' conta_vinculada=' +
+        (linkedUser || 'nenhuma'),
+    )
+    return e.json(200, { ok: true, id: id })
   },
   $apis.requireAuth(),
 )

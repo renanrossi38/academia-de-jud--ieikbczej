@@ -625,17 +625,31 @@ export default function AdminStudents() {
     setDeleting(true)
     try {
       await studentsService.deleteStudent(deletingStudent.id)
+      // Sai da listagem na hora (a listagem já vem da rota própria; nada em cache).
       setStudents((prev) => prev.filter((s) => s.id !== deletingStudent.id))
       toast({
         title: 'Aluno excluído',
         description: `${deletingStudent.name} foi removido definitivamente, junto com o histórico de presença dele.`,
       })
       setDeletingStudent(null)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao excluir aluno:', err)
+      if (isSessionError(err)) {
+        // Sessão fantasma (a causa real do "excluir não funciona"): token morto
+        // no servidor recusava o DELETE com 404 sem erro na tela. Limpa o
+        // authStore e manda para o login, como no fluxo de criação.
+        toast({
+          title: 'Sua sessão expirou',
+          description: 'Sua sessão expirou, entre novamente.',
+          variant: 'destructive',
+        })
+        window.location.assign('/entrar?redirect=/painel/alunos')
+        return
+      }
       toast({
         title: 'Erro ao excluir aluno',
-        description: err?.message || 'Falha ao excluir no servidor. Tente novamente.',
+        description:
+          (err instanceof Error && err.message) || 'Falha ao excluir no servidor. Tente novamente.',
         variant: 'destructive',
       })
     } finally {

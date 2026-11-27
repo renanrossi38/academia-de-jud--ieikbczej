@@ -1,7 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import { Belt, Student, User } from '@/types'
 import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
-import { extractServerError } from '@/services/studentsErrors'
+import { extractServerError, isSessionError, serverErrorMessage } from '@/services/studentsErrors'
 
 export interface CreateStudentInput {
   name: string
@@ -422,9 +422,30 @@ export const studentsService = {
     }
   },
 
-  /** Exclui o aluno de vez (as presenças dele saem junto, por cascata). */
+  /**
+   * Exclui o aluno de vez (as presenças dele saem junto, por cascata).
+   *
+   * Usa a ROTA PRÓPRIA do servidor (DELETE /backend/v1/students/delete),
+   * mesmo padrão da criação e da listagem: o DELETE padrão da API recusa o
+   * dono com 404 "The requested resource wasn't found." MESMO COM O REGISTRO
+   * EXISTINDO (falha de API rule / sessão fantasma) — o aluno continuava na
+   * lista sem nenhum erro na tela. A rota valida o admin explicitamente e
+   * devolve mensagem real em português quando falha.
+   */
   async deleteStudent(id: string): Promise<void> {
-    await pb.collection('students').delete(id)
+    try {
+      await pb.send('/backend/v1/students/delete?id=' + encodeURIComponent(id), {
+        method: 'DELETE',
+      })
+    } catch (err) {
+      if (isSessionError(err)) {
+        // Sessão fantasma: limpa o authStore local — o painel cai na tela de
+        // login em vez de deixar o dono num admin que não consegue excluir.
+        pb.authStore.clear()
+        throw err // erro original (401/404): a página trata sessão expirada
+      }
+      throw new Error(serverErrorMessage(err))
+    }
   },
 
   async updateStudent(id: string, input: UpdateStudentInput): Promise<Student> {
